@@ -2,22 +2,39 @@ import {
   collection, doc, getDoc, getDocs, setDoc, onSnapshot, runTransaction,
   serverTimestamp, updateDoc, deleteField,
 } from "firebase/firestore";
-import { db } from "./firebase.js";
+import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
+import { db, auth, googleProvider } from "./firebase.js";
 import { SEED_MATCHES } from "./seed.js";
 
-/* ----------------- identity (temporary, pre-Google login) ----------------- */
-// Real Google auth + allow-list + roles arrive with the tournament's Firebase
-// config. For now the "user" is a name + a device id + a dev admin flag.
-export function getMe() {
-  let me = null;
-  try { me = JSON.parse(localStorage.getItem("fb_me") || "null"); } catch (_) {}
-  return me;
+/* ----------------- identity (Google login) ----------------- */
+// Organizers who can force-unlock reports. Per-event membership/roles come later;
+// for now any signed-in Google user can score, and these emails are admins.
+const ORG_ADMINS = ["claudio.englert@gmail.com"];
+
+// Map a Firebase auth user to our app "me" shape (null when signed out).
+function toMe(user) {
+  if (!user) return null;
+  const email = (user.email || "").toLowerCase();
+  return {
+    uid: user.uid,
+    name: user.displayName || email || "User",
+    email,
+    admin: ORG_ADMINS.includes(email),
+  };
 }
-export function setMe(name, admin) {
-  const uid = getMe()?.uid || "u_" + Math.random().toString(36).slice(2, 10);
-  const me = { uid, name: name.trim(), admin: !!admin };
-  localStorage.setItem("fb_me", JSON.stringify(me));
-  return me;
+
+// Subscribe to sign-in state. cb receives `me` (or null). Returns unsubscribe.
+export function onMe(cb) {
+  return onAuthStateChanged(auth, (user) => cb(toMe(user)));
+}
+
+export async function signInWithGoogle() {
+  const cred = await signInWithPopup(auth, googleProvider);
+  return toMe(cred.user);
+}
+
+export async function signOutMe() {
+  await signOut(auth);
 }
 
 /* ----------------- games (seeded from the schedule) ----------------- */

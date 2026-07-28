@@ -4,17 +4,24 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import MatchList from "./pages/MatchList.jsx";
 import Sumula from "./pages/Sumula.jsx";
 import Identity from "./pages/Identity.jsx";
-import { getMe, ensureGames } from "./cloud.js";
+import { onMe, signOutMe, ensureGames } from "./cloud.js";
 import "./styles.css";
 
 function Root() {
-  const [me, setMe] = useState(getMe());
+  const [me, setMe] = useState(undefined); // undefined = auth not resolved yet
+  const [ready, setReady] = useState(false);
 
-  useEffect(() => { ensureGames(); }, []);
+  useEffect(() => {
+    const unsub = onMe((m) => { setMe(m); setReady(true); });
+    return unsub;
+  }, []);
 
-  if (!me) return <Identity onDone={setMe} />;
+  useEffect(() => { if (me) ensureGames(); }, [me]);
 
-  const signOut = () => { localStorage.removeItem("fb_me"); setMe(null); };
+  if (!ready || me === undefined) return <div className="empty">Loading…</div>;
+  if (!me) return <Identity />;
+
+  const signOut = () => signOutMe();
 
   return (
     <HashRouter>

@@ -273,6 +273,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .identity-card .check { display: flex; align-items: center; gap: 10px; margin: 6px 0 16px; color: var(--text); font-size: 15px; }
 .identity-card .check input { width: 22px; height: 22px; }
 .identity-card .hint { color: var(--muted); font-size: 12px; margin-top: 14px; }
+.identity-card .error { color: var(--r); font-size: 13px; margin-top: 12px; }
+.btn.primary.google { margin-top: 8px; }
 .brand-logo.lg { width: 72px; height: 72px; border-radius: 16px; margin: 0 auto; }
 
 /* ---------- Lock bar ---------- */

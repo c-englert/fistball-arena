@@ -1,12 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // DEV / emulator only — open access so we can validate realtime + locking
-    // with a lightweight local identity. In production this is locked down:
-    // only allow-listed Google accounts read; only the lock holder or an admin
-    // writes a given report; only an admin clears another user's lock.
-    match /{document=**} {
-      allow read, write: if true;
+
+    // Any signed-in Google user is a valid participant for now.
+    // Per-event membership + roles (official / viewer) come in a later phase.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Games (schedule) — everyone signed in can read; seeding writes allowed
+    // while there is no admin console yet. Tighten to admin-only later.
+    match /games/{gameId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    // Reports (súmulas) — signed-in users read all (for the live list) and
+    // write. Lock discipline is enforced in the app via a transaction; server
+    // rules keep it to authenticated users.
+    match /reports/{gameId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
     }
   }
 }

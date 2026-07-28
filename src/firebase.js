@@ -1,24 +1,18 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
-// In dev we run against the local Firebase emulator (no real project needed).
-// When the tournament's real firebaseConfig is added, the non-DEV branch is used
-// and Google auth + strict rules kick in.
-const USE_EMULATOR = import.meta.env.DEV;
-
-const firebaseConfig = USE_EMULATOR
-  ? { projectId: "demo-fistball", apiKey: "demo" }
-  : {
-      // TODO: paste the tournament's firebaseConfig here (from the Firebase console)
-      apiKey: import.meta.env.VITE_FB_API_KEY,
-      authDomain: import.meta.env.VITE_FB_AUTH_DOMAIN,
-      projectId: import.meta.env.VITE_FB_PROJECT_ID,
-      appId: import.meta.env.VITE_FB_APP_ID,
-    };
+// Fistball Arena — Firebase project config (client-side, not secret).
+const firebaseConfig = {
+  apiKey: "AIzaSyAca__YTy_Y6tlX62jJ6aK_qHhJgUD4V0w",
+  authDomain: "fistball-arena.firebaseapp.com",
+  projectId: "fistball-arena",
+  storageBucket: "fistball-arena.firebasestorage.app",
+  messagingSenderId: "261226374717",
+  appId: "1:261226374717:web:d267cc2b02175e85bf2c54",
+};
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
-
-if (USE_EMULATOR) {
-  connectFirestoreEmulator(db, "localhost", 8080);
-}
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
