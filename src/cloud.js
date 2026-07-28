@@ -163,6 +163,7 @@ export async function saveReport(gameId, me, patch) {
     updatedBy: { uid: me.uid, name: me.name },
     updatedAt: serverTimestamp(),
   });
+  await publishResult(gameId);
 }
 
 export async function submitReport(gameId, me) {
@@ -172,4 +173,45 @@ export async function submitReport(gameId, me) {
     submittedBy: { uid: me.uid, name: me.name },
     submittedAt: serverTimestamp(),
   });
+  await publishResult(gameId);
+}
+
+/* ----------------- publish to Fistball Live -----------------
+ * A public, minimal scoreboard projection of each report, written to the
+ * `results` collection (public read). The Fistball Live spectator app reads
+ * this directly, so the database — not the sheet — is the source of truth. */
+function deriveResult(rep) {
+  const sets = [];
+  let setsA = 0, setsB = 0, pointsA = 0, pointsB = 0;
+  for (const s of rep.sets || []) {
+    const r = s.rallies || [];
+    if (!r.length) continue;
+    const a = r.filter((x) => x === "A").length;
+    const b = r.filter((x) => x === "B").length;
+    sets.push([a, b]);
+    pointsA += a; pointsB += b;
+    if (a > b) setsA++; else if (b > a) setsB++;
+  }
+  let status = "Not Started";
+  if (rep.status === "submitted") status = "Finished";
+  else if (sets.length) status = "In progress";
+  const i = rep.info || {};
+  return {
+    nr: i.nr, date: i.date, time: i.time, court: i.court,
+    round: i.round, category: i.category, bestOf: i.bestOf,
+    teamA: rep.teamA?.name || "", teamB: rep.teamB?.name || "",
+    setsA, setsB, pointsA, pointsB, sets, status,
+    updatedAt: serverTimestamp(),
+  };
+}
+
+export async function publishResult(gameId) {
+  try {
+    const snap = await getDoc(doc(db, "reports", gameId));
+    if (!snap.exists()) return;
+    await setDoc(doc(db, "results", gameId), deriveResult(snap.data()));
+  } catch (e) {
+    // Never let publishing break the save/submit; log for diagnostics.
+    console.warn("publishResult failed:", e);
+  }
 }

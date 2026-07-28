@@ -22,5 +22,12 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if signedIn();
     }
+
+    // Results — public scoreboard projection read by the Fistball Live
+    // spectator app (no login). Only signed-in scorers write it (via the app).
+    match /results/{gameId} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
   }
 }
