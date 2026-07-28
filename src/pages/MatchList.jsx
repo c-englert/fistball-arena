@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { subscribeGames, subscribeReports, adminUnlock } from "../cloud.js";
 
 function parseDate(s) {

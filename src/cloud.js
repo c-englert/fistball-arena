@@ -41,7 +41,11 @@ export async function signOutMe() {
 // The admin wizard's config is stored in a single shared doc so multiple
 // organizers see and re-edit the same setup.
 export function subscribeScheduleConfig(cb) {
-  return onSnapshot(doc(db, "meta", "schedule"), (d) => cb(d.exists() ? d.data().config : null));
+  return onSnapshot(
+    doc(db, "meta", "schedule"),
+    (d) => cb(d.exists() ? d.data().config : null),
+    (err) => console.warn("schedule config unavailable (publish meta rules):", err?.code || err)
+  );
 }
 export async function saveScheduleConfig(config) {
   await setDoc(doc(db, "meta", "schedule"), { config, updatedAt: serverTimestamp() });
