@@ -194,7 +194,9 @@ export function subscribeLivePointer(cb) {
 export async function setLiveEvent(event) {
   const eid = event?.id || reqEid();
   await setDoc(doc(db, "public", "live"), {
-    eventId: eid, name: event?.name || "", updatedAt: serverTimestamp(),
+    eventId: eid, name: event?.name || "",
+    startsAt: event?.startDate || "", endsAt: event?.endDate || "",
+    updatedAt: serverTimestamp(),
   });
 }
 export async function clearLiveEvent() {
