@@ -389,6 +389,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .logo-actions .btn { padding: 4px 8px; min-width: 0; }
 .promo-logo { height: 40px; background: #fff; border-radius: 8px; padding: 4px; display: inline-flex; align-items: center; flex: none; }
 .promo-logo img { height: 100%; max-width: 80px; object-fit: contain; }
+.ev-body { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+.ev-logo { width: 60px; height: 60px; flex: none; object-fit: contain; background: #fff; border-radius: 10px; padding: 5px; border: 1px solid var(--line); }
+.ev-promos { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.ev-promos img { height: 22px; max-width: 56px; object-fit: contain; }
 
 /* ---------- Manage menu ---------- */
 .menu-wrap { position: relative; }

@@ -100,6 +100,9 @@ export function subscribeEvent(cb) {
 export async function setEventStatus(status) {
   await updateDoc(doc(db, "events", reqEid()), { status });
 }
+export async function updateEventDetails(patch) {
+  await updateDoc(doc(db, "events", reqEid()), patch);
+}
 
 export function subscribeMembers(cb) {
   return onSnapshot(ecol("members"),
@@ -169,6 +172,15 @@ export async function saveBranding({ name, eventLogo, promoters }) {
   await setDoc(doc(db, "public", `event_${eid}`), {
     eventId: eid, name: name || "", eventLogo: eventLogo || null, promoters: promoters || [],
   });
+}
+
+// Branding for ALL events (public), keyed by eventId — for logos on event cards.
+export function subscribeAllBranding(cb) {
+  return onSnapshot(collection(db, "public"), (snap) => {
+    const m = {};
+    snap.forEach((d) => { if (d.id.startsWith("event_")) { const v = d.data(); if (v.eventId) m[v.eventId] = v; } });
+    cb(m);
+  }, (err) => { console.warn("branding list unavailable:", err?.code || err); cb({}); });
 }
 
 /* ----------------- Fistball Live pointer -----------------

@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, saveBranding,
+  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails,
 } from "../cloud.js";
 import { fileToLogoDataUrl } from "../img.js";
+import { formatRange } from "../dates.js";
 import { useEvent } from "../eventContext.js";
 
 export default function Settings({ me }) {
@@ -12,6 +13,15 @@ export default function Settings({ me }) {
   const { eventId, event, archived, isAdmin, branding } = useEvent();
   const [live, setLive] = useState(undefined);
   const [status, setStatus] = useState("");
+  const [details, setDetails] = useState(() => ({
+    name: event?.name || "", place: event?.place || "", startDate: event?.startDate || "", endDate: event?.endDate || "",
+  }));
+
+  const saveDetails = async () => {
+    setStatus("Saving event…");
+    try { await updateEventDetails({ ...details, dates: formatRange(details.startDate, details.endDate) }); setStatus("Event details saved."); }
+    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+  };
 
   // logo library + this event's selection
   const [logos, setLogos] = useState([]);
@@ -79,6 +89,23 @@ export default function Settings({ me }) {
       </header>
 
       <div className="content">
+        {/* ---- Event details ---- */}
+        <div className="card">
+          <h2>Event details</h2>
+          <div className="field"><span>Name</span>
+            <input value={details.name} disabled={archived} onChange={(e) => setDetails({ ...details, name: e.target.value })} /></div>
+          <div className="field"><span>Place</span>
+            <input value={details.place} disabled={archived} onChange={(e) => setDetails({ ...details, place: e.target.value })} placeholder="City · Country" /></div>
+          <div className="grid2">
+            <div className="field"><span>Starts</span>
+              <input type="date" disabled={archived} value={details.startDate} onChange={(e) => setDetails({ ...details, startDate: e.target.value, endDate: details.endDate && details.endDate < e.target.value ? e.target.value : details.endDate })} /></div>
+            <div className="field"><span>Ends</span>
+              <input type="date" disabled={archived} min={details.startDate || undefined} value={details.endDate} onChange={(e) => setDetails({ ...details, endDate: e.target.value })} /></div>
+          </div>
+          {(details.startDate || details.endDate) && <p className="muted-sm">{formatRange(details.startDate, details.endDate)}</p>}
+          {!archived && <button className="btn primary" onClick={saveDetails}>Save details</button>}
+        </div>
+
         {/* ---- Logos ---- */}
         <div className="card">
           <div className="row-between">

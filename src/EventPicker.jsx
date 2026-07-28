@@ -1,22 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listMyEvents, createEvent, subscribeLivePointer, setLiveEvent, clearLiveEvent } from "./cloud.js";
+import { listMyEvents, createEvent, subscribeLivePointer, setLiveEvent, clearLiveEvent, subscribeAllBranding } from "./cloud.js";
 import AccountMenu from "./AccountMenu.jsx";
-
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-function formatRange(a, b) {
-  const p = (s) => { const m = /(\d{4})-(\d{2})-(\d{2})/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
-  const da = p(a), db = p(b);
-  if (da && db) {
-    if (da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth())
-      return `${da.getDate()}–${db.getDate()} ${MON[da.getMonth()]} ${da.getFullYear()}`;
-    if (da.getFullYear() === db.getFullYear())
-      return `${da.getDate()} ${MON[da.getMonth()]} – ${db.getDate()} ${MON[db.getMonth()]} ${da.getFullYear()}`;
-    return `${da.getDate()} ${MON[da.getMonth()]} ${da.getFullYear()} – ${db.getDate()} ${MON[db.getMonth()]} ${db.getFullYear()}`;
-  }
-  const one = da || db;
-  return one ? `${one.getDate()} ${MON[one.getMonth()]} ${one.getFullYear()}` : "";
-}
+import { formatRange } from "./dates.js";
 
 export default function EventPicker({ me, onSignOut }) {
   const nav = useNavigate();
@@ -26,9 +12,11 @@ export default function EventPicker({ me, onSignOut }) {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState("active");
   const [live, setLive] = useState(null);
+  const [brandings, setBrandings] = useState({});
 
   useEffect(() => listMyEvents(me, setEvents), [me]);
   useEffect(() => subscribeLivePointer(setLive), []);
+  useEffect(() => subscribeAllBranding(setBrandings), []);
 
   const shown = (events || []).filter((e) => (tab === "archived" ? e.status === "archived" : e.status !== "archived"));
   const canManageLive = (ev) => me.admin || ev.myRole === "admin";
@@ -110,8 +98,16 @@ export default function EventPicker({ me, onSignOut }) {
                   </button>
                 )}
               </div>
-              <div className="mc-teams" style={{ fontSize: 20 }}>{ev.name}</div>
-              <div className="muted-sm">{[ev.place, ev.dates].filter(Boolean).join(" · ")}</div>
+              <div className="ev-body">
+                {brandings[ev.id]?.eventLogo?.dataUrl && <img className="ev-logo" src={brandings[ev.id].eventLogo.dataUrl} alt="" />}
+                <div style={{ minWidth: 0 }}>
+                  <div className="mc-teams" style={{ fontSize: 20 }}>{ev.name}</div>
+                  <div className="muted-sm">{[ev.place, ev.dates].filter(Boolean).join(" · ")}</div>
+                  <div className="ev-promos">
+                    {(brandings[ev.id]?.promoters || []).slice(0, 4).map((p, i) => <img key={i} src={p.dataUrl} alt="" />)}
+                  </div>
+                </div>
+              </div>
             </div>
           );
         })}
