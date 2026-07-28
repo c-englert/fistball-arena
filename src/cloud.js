@@ -73,6 +73,12 @@ export function listMyEvents(me, cb) {
   );
 }
 
+// Public per-event info doc (read by the anonymous Live for header + countdown).
+// Merged so branding (logos) and details (name/place/dates) coexist.
+function writeEventPublic(eid, patch) {
+  return setDoc(doc(db, "public", `event_${eid}`), { eventId: eid, ...patch }, { merge: true });
+}
+
 export async function createEvent(descriptor, me) {
   const ref = doc(collection(db, "events"));
   await setDoc(ref, {
@@ -84,6 +90,10 @@ export async function createEvent(descriptor, me) {
     status: "active",
     createdBy: me.uid,
     createdAt: serverTimestamp(),
+  });
+  await writeEventPublic(ref.id, {
+    name: descriptor.name || "", place: descriptor.place || "", dates: descriptor.dates || "",
+    startsAt: descriptor.startDate || "", endsAt: descriptor.endDate || "",
   });
   // Add the creator as an admin member so they always appear in their list.
   await setDoc(doc(db, "events", ref.id, "members", me.email), {
@@ -101,7 +111,12 @@ export async function setEventStatus(status) {
   await updateDoc(doc(db, "events", reqEid()), { status });
 }
 export async function updateEventDetails(patch, eventId) {
-  await updateDoc(doc(db, "events", eventId || reqEid()), patch);
+  const eid = eventId || reqEid();
+  await updateDoc(doc(db, "events", eid), patch);
+  await writeEventPublic(eid, {
+    name: patch.name || "", place: patch.place || "", dates: patch.dates || "",
+    startsAt: patch.startDate || "", endsAt: patch.endDate || "",
+  });
 }
 
 export function subscribeMembers(cb) {
@@ -168,10 +183,7 @@ export function subscribeBranding(cb) {
     () => cb(null));
 }
 export async function saveBranding({ name, eventLogo, promoters }) {
-  const eid = reqEid();
-  await setDoc(doc(db, "public", `event_${eid}`), {
-    eventId: eid, name: name || "", eventLogo: eventLogo || null, promoters: promoters || [],
-  });
+  await writeEventPublic(reqEid(), { name: name || "", eventLogo: eventLogo || null, promoters: promoters || [] });
 }
 
 // Branding for ALL events (public), keyed by eventId — for logos on event cards.
