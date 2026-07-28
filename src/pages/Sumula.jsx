@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
 import {
   ensureReport, subscribeReport, acquireLock, releaseLock, heartbeat,
-  adminUnlock, saveReport, submitReport,
+  adminUnlock, saveReport, submitReport, fetchTeamRosters,
 } from "../cloud.js";
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
 
@@ -76,6 +76,29 @@ export default function Sumula({ me }) {
 
   const scoring = useMemo(() => computeScore(draft), [draft]);
 
+  // Pull both line-ups fresh from the roster registry (for reports created before
+  // the registry was imported, or to get updated players/photos).
+  async function loadRoster() {
+    if (readOnly) return;
+    const cur = draftRef.current;
+    const map = await fetchTeamRosters([cur.teamA.name, cur.teamB.name]);
+    if (!Object.keys(map).length) { alert("No roster found for these teams. Import players in the Teams page first."); return; }
+    update((n) => {
+      for (const side of ["teamA", "teamB"]) {
+        const r = map[n[side].name];
+        if (!r) continue;
+        n[side].players = (r.players || []).map((p) => ({
+          nr: p.nr, name: p.name, first: p.first, photo: p.photo || "",
+          captain: false, onCourt: true, cards: { y: false, yr: false, r: false },
+        }));
+        n[side].staff = (r.staff || []).map((s) => ({
+          role: s.role, name: s.name, first: s.first, photo: s.photo || "",
+          cards: { y: false, yr: false, r: false },
+        }));
+      }
+    });
+  }
+
   async function downloadPDF() {
     const blob = await pdf(<SumulaPDF draft={draft} />).toBlob();
     const url = URL.createObjectURL(blob);
@@ -126,7 +149,7 @@ export default function Sumula({ me }) {
       <div className="content">
         {section === "info" && <InfoSection d={draft} />}
         {section === "lineup" && (
-          <LineupSection d={draft} team={team} setTeam={setTeam} update={update} />
+          <LineupSection d={draft} team={team} setTeam={setTeam} update={update} loadRoster={loadRoster} readOnly={readOnly} />
         )}
         {section === "score" && <ScoreSection d={draft} scoring={scoring} update={update} />}
         {section === "refs" && <RefsSection d={draft} update={update} />}
@@ -187,7 +210,7 @@ function PlayerAvatar({ src, name }) {
   return <span className="avatar avatar-ph">{(name || "?").trim()[0]}</span>;
 }
 
-function LineupSection({ d, team, setTeam, update }) {
+function LineupSection({ d, team, setTeam, update, loadRoster, readOnly }) {
   const t = d[team];
   const toggleCaptain = (i) =>
     update((n) => n[team].players.forEach((p, j) => (p.captain = j === i ? !p.captain : false)));
@@ -207,7 +230,11 @@ function LineupSection({ d, team, setTeam, update }) {
       </div>
 
       <div className="card">
-        <h2>Players — tap C (captain), OC (on court), or a card</h2>
+        <div className="row-between">
+          <h2 style={{ margin: 0 }}>Players — tap C (captain), OC (on court), or a card</h2>
+          {!readOnly && <button className="btn sm" onClick={loadRoster} title="Fill both line-ups from the Teams registry">↻ Load roster</button>}
+        </div>
+        <div style={{ height: 12 }} />
         {t.players.map((p, i) => (
           <div className="player" key={i}>
             <div className="player-id">

@@ -106,6 +106,16 @@ async function getRoster(teamName) {
   return s.exists() ? s.data() : null;
 }
 
+// Fetch rosters for a set of team names (for the súmula "load roster" button).
+export async function fetchTeamRosters(names) {
+  const out = {};
+  for (const name of [...new Set(names)]) {
+    const r = await getRoster(name);
+    if (r) out[name] = r;
+  }
+  return out;
+}
+
 /* ----------------- games (seeded from the schedule) ----------------- */
 export async function ensureGames() {
   const snap = await getDocs(collection(db, "games"));
@@ -187,6 +197,27 @@ export function subscribeReport(gameId, cb) {
   return onSnapshot(doc(db, "reports", gameId),
     (d) => cb(d.exists() ? d.data() : null),
     (err) => console.warn("report unavailable:", err?.code || err));
+}
+
+// Re-pull both line-ups from the roster registry (for reports created before the
+// registry was imported, or after the roster changed). Replaces players/staff of
+// each side that has a match in `rosters`; resets that side's captain/cards/on-court.
+// Returns { updated: [teamNames...], missing: [teamNames...] }.
+export async function reloadReportRoster(gameId) {
+  const ref = doc(db, "reports", gameId);
+  const snap = await getDoc(ref);
+  const rep = snap.data();
+  if (!rep) return { updated: [], missing: [] };
+  const patch = {};
+  const updated = [], missing = [];
+  for (const side of ["teamA", "teamB"]) {
+    const name = rep[side]?.name;
+    const r = await getRoster(name);
+    if (r) { patch[side] = cloneTeam({ name, players: r.players, staff: r.staff }); updated.push(name); }
+    else if (name) missing.push(name);
+  }
+  if (Object.keys(patch).length) await updateDoc(ref, patch);
+  return { updated, missing };
 }
 
 /* ----------------- locking ----------------- */

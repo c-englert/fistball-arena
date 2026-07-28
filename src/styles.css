@@ -345,3 +345,27 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 /* ---------- Athlete avatars ---------- */
 .avatar { width: 40px; height: 40px; flex: none; border-radius: 50%; object-fit: cover; background: #eef0f6; }
 .avatar-ph { display: grid; place-items: center; font-weight: 800; color: var(--muted); font-size: 16px; text-transform: uppercase; }
+
+/* ---------- Roster volume bar (players ⟵ center ⟶ staff) ---------- */
+.vol-bar { display: flex; align-items: center; margin-top: 10px; height: 8px; }
+.vol-half { flex: 1; display: flex; align-items: center; }
+.vol-half.left { justify-content: flex-end; }
+.vol-half.right { justify-content: flex-start; }
+.vol-fill { height: 8px; border-radius: 4px; min-width: 3px; }
+.vol-fill.players { background: #f2560c; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.vol-fill.staff { background: var(--accent); border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+/* ---------- Person profile card ---------- */
+.roster-row.clickable { cursor: pointer; }
+.roster-row.clickable:hover { background: #f7f8fb; }
+.person-modal { position: relative; max-width: 380px; }
+.modal-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: none; background: #eef0f6; color: var(--muted); font-weight: 800; cursor: pointer; }
+.person-photo { width: 132px; height: 132px; border-radius: 50%; object-fit: cover; margin: 4px auto 12px; display: block; background: #eef0f6; }
+.person-photo-ph { display: grid; place-items: center; font-size: 52px; font-weight: 800; color: var(--muted); text-transform: uppercase; }
+.person-name { margin: 0; font-size: 22px; font-weight: 800; }
+.person-sub { color: var(--muted); margin: 2px 0 16px; }
+.person-facts { display: grid; gap: 2px; text-align: left; }
+.person-fact { display: flex; justify-content: space-between; padding: 9px 4px; border-bottom: 1px solid var(--line); }
+.person-fact:last-child { border-bottom: none; }
+.pf-k { color: var(--muted); }
+.pf-v { font-weight: 700; }

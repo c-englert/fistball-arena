@@ -19,6 +19,7 @@ export default function Roster({ me }) {
   const [tab, setTab] = useState("DB");
   const [status, setStatus] = useState("");
   const [open, setOpen] = useState(null);           // expanded team
+  const [profile, setProfile] = useState(null);     // person card
 
   useEffect(() => subscribeRosters(setRosters), []);
 
@@ -54,6 +55,12 @@ export default function Roster({ me }) {
     const src = rosters || {};
     return Object.keys(src).sort((a, b) => a.localeCompare(b)).map((k) => ({ key: k, ...src[k] }));
   }, [rosters]);
+
+  // Normalise the volume bars against the largest players/staff count across teams.
+  const maxCount = useMemo(
+    () => Math.max(1, ...teams.flatMap((t) => [t.players?.length || 0, t.staff?.length || 0])),
+    [teams]
+  );
 
   return (
     <div className="app">
@@ -97,14 +104,24 @@ export default function Roster({ me }) {
 
         {teams.map((t) => (
           <div className="card" key={t.key}>
-            <button className="row-between roster-head" onClick={() => setOpen(open === t.key ? null : t.key)}>
-              <span className="group-title">{t.name}</span>
-              <span className="muted-sm">{t.players?.length || 0} players · {t.staff?.length || 0} staff {open === t.key ? "▾" : "▸"}</span>
+            <button className="roster-head" onClick={() => setOpen(open === t.key ? null : t.key)}>
+              <div className="row-between">
+                <span className="group-title">{t.name}</span>
+                <span className="muted-sm">{t.players?.length || 0} players · {t.staff?.length || 0} staff {open === t.key ? "▾" : "▸"}</span>
+              </div>
+              <div className="vol-bar" title={`${t.players?.length || 0} players · ${t.staff?.length || 0} staff`}>
+                <div className="vol-half left">
+                  <span className="vol-fill players" style={{ width: ((t.players?.length || 0) / maxCount * 100) + "%" }} />
+                </div>
+                <div className="vol-half right">
+                  <span className="vol-fill staff" style={{ width: ((t.staff?.length || 0) / maxCount * 100) + "%" }} />
+                </div>
+              </div>
             </button>
             {open === t.key && (
               <div style={{ marginTop: 10 }}>
                 {(t.players || []).map((p, i) => (
-                  <div className="roster-row" key={"p" + i}>
+                  <div className="roster-row clickable" key={"p" + i} onClick={() => setProfile({ ...p, team: t.name, kind: "player" })}>
                     <Avatar src={p.photo} name={p.name} />
                     <span className="roster-nr">{p.nr}</span>
                     <span className="roster-name">{p.name} <span className="muted-sm">{p.first}</span></span>
@@ -113,7 +130,7 @@ export default function Roster({ me }) {
                 ))}
                 {(t.staff || []).length > 0 && <div className="subhead">Staff</div>}
                 {(t.staff || []).map((s, i) => (
-                  <div className="roster-row" key={"s" + i}>
+                  <div className="roster-row clickable" key={"s" + i} onClick={() => setProfile({ ...s, team: t.name, kind: "staff" })}>
                     <Avatar src={s.photo} name={s.name} />
                     <span className="roster-nr role">{(s.role || "").split(" ").map((w) => w[0]).join("").slice(0, 3)}</span>
                     <span className="roster-name">{s.name} <span className="muted-sm">{s.first}</span></span>
@@ -124,6 +141,49 @@ export default function Roster({ me }) {
             )}
           </div>
         ))}
+      </div>
+
+      {profile && <PersonModal person={profile} onClose={() => setProfile(null)} />}
+    </div>
+  );
+}
+
+function ageFrom(bday) {
+  const m = String(bday).match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const b = new Date(+m[1], +m[2] - 1, +m[3]);
+  const now = new Date();
+  let a = now.getFullYear() - b.getFullYear();
+  if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) a--;
+  return a >= 0 && a < 120 ? a : null;
+}
+
+function PersonModal({ person, onClose }) {
+  const p = person;
+  const age = ageFrom(p.birthday);
+  const facts = [
+    p.kind === "player" && ["Number", p.nr],
+    [p.kind === "player" ? "Position" : "Role", p.kind === "player" ? p.position : p.role],
+    ["Team", p.team],
+    p.birthday && ["Born", p.birthday + (age != null ? ` (${age})` : "")],
+    p.height && ["Height", p.height + " cm"],
+    p.matches && ["Nat. team caps", p.matches],
+  ].filter(Boolean);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal person-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
+        {p.photo
+          ? <img className="person-photo" src={p.photo} alt="" referrerPolicy="no-referrer" />
+          : <div className="person-photo person-photo-ph">{(p.name || "?").trim()[0]}</div>}
+        <h3 className="person-name">{p.first} {p.name}</h3>
+        <div className="person-sub">{p.kind === "player" ? p.position : p.role} · {p.team}</div>
+        <div className="person-facts">
+          {facts.map(([k, v]) => (
+            <div className="person-fact" key={k}><span className="pf-k">{k}</span><span className="pf-v">{v}</span></div>
+          ))}
+        </div>
+        <p className="muted-sm" style={{ marginTop: 14 }}>Match & card history coming soon.</p>
       </div>
     </div>
   );
