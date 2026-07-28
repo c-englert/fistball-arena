@@ -7,6 +7,7 @@ import {
 } from "../cloud.js";
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
 import { flagFor } from "../flags.js";
+import { useEvent } from "../eventContext.js";
 
 const SECTIONS = [
   ["info", "Info"],
@@ -19,6 +20,7 @@ const SECTIONS = [
 export default function Sumula({ me }) {
   const { id } = useParams();
   const nav = useNavigate();
+  const { eventId, canScore } = useEvent();
   const [draft, setDraft] = useState(null);
   const [lockedBy, setLockedBy] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -30,13 +32,15 @@ export default function Sumula({ me }) {
   const saveTimer = useRef(null);
 
   const iHold = !!lockedBy && lockedBy.uid === me.uid;
-  const readOnly = !iHold || submitted;
+  const readOnly = !iHold || submitted || !canScore;
 
   useEffect(() => {
     let unsub;
     (async () => {
-      await ensureReport(id);
-      await acquireLock(id, me);
+      if (canScore) {
+        await ensureReport(id);
+        await acquireLock(id, me);
+      }
       unsub = subscribeReport(id, (data) => {
         if (!data) return;
         setLockedBy(data.lockedBy || null);
@@ -117,7 +121,7 @@ export default function Sumula({ me }) {
   return (
     <div className="app">
       <header className="topbar">
-        <button className="iconbtn" onClick={() => nav("/")}>‹ Games</button>
+        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
         <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
         <div className="spacer" />
         <div style={{ textAlign: "right" }}>

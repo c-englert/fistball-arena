@@ -4,6 +4,7 @@ import { TEAM_NAMES } from "../seed.js";
 import { generateSchedule } from "../schedule/generator.js";
 import { fetchSheetGames } from "../schedule/importSheet.js";
 import { saveScheduleConfig, subscribeScheduleConfig, publishGames } from "../cloud.js";
+import { useEvent } from "../eventContext.js";
 
 const EVENT_SHEET_ID = "1IWuv2zOZtIJDZCFnItp_z8p546azRGlD8I052jVe8Mk";
 
@@ -39,6 +40,7 @@ const fromISO = (iso) => {
 
 export default function Schedule({ me }) {
   const nav = useNavigate();
+  const { eventId, isAdmin } = useEvent();
   const [config, setConfig] = useState(defaultConfig);
   const [step, setStep] = useState("cats");
   const [result, setResult] = useState(null); // { games, warnings, unplaced }
@@ -55,8 +57,8 @@ export default function Schedule({ me }) {
     return unsub;
   }, [loadedRef]);
 
-  if (!me?.admin) {
-    return <div className="empty">Admins only. <button className="btn" onClick={() => nav("/")}>Back</button></div>;
+  if (!isAdmin) {
+    return <div className="empty">Admins only. <button className="btn" onClick={() => nav(`/e/${eventId}`)}>Back</button></div>;
   }
 
   const patch = (fn) => setConfig((c) => { const n = structuredClone(c); fn(n); return n; });
@@ -114,7 +116,7 @@ export default function Schedule({ me }) {
   return (
     <div className="app">
       <header className="topbar">
-        <button className="iconbtn" onClick={() => nav("/")}>‹ Games</button>
+        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
         <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
         <div className="spacer" />
         <div style={{ textAlign: "right" }}>

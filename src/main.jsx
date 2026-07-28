@@ -1,12 +1,10 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";
-import MatchList from "./pages/MatchList.jsx";
-import Sumula from "./pages/Sumula.jsx";
+import EventPicker from "./EventPicker.jsx";
+import EventShell from "./EventShell.jsx";
 import Identity from "./pages/Identity.jsx";
-import Schedule from "./pages/Schedule.jsx";
-import Roster from "./pages/Roster.jsx";
-import { onMe, signOutMe, ensureGames } from "./cloud.js";
+import { onMe, signOutMe } from "./cloud.js";
 import "./styles.css";
 
 function Root() {
@@ -18,8 +16,6 @@ function Root() {
     return unsub;
   }, []);
 
-  useEffect(() => { if (me) ensureGames(); }, [me]);
-
   if (!ready || me === undefined) return <div className="empty">Loading…</div>;
   if (!me) return <Identity />;
 
@@ -28,10 +24,8 @@ function Root() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<MatchList me={me} onSignOut={signOut} />} />
-        <Route path="/game/:id" element={<Sumula me={me} />} />
-        <Route path="/schedule" element={<Schedule me={me} />} />
-        <Route path="/roster" element={<Roster me={me} />} />
+        <Route path="/" element={<EventPicker me={me} onSignOut={signOut} />} />
+        <Route path="/e/:eventId/*" element={<EventShell me={me} onSignOut={signOut} />} />
       </Routes>
     </HashRouter>
   );

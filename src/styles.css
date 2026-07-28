@@ -373,3 +373,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 /* ---------- Team flags ---------- */
 .flag { margin-right: 6px; }
 .flag:empty { margin: 0; }
+
+/* ---------- Archived badge / match state ---------- */
+.arch-badge { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: #fde8e8; color: var(--r); padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
+.state.progress { background: #fff2cc; color: #8a6d00; }

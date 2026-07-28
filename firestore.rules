@@ -2,44 +2,74 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Any signed-in Google user is a valid participant for now.
-    // Per-event membership + roles (official / viewer) come in a later phase.
-    function signedIn() {
-      return request.auth != null;
+    function signedIn() { return request.auth != null; }
+    function email() { return request.auth.token.email; }
+
+    // Org-admins (mirror of ORG_ADMINS in src/cloud.js).
+    function isOrgAdmin() {
+      return signedIn() && email() in [
+        'claudio.englert@gmail.com',
+        'claudio@qualitin.com',
+        'gastaoenglert@gmail.com'
+      ];
     }
 
-    // Games (schedule) — everyone signed in can read; seeding writes allowed
-    // while there is no admin console yet. Tighten to admin-only later.
-    match /games/{gameId} {
-      allow read: if signedIn();
-      allow write: if signedIn();
+    function memberPath(eventId) {
+      return /databases/$(database)/documents/events/$(eventId)/members/$(email());
+    }
+    function isMember(eventId) {
+      return signedIn() && exists(memberPath(eventId));
+    }
+    // Null-safe: only get() after exists() confirmed the member doc.
+    function memberRole(eventId) {
+      return isMember(eventId) ? get(memberPath(eventId)).data.role : null;
+    }
+    function isEventAdmin(eventId) { return memberRole(eventId) == 'admin'; }
+    function canWriteReports(eventId) { return memberRole(eventId) in ['admin', 'official']; }
+
+    function eventPath(eventId) { return /databases/$(database)/documents/events/$(eventId); }
+    function isActive(eventId) {
+      return exists(eventPath(eventId)) && get(eventPath(eventId)).data.status == 'active';
     }
 
-    // Reports (súmulas) — signed-in users read all (for the live list) and
-    // write. Lock discipline is enforced in the app via a transaction; server
-    // rules keep it to authenticated users.
-    match /reports/{gameId} {
-      allow read: if signedIn();
-      allow write: if signedIn();
-    }
+    match /events/{eventId} {
+      allow read: if isOrgAdmin() || isMember(eventId);
+      allow create: if isOrgAdmin()
+                    && request.resource.data.status in ['active', 'archived']
+                    && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isOrgAdmin() || (isEventAdmin(eventId) && resource.data.status == 'active');
+      allow delete: if isOrgAdmin();
 
-    // Results — public scoreboard projection read by the Fistball Live
-    // spectator app (no login). Only signed-in scorers write it (via the app).
-    match /results/{gameId} {
-      allow read: if true;
-      allow write: if signedIn();
-    }
+      match /members/{memberEmail} {
+        allow read: if isOrgAdmin() || isEventAdmin(eventId) || (signedIn() && memberEmail == email());
+        allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
+      }
 
-    // Meta — shared admin config (e.g. the schedule-generator setup).
-    match /meta/{doc} {
-      allow read: if signedIn();
-      allow write: if signedIn();
-    }
+      match /games/{gameId} {
+        allow read: if isOrgAdmin() || isMember(eventId);
+        allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
+      }
+      match /rosters/{rosterId} {
+        allow read: if isOrgAdmin() || isMember(eventId);
+        allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
+      }
+      match /meta/{docId} {
+        allow read: if isOrgAdmin() || isMember(eventId);
+        allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
+      }
 
-    // Rosters — players & staff registry per team.
-    match /rosters/{teamId} {
-      allow read: if signedIn();
-      allow write: if signedIn();
+      // Reports (súmulas): official OR admin OR org-admin, AND event active.
+      // No report writes when archived — for anyone.
+      match /reports/{gameId} {
+        allow read: if isOrgAdmin() || isMember(eventId);
+        allow write: if isActive(eventId) && (isOrgAdmin() || canWriteReports(eventId));
+      }
+
+      // Results: PUBLIC read (spectator app, no login); official/admin write.
+      match /results/{gameId} {
+        allow read: if true;
+        allow write: if isOrgAdmin() || (canWriteReports(eventId) && isActive(eventId));
+      }
     }
   }
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { subscribeGames, subscribeReports, adminUnlock } from "../cloud.js";
 import { flagFor } from "../flags.js";
+import { useEvent } from "../eventContext.js";
 
 function parseDate(s) {
   const [d, m, y] = String(s).split("/").map(Number);
@@ -16,6 +17,8 @@ function dayLabel(s) {
 
 export default function MatchList({ me, onSignOut }) {
   const nav = useNavigate();
+  const { eventId, event, isAdmin, archived } = useEvent();
+  const base = `/e/${eventId}`;
   const [games, setGames] = useState([]);
   const [reports, setReports] = useState({});
   const [court, setCourt] = useState(() => localStorage.getItem("fb_court") || "all");
@@ -46,16 +49,17 @@ export default function MatchList({ me, onSignOut }) {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand-logo"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
+        <a className="brand-logo" href="#/" title="Switch event"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></a>
         <div>
-          <div className="title">Fistball Arena</div>
-          <div className="sub">Game reports · U18 WC &amp; Women's EFA 2026</div>
+          <div className="title">{event?.name || "Fistball Arena"}{archived && <span className="arch-badge">Archived</span>}</div>
+          <div className="sub">{[event?.place, event?.dates].filter(Boolean).join(" · ") || "Game reports"}</div>
         </div>
         <div className="spacer" />
-        {me.admin && <Link className="iconbtn" to="/roster" title="Players & staff">Teams</Link>}
-        {me.admin && <Link className="iconbtn" to="/schedule" title="Schedule generator">Schedule</Link>}
-        <button className="iconbtn" onClick={onSignOut} title="Switch user">
-          {me.name}{me.admin ? " · admin" : ""}
+        {isAdmin && <Link className="iconbtn" to={`${base}/roster`} title="Players & staff">Teams</Link>}
+        {isAdmin && <Link className="iconbtn" to={`${base}/schedule`} title="Schedule generator">Schedule</Link>}
+        {isAdmin && <Link className="iconbtn" to={`${base}/members`} title="Members & access">Members</Link>}
+        <button className="iconbtn" onClick={onSignOut} title="Sign out">
+          {me.name}{me.admin ? " · org-admin" : ""}
         </button>
       </header>
 
@@ -84,9 +88,9 @@ export default function MatchList({ me, onSignOut }) {
           const stateLabel = st === "submitted" ? "Submitted"
             : inProgress ? `In progress · ${locked?.name || "…"}`
             : "Not started";
-          const canUnlock = me.admin && locked && locked.uid !== me.uid && st !== "submitted";
+          const canUnlock = isAdmin && !archived && locked && locked.uid !== me.uid && st !== "submitted";
           return (
-            <div className="match-card" key={m.id} onClick={() => nav(`/game/${m.id}`)}>
+            <div className="match-card" key={m.id} onClick={() => nav(`${base}/game/${m.id}`)}>
               <div className="mc-top">
                 <span className="tag">#{m.nr}</span>
                 <span className="tag day">{dayLabel(m.date)}</span>

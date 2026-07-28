@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchRosters } from "../roster/importRoster.js";
 import { subscribeRosters, publishRosters } from "../cloud.js";
 import { flagFor } from "../flags.js";
+import { useEvent } from "../eventContext.js";
 
 const DB_SHEET_ID = "1og9dwLSgjdlozwb79R0Au1s48etQKlVf1EHILRyyhxM";
 
@@ -14,6 +15,7 @@ function Avatar({ src, name }) {
 
 export default function Roster({ me }) {
   const nav = useNavigate();
+  const { eventId, isAdmin } = useEvent();
   const [rosters, setRosters] = useState(null);   // live registry from Firestore
   const [preview, setPreview] = useState(null);     // parsed import { rosters, teamCount, count, warnings }
   const [sheetId, setSheetId] = useState(DB_SHEET_ID);
@@ -24,8 +26,8 @@ export default function Roster({ me }) {
 
   useEffect(() => subscribeRosters(setRosters), []);
 
-  if (!me?.admin) {
-    return <div className="empty">Admins only. <button className="btn" onClick={() => nav("/")}>Back</button></div>;
+  if (!isAdmin) {
+    return <div className="empty">Admins only. <button className="btn" onClick={() => nav(`/e/${eventId}`)}>Back</button></div>;
   }
 
   const doImport = async () => {
@@ -66,7 +68,7 @@ export default function Roster({ me }) {
   return (
     <div className="app">
       <header className="topbar">
-        <button className="iconbtn" onClick={() => nav("/")}>‹ Games</button>
+        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
         <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
         <div className="spacer" />
         <div style={{ textAlign: "right" }}>
