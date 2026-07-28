@@ -45,6 +45,7 @@ export default function Schedule({ me }) {
   const [replaceAll, setReplaceAll] = useState(true);
   const [status, setStatus] = useState("");
   const [sheetId, setSheetId] = useState(EVENT_SHEET_ID);
+  const [confirm, setConfirm] = useState(null); // { title, message, danger, okLabel, onOk }
   const loadedRef = useState({ done: false })[0];
 
   useEffect(() => {
@@ -85,20 +86,29 @@ export default function Schedule({ me }) {
     }
   };
 
-  const doPublish = async () => {
-    if (!result?.games.length) return;
-    const msg = replaceAll
-      ? "Replace ALL existing games, reports and results with the generated schedule? This cannot be undone."
-      : `Add ${result.games.length} generated games to the database?`;
-    if (!window.confirm(msg)) return;
+  const runPublish = async () => {
+    setConfirm(null);
     setStatus("Publishing…");
     try {
-      await saveScheduleConfig(config);
+      try { await saveScheduleConfig(config); } catch (_) { /* meta rules optional */ }
       await publishGames(result.games, { replaceAll });
       setStatus(`Published ${result.games.length} games. Open the games list to see them.`);
     } catch (e) {
       setStatus("Publish failed: " + (e?.message || e));
     }
+  };
+
+  const doPublish = () => {
+    if (!result?.games.length) return;
+    setConfirm({
+      title: replaceAll ? "Replace the whole schedule?" : "Publish games?",
+      message: replaceAll
+        ? `This replaces ALL current games, reports and results with the ${result.games.length} matches below. Existing súmulas and scores will be deleted. This cannot be undone.`
+        : `Add ${result.games.length} games to the database.`,
+      danger: replaceAll,
+      okLabel: replaceAll ? "Replace all" : "Publish",
+      onOk: runPublish,
+    });
   };
 
   return (
@@ -137,6 +147,27 @@ export default function Schedule({ me }) {
           {step !== "preview"
             ? <button className="btn primary" onClick={() => setStep(STEPS[STEPS.findIndex(s => s[0] === step) + 1][0])}>Next ›</button>
             : <button className="btn primary" onClick={generate}>Generate</button>}
+        </div>
+      </div>
+
+      {confirm && <ConfirmModal confirm={confirm} onClose={() => setConfirm(null)} />}
+    </div>
+  );
+}
+
+/* ---------------- confirm modal ---------------- */
+function ConfirmModal({ confirm, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        {confirm.danger && <div className="modal-icon">⚠️</div>}
+        <h3 className="modal-title">{confirm.title}</h3>
+        <p className="modal-msg">{confirm.message}</p>
+        <div className="modal-actions">
+          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className={`btn ${confirm.danger ? "danger-solid" : "primary"}`} onClick={confirm.onOk} autoFocus>
+            {confirm.okLabel || "Confirm"}
+          </button>
         </div>
       </div>
     </div>
