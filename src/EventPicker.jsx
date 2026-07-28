@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listMyEvents, createEvent, subscribeLivePointer, setLiveEvent, clearLiveEvent, subscribeAllBranding } from "./cloud.js";
+import { listMyEvents, createEvent, subscribeLivePointer, setLiveEvent, clearLiveEvent, subscribeAllBranding, updateEventDetails } from "./cloud.js";
 import AccountMenu from "./AccountMenu.jsx";
 import { formatRange } from "./dates.js";
 
@@ -20,6 +20,13 @@ export default function EventPicker({ me, onSignOut }) {
 
   const shown = (events || []).filter((e) => (tab === "archived" ? e.status === "archived" : e.status !== "archived"));
   const canManageLive = (ev) => me.admin || ev.myRole === "admin";
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: "", place: "", startDate: "", endDate: "" });
+  const startEdit = (ev) => { setEditId(ev.id); setEditForm({ name: ev.name || "", place: ev.place || "", startDate: ev.startDate || "", endDate: ev.endDate || "" }); };
+  const saveEdit = async () => {
+    try { await updateEventDetails({ ...editForm, dates: formatRange(editForm.startDate, editForm.endDate) }, editId); setEditId(null); }
+    catch (e) { alert("Failed: " + (e?.message || e)); }
+  };
   const toggleLive = async (ev, isLive) => {
     try { if (isLive) { if (window.confirm("Remove this event from Fistball Live?")) await clearLiveEvent(); } else await setLiveEvent(ev); }
     catch (e) { alert("Failed: " + (e?.message || e)); }
@@ -85,29 +92,49 @@ export default function EventPicker({ me, onSignOut }) {
         )}
         {shown.map((ev) => {
           const isLive = live?.eventId === ev.id;
+          const editing = editId === ev.id;
+          const canEdit = (me.admin || ev.myRole === "admin") && ev.status !== "archived";
           return (
-            <div className="match-card" key={ev.id} onClick={() => nav(`/e/${ev.id}`)} style={{ cursor: "pointer" }}>
+            <div className="match-card" key={ev.id} onClick={() => !editing && nav(`/e/${ev.id}`)} style={{ cursor: editing ? "default" : "pointer" }}>
               <div className="mc-top">
                 <span className={`state ${ev.status === "archived" ? "none" : "submitted"}`}>{ev.status === "archived" ? "Archived" : "Active"}</span>
                 <span className="tag">{ev.myRole}</span>
                 {isLive && <span className="tag live-tag">● On Fistball Live</span>}
                 <span className="spacer" style={{ flex: 1 }} />
-                {canManageLive(ev) && (
+                {!editing && canEdit && <button className="btn sm" onClick={(e) => { e.stopPropagation(); startEdit(ev); }}>Edit</button>}
+                {!editing && canManageLive(ev) && (
                   <button className={`btn sm ${isLive ? "danger" : ""}`} onClick={(e) => { e.stopPropagation(); toggleLive(ev, isLive); }}>
                     {isLive ? "Remove from Live" : "Show on Live"}
                   </button>
                 )}
               </div>
-              <div className="ev-body">
-                {brandings[ev.id]?.eventLogo?.dataUrl && <img className="ev-logo" src={brandings[ev.id].eventLogo.dataUrl} alt="" />}
-                <div style={{ minWidth: 0 }}>
-                  <div className="mc-teams" style={{ fontSize: 20 }}>{ev.name}</div>
-                  <div className="muted-sm">{[ev.place, ev.dates].filter(Boolean).join(" · ")}</div>
-                  <div className="ev-promos">
-                    {(brandings[ev.id]?.promoters || []).slice(0, 4).map((p, i) => <img key={i} src={p.dataUrl} alt="" />)}
+
+              {editing ? (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <div className="field"><span>Name</span><input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></div>
+                  <div className="field"><span>Place</span><input value={editForm.place} onChange={(e) => setEditForm({ ...editForm, place: e.target.value })} placeholder="City · Country" /></div>
+                  <div className="grid2">
+                    <div className="field"><span>Starts</span><input type="date" value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value, endDate: editForm.endDate && editForm.endDate < e.target.value ? e.target.value : editForm.endDate })} /></div>
+                    <div className="field"><span>Ends</span><input type="date" min={editForm.startDate || undefined} value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} /></div>
+                  </div>
+                  {(editForm.startDate || editForm.endDate) && <p className="muted-sm">{formatRange(editForm.startDate, editForm.endDate)}</p>}
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button className="btn" onClick={() => setEditId(null)}>Cancel</button>
+                    <button className="btn primary" onClick={saveEdit}>Save</button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="ev-body">
+                  {brandings[ev.id]?.eventLogo?.dataUrl && <img className="ev-logo" src={brandings[ev.id].eventLogo.dataUrl} alt="" />}
+                  <div style={{ minWidth: 0 }}>
+                    <div className="mc-teams" style={{ fontSize: 20 }}>{ev.name}</div>
+                    <div className="muted-sm">{[ev.place, ev.dates].filter(Boolean).join(" · ")}</div>
+                    <div className="ev-promos">
+                      {(brandings[ev.id]?.promoters || []).slice(0, 4).map((p, i) => <img key={i} src={p.dataUrl} alt="" />)}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

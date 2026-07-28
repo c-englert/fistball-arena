@@ -100,8 +100,8 @@ export function subscribeEvent(cb) {
 export async function setEventStatus(status) {
   await updateDoc(doc(db, "events", reqEid()), { status });
 }
-export async function updateEventDetails(patch) {
-  await updateDoc(doc(db, "events", reqEid()), patch);
+export async function updateEventDetails(patch, eventId) {
+  await updateDoc(doc(db, "events", eventId || reqEid()), patch);
 }
 
 export function subscribeMembers(cb) {
