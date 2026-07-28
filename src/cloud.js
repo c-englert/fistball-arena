@@ -21,7 +21,7 @@ export function isOrgAdmin(email) {
 function toMe(user) {
   if (!user) return null;
   const email = (user.email || "").toLowerCase();
-  return { uid: user.uid, name: user.displayName || email || "User", email, admin: isOrgAdmin(email) };
+  return { uid: user.uid, name: user.displayName || email || "User", email, photo: user.photoURL || "", admin: isOrgAdmin(email) };
 }
 
 export function onMe(cb) {

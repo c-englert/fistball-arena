@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchRosters } from "../roster/importRoster.js";
-import { subscribeRosters, publishRosters } from "../cloud.js";
+import { subscribeRosters, publishRosters, addMember } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 
@@ -146,7 +146,7 @@ export default function Roster({ me }) {
         ))}
       </div>
 
-      {profile && <PersonModal person={profile} onClose={() => setProfile(null)} />}
+      {profile && <PersonModal person={profile} onClose={() => setProfile(null)} me={me} isAdmin={isAdmin} />}
     </div>
   );
 }
@@ -161,9 +161,22 @@ function ageFrom(bday) {
   return a >= 0 && a < 120 ? a : null;
 }
 
-function PersonModal({ person, onClose }) {
+function PersonModal({ person, onClose, me, isAdmin }) {
   const p = person;
   const age = ageFrom(p.birthday);
+  const [grant, setGrant] = useState({ email: "", role: "official" });
+  const [granting, setGranting] = useState(false);
+  const [granted, setGranted] = useState("");
+  const authorize = async () => {
+    if (!grant.email.trim()) return;
+    setGranting(true);
+    try {
+      await addMember({ email: grant.email, name: `${p.first} ${p.name}`.trim(), role: grant.role }, me);
+      setGranted(`${grant.email} authorized as ${grant.role}.`);
+      setGrant({ email: "", role: "official" });
+    } catch (e) { setGranted("Failed: " + (e?.message || e)); }
+    setGranting(false);
+  };
   const facts = [
     p.kind === "player" && ["Number", p.nr],
     [p.kind === "player" ? "Position" : "Role", p.kind === "player" ? p.position : p.role],
@@ -187,6 +200,21 @@ function PersonModal({ person, onClose }) {
           ))}
         </div>
         <p className="muted-sm" style={{ marginTop: 14 }}>Match & card history coming soon.</p>
+
+        {isAdmin && (
+          <div className="person-grant">
+            <div className="subhead">Give access</div>
+            <p className="muted-sm">Authorize this person as a member of the event.</p>
+            <div className="add-row" style={{ flexWrap: "wrap" }}>
+              <input style={{ flex: "2 1 160px" }} value={grant.email} onChange={(e) => setGrant({ ...grant, email: e.target.value })} placeholder="email@example.com" />
+              <select value={grant.role} onChange={(e) => setGrant({ ...grant, role: e.target.value })}>
+                <option value="admin">admin</option><option value="official">official</option><option value="viewer">viewer</option>
+              </select>
+              <button className="btn primary" disabled={granting || !grant.email.trim()} onClick={authorize}>Authorize</button>
+            </div>
+            {granted && <p className="muted-sm">{granted}</p>}
+          </div>
+        )}
       </div>
     </div>
   );

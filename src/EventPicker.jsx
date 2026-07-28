@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listMyEvents, createEvent } from "./cloud.js";
+import AccountMenu from "./AccountMenu.jsx";
 
 export default function EventPicker({ me, onSignOut }) {
   const nav = useNavigate();
@@ -32,7 +33,7 @@ export default function EventPicker({ me, onSignOut }) {
           <div className="sub">Choose an event</div>
         </div>
         <div className="spacer" />
-        <button className="iconbtn" onClick={onSignOut} title="Sign out">{me.name}{me.admin ? " · org-admin" : ""}</button>
+        <AccountMenu me={me} onSignOut={onSignOut} />
       </header>
 
       <div className="content">

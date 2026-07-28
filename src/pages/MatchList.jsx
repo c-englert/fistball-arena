@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { subscribeGames, subscribeReports, adminUnlock } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
+import AccountMenu from "../AccountMenu.jsx";
 
 function ManageMenu({ base }) {
   const [open, setOpen] = useState(false);
@@ -84,9 +85,7 @@ export default function MatchList({ me, onSignOut }) {
         </div>
         <div className="spacer" />
         {isAdmin && <ManageMenu base={base} />}
-        <button className="iconbtn" onClick={onSignOut} title="Sign out">
-          {me.name}{me.admin ? " · org-admin" : ""}
-        </button>
+        <AccountMenu me={me} onSignOut={onSignOut} />
       </header>
 
       <div className="filter-bar">
