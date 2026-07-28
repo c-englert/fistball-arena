@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { subscribeMembers, addMember, removeMember, setEventStatus } from "../cloud.js";
+import { subscribeMembers, addMember, removeMember, setEventStatus,
+  subscribeLivePointer, setLiveEvent, clearLiveEvent } from "../cloud.js";
 import { useEvent } from "../eventContext.js";
 
 const ROLES = ["admin", "official", "viewer"];
@@ -11,8 +12,10 @@ export default function Members({ me }) {
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState({ email: "", name: "", role: "official" });
   const [status, setStatus] = useState("");
+  const [live, setLive] = useState(undefined); // public live pointer
 
   useEffect(() => subscribeMembers(setMembers), [eventId]);
+  useEffect(() => subscribeLivePointer(setLive), []);
 
   if (!isAdmin) return <div className="empty">Admins only.</div>;
 
@@ -25,6 +28,13 @@ export default function Members({ me }) {
   const remove = async (email) => {
     if (!window.confirm(`Remove ${email} from this event?`)) return;
     try { await removeMember(email); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+  };
+  const publishLive = async () => {
+    try { await setLiveEvent(event); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+  };
+  const stopLive = async () => {
+    if (!window.confirm("Stop showing this event on Fistball Live?")) return;
+    try { await clearLiveEvent(); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
   };
   const toggleArchive = async () => {
     const next = archived ? "active" : "archived";
@@ -52,6 +62,21 @@ export default function Members({ me }) {
             <button className={`btn ${archived ? "primary" : "danger"}`} onClick={toggleArchive}>
               {archived ? "Re-activate" : "Archive"}
             </button>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="row-between">
+            <div><h2 style={{ margin: 0 }}>Fistball Live</h2>
+              <p className="muted-sm">
+                {live === undefined ? "Checking…"
+                  : live?.eventId === eventId ? "✅ This event is showing on the public scoreboard."
+                  : live?.eventId ? `Another event is live: “${live.name || live.eventId}”.`
+                  : "No event is on the public scoreboard yet."}
+              </p></div>
+            {live?.eventId === eventId
+              ? <button className="btn danger" onClick={stopLive}>Stop showing</button>
+              : <button className="btn primary" onClick={publishLive}>{live?.eventId ? "Show this instead" : "Publish to Live"}</button>}
           </div>
         </div>
 

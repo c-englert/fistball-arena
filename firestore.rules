@@ -32,6 +32,14 @@ service cloud.firestore {
       return exists(eventPath(eventId)) && get(eventPath(eventId)).data.status == 'active';
     }
 
+    // Public "which event is on Fistball Live" pointer. Anyone reads (spectator
+    // app, no login); an admin of the target event (or org-admin) writes it.
+    match /public/{docId} {
+      allow read: if true;
+      allow create, update: if isOrgAdmin() || isEventAdmin(request.resource.data.eventId);
+      allow delete: if isOrgAdmin() || isEventAdmin(resource.data.eventId);
+    }
+
     match /events/{eventId} {
       allow read: if isOrgAdmin() || isMember(eventId);
       allow create: if isOrgAdmin()

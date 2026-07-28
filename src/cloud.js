@@ -125,6 +125,23 @@ export function subscribeMyRole(me, cb) {
     () => cb(null));
 }
 
+/* ----------------- Fistball Live pointer -----------------
+ * A single PUBLIC doc telling the spectator app which event to show. Read
+ * anonymously by Fistball Live; written by an admin of that event (or org-admin). */
+export function subscribeLivePointer(cb) {
+  return onSnapshot(doc(db, "public", "live"),
+    (d) => cb(d.exists() ? d.data() : null),
+    (err) => { console.warn("live pointer unavailable:", err?.code || err); cb(null); });
+}
+export async function setLiveEvent(event) {
+  await setDoc(doc(db, "public", "live"), {
+    eventId: reqEid(), name: event?.name || "", updatedAt: serverTimestamp(),
+  });
+}
+export async function clearLiveEvent() {
+  await deleteDoc(doc(db, "public", "live"));
+}
+
 /* ----------------- schedule generator config ----------------- */
 export function subscribeScheduleConfig(cb) {
   return onSnapshot(edoc("meta", "schedule"),
