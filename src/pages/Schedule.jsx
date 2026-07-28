@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TEAM_NAMES } from "../seed.js";
 import { generateSchedule } from "../schedule/generator.js";
+import { fetchSheetGames } from "../schedule/importSheet.js";
 import { saveScheduleConfig, subscribeScheduleConfig, publishGames } from "../cloud.js";
+
+const EVENT_SHEET_ID = "1IWuv2zOZtIJDZCFnItp_z8p546azRGlD8I052jVe8Mk";
 
 const STEPS = [
   ["cats", "Groups"],
@@ -41,6 +44,7 @@ export default function Schedule({ me }) {
   const [result, setResult] = useState(null); // { games, warnings, unplaced }
   const [replaceAll, setReplaceAll] = useState(true);
   const [status, setStatus] = useState("");
+  const [sheetId, setSheetId] = useState(EVENT_SHEET_ID);
   const loadedRef = useState({ done: false })[0];
 
   useEffect(() => {
@@ -66,6 +70,19 @@ export default function Schedule({ me }) {
     const r = generateSchedule(config);
     setResult(r);
     setStatus(`${r.games.length} match(es) generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
+  };
+
+  const doImport = async () => {
+    setStatus("Reading spreadsheet…");
+    try {
+      const id = sheetId.match(/[-\w]{25,}/)?.[0] || sheetId.trim(); // accept a full URL or a bare id
+      const r = await fetchSheetGames(id, "0");
+      setResult(r);
+      setStep("preview");
+      setStatus(`Imported ${r.games.length} match(es) from the sheet.`);
+    } catch (e) {
+      setStatus("Import failed: " + (e?.message || e));
+    }
   };
 
   const doPublish = async () => {
@@ -108,7 +125,8 @@ export default function Schedule({ me }) {
         {step === "slots" && <SlotsStep config={config} patch={patch} />}
         {step === "preview" && (
           <PreviewStep config={config} result={result} generate={generate}
-            replaceAll={replaceAll} setReplaceAll={setReplaceAll} doPublish={doPublish} />
+            replaceAll={replaceAll} setReplaceAll={setReplaceAll} doPublish={doPublish}
+            sheetId={sheetId} setSheetId={setSheetId} doImport={doImport} />
         )}
       </div>
 
@@ -252,7 +270,7 @@ function SlotsStep({ config, patch }) {
 }
 
 /* ---------------- Step 4: preview & publish ---------------- */
-function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPublish }) {
+function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPublish, sheetId, setSheetId, doImport }) {
   const byDay = useMemo(() => {
     if (!result) return [];
     const map = new Map();
@@ -263,11 +281,20 @@ function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPu
   return (
     <>
       <div className="card">
+        <h2>Import existing schedule from a Google Sheet</h2>
+        <p className="muted-sm">Loads the real matchups, days, times and courts as-is (recommended for an event already planned in a sheet).</p>
+        <div className="add-row" style={{ marginTop: 8 }}>
+          <input value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder="Sheet URL or ID" />
+          <button className="btn primary" onClick={doImport}>Import</button>
+        </div>
+      </div>
+
+      <div className="card">
         <div className="row-between">
           <h2 style={{ margin: 0 }}>Preview</h2>
           <button className="btn" onClick={generate}>{result ? "Regenerate" : "Generate"}</button>
         </div>
-        {!result && <p className="muted-sm">Press Generate to build the schedule from your setup.</p>}
+        {!result && <p className="muted-sm">Import above, or press Generate to build from your group setup.</p>}
         {result?.warnings?.length > 0 && (
           <div className="warn-box">
             {result.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
