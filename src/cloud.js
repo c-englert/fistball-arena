@@ -178,8 +178,9 @@ export function subscribeLivePointer(cb) {
     (err) => { console.warn("live pointer unavailable:", err?.code || err); cb(null); });
 }
 export async function setLiveEvent(event) {
+  const eid = event?.id || reqEid();
   await setDoc(doc(db, "public", "live"), {
-    eventId: reqEid(), name: event?.name || "", updatedAt: serverTimestamp(),
+    eventId: eid, name: event?.name || "", updatedAt: serverTimestamp(),
   });
 }
 export async function clearLiveEvent() {

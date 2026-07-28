@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listMyEvents, createEvent } from "./cloud.js";
+import { listMyEvents, createEvent, subscribeLivePointer, setLiveEvent, clearLiveEvent } from "./cloud.js";
 import AccountMenu from "./AccountMenu.jsx";
 
 export default function EventPicker({ me, onSignOut }) {
@@ -9,8 +9,18 @@ export default function EventPicker({ me, onSignOut }) {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", place: "", dates: "" });
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("active");
+  const [live, setLive] = useState(null);
 
   useEffect(() => listMyEvents(me, setEvents), [me]);
+  useEffect(() => subscribeLivePointer(setLive), []);
+
+  const shown = (events || []).filter((e) => (tab === "archived" ? e.status === "archived" : e.status !== "archived"));
+  const canManageLive = (ev) => me.admin || ev.myRole === "admin";
+  const toggleLive = async (ev, isLive) => {
+    try { if (isLive) { if (window.confirm("Remove this event from Fistball Live?")) await clearLiveEvent(); } else await setLiveEvent(ev); }
+    catch (e) { alert("Failed: " + (e?.message || e)); }
+  };
 
   const create = async () => {
     if (!form.name.trim()) return;
@@ -58,20 +68,35 @@ export default function EventPicker({ me, onSignOut }) {
           </div>
         )}
 
+        <div className="filter-bar" style={{ padding: "0 0 12px" }}>
+          <button className={`filter-pill ${tab === "active" ? "active" : ""}`} onClick={() => setTab("active")}>Active &amp; upcoming</button>
+          <button className={`filter-pill ${tab === "archived" ? "active" : ""}`} onClick={() => setTab("archived")}>Archived</button>
+        </div>
+
         {events === null && <div className="empty">Loading events…</div>}
-        {events !== null && events.length === 0 && (
-          <div className="empty">{me.admin ? "No events yet — create one above." : "You're not a member of any event yet. Ask an organizer to add you."}</div>
+        {events !== null && shown.length === 0 && (
+          <div className="empty">{tab === "archived" ? "No archived events." : me.admin ? "No active events — create one above." : "You're not a member of any active event yet."}</div>
         )}
-        {(events || []).map((ev) => (
-          <button className="match-card" key={ev.id} onClick={() => nav(`/e/${ev.id}`)} style={{ textAlign: "left", width: "100%", cursor: "pointer" }}>
-            <div className="mc-top">
-              <span className={`state ${ev.status === "archived" ? "none" : "submitted"}`}>{ev.status === "archived" ? "Archived" : "Active"}</span>
-              <span className="tag">{ev.myRole}</span>
+        {shown.map((ev) => {
+          const isLive = live?.eventId === ev.id;
+          return (
+            <div className="match-card" key={ev.id} onClick={() => nav(`/e/${ev.id}`)} style={{ cursor: "pointer" }}>
+              <div className="mc-top">
+                <span className={`state ${ev.status === "archived" ? "none" : "submitted"}`}>{ev.status === "archived" ? "Archived" : "Active"}</span>
+                <span className="tag">{ev.myRole}</span>
+                {isLive && <span className="tag live-tag">● On Fistball Live</span>}
+                <span className="spacer" style={{ flex: 1 }} />
+                {canManageLive(ev) && (
+                  <button className={`btn sm ${isLive ? "danger" : ""}`} onClick={(e) => { e.stopPropagation(); toggleLive(ev, isLive); }}>
+                    {isLive ? "Remove from Live" : "Show on Live"}
+                  </button>
+                )}
+              </div>
+              <div className="mc-teams" style={{ fontSize: 20 }}>{ev.name}</div>
+              <div className="muted-sm">{[ev.place, ev.dates].filter(Boolean).join(" · ")}</div>
             </div>
-            <div className="mc-teams" style={{ fontSize: 20 }}>{ev.name}</div>
-            <div className="muted-sm">{[ev.place, ev.dates].filter(Boolean).join(" · ")}</div>
-          </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
