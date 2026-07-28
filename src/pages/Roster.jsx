@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchRosters } from "../roster/importRoster.js";
 import { subscribeRosters, publishRosters } from "../cloud.js";
+import { flagFor } from "../flags.js";
 
 const DB_SHEET_ID = "1og9dwLSgjdlozwb79R0Au1s48etQKlVf1EHILRyyhxM";
 
@@ -106,7 +107,7 @@ export default function Roster({ me }) {
           <div className="card" key={t.key}>
             <button className="roster-head" onClick={() => setOpen(open === t.key ? null : t.key)}>
               <div className="row-between">
-                <span className="group-title">{t.name}</span>
+                <span className="group-title"><span className="flag">{flagFor(t.name)}</span>{t.name}</span>
                 <span className="muted-sm">{t.players?.length || 0} players · {t.staff?.length || 0} staff {open === t.key ? "▾" : "▸"}</span>
               </div>
               <div className="vol-bar" title={`${t.players?.length || 0} players · ${t.staff?.length || 0} staff`}>
@@ -177,7 +178,7 @@ function PersonModal({ person, onClose }) {
           ? <img className="person-photo" src={p.photo} alt="" referrerPolicy="no-referrer" />
           : <div className="person-photo person-photo-ph">{(p.name || "?").trim()[0]}</div>}
         <h3 className="person-name">{p.first} {p.name}</h3>
-        <div className="person-sub">{p.kind === "player" ? p.position : p.role} · {p.team}</div>
+        <div className="person-sub">{p.kind === "player" ? p.position : p.role} · <span className="flag">{flagFor(p.team)}</span>{p.team}</div>
         <div className="person-facts">
           {facts.map(([k, v]) => (
             <div className="person-fact" key={k}><span className="pf-k">{k}</span><span className="pf-v">{v}</span></div>

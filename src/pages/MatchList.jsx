@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { subscribeGames, subscribeReports, adminUnlock } from "../cloud.js";
+import { flagFor } from "../flags.js";
 
 function parseDate(s) {
   const [d, m, y] = String(s).split("/").map(Number);
@@ -101,9 +102,9 @@ export default function MatchList({ me, onSignOut }) {
                 )}
               </div>
               <div className="mc-teams">
-                {m.teamA.name.split(" - ")[0]}
+                <span className="flag">{flagFor(m.teamA.name)}</span>{m.teamA.name.split(" - ")[0]}
                 <span className="vs">vs</span>
-                {m.teamB.name.split(" - ")[0]}
+                <span className="flag">{flagFor(m.teamB.name)}</span>{m.teamB.name.split(" - ")[0]}
               </div>
             </div>
           );

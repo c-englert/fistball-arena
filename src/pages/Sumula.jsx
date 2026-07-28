@@ -6,6 +6,7 @@ import {
   adminUnlock, saveReport, submitReport, fetchTeamRosters,
 } from "../cloud.js";
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
+import { flagFor } from "../flags.js";
 
 const SECTIONS = [
   ["info", "Info"],
@@ -222,10 +223,10 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly }) {
     <>
       <div className="team-tabs">
         <button className={`team-tab ${team === "teamA" ? "active" : ""}`} onClick={() => setTeam("teamA")}>
-          {short(d.teamA.name)}
+          <span className="flag">{flagFor(d.teamA.name)}</span>{short(d.teamA.name)}
         </button>
         <button className={`team-tab ${team === "teamB" ? "active" : ""}`} onClick={() => setTeam("teamB")}>
-          {short(d.teamB.name)}
+          <span className="flag">{flagFor(d.teamB.name)}</span>{short(d.teamB.name)}
         </button>
       </div>
 

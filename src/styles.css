@@ -369,3 +369,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .person-fact:last-child { border-bottom: none; }
 .pf-k { color: var(--muted); }
 .pf-v { font-weight: 700; }
+
+/* ---------- Team flags ---------- */
+.flag { margin-right: 6px; }
+.flag:empty { margin: 0; }
