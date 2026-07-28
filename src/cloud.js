@@ -111,6 +111,21 @@ export async function addMember({ email, name, role }, me) {
     email: e, name: name || "", role: role || "viewer",
     addedBy: me.email, addedAt: serverTimestamp(),
   });
+  await upsertPerson(e, name); // remember for reuse across events
+}
+
+/* ----------------- global people directory (reuse across events) ----------------- */
+export function subscribePeople(cb) {
+  return onSnapshot(collection(db, "people"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => { console.warn("people unavailable:", err?.code || err); cb([]); });
+}
+async function upsertPerson(email, name) {
+  const e = (email || "").toLowerCase().trim();
+  if (!e) return;
+  const patch = { email: e };
+  if (name && name.trim()) patch.name = name.trim();
+  await setDoc(doc(db, "people", e), patch, { merge: true });
 }
 export async function removeMember(email) {
   await deleteDoc(edoc("members", (email || "").toLowerCase().trim()));

@@ -4,6 +4,31 @@ import { subscribeGames, subscribeReports, adminUnlock } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 
+function ManageMenu({ base }) {
+  const [open, setOpen] = useState(false);
+  const items = [
+    ["Schedule", `${base}/schedule`],
+    ["Players & staff", `${base}/roster`],
+    ["Access", `${base}/members`],
+    ["Settings", `${base}/settings`],
+  ];
+  return (
+    <div className="menu-wrap">
+      <button className="iconbtn" onClick={() => setOpen((o) => !o)}>Manage ▾</button>
+      {open && (
+        <>
+          <div className="menu-backdrop" onClick={() => setOpen(false)} />
+          <div className="menu-pop">
+            {items.map(([label, to]) => (
+              <Link key={to} className="menu-item" to={to} onClick={() => setOpen(false)}>{label}</Link>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function parseDate(s) {
   const [d, m, y] = String(s).split("/").map(Number);
   return new Date(2000 + (y || 0), (m || 1) - 1, d || 1);
@@ -55,9 +80,7 @@ export default function MatchList({ me, onSignOut }) {
           <div className="sub">{[event?.place, event?.dates].filter(Boolean).join(" · ") || "Game reports"}</div>
         </div>
         <div className="spacer" />
-        {isAdmin && <Link className="iconbtn" to={`${base}/roster`} title="Players & staff">Teams</Link>}
-        {isAdmin && <Link className="iconbtn" to={`${base}/schedule`} title="Schedule generator">Schedule</Link>}
-        {isAdmin && <Link className="iconbtn" to={`${base}/members`} title="Members & access">Members</Link>}
+        {isAdmin && <ManageMenu base={base} />}
         <button className="iconbtn" onClick={onSignOut} title="Sign out">
           {me.name}{me.admin ? " · org-admin" : ""}
         </button>

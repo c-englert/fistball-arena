@@ -7,6 +7,7 @@ import Sumula from "./pages/Sumula.jsx";
 import Schedule from "./pages/Schedule.jsx";
 import Roster from "./pages/Roster.jsx";
 import Members from "./pages/Members.jsx";
+import Settings from "./pages/Settings.jsx";
 
 export default function EventShell({ me, onSignOut }) {
   const { eventId } = useParams();
@@ -40,6 +41,7 @@ export default function EventShell({ me, onSignOut }) {
           <Route path="schedule" element={isAdmin ? <Schedule me={me} /> : <Navigate to=".." replace />} />
           <Route path="roster" element={isAdmin ? <Roster me={me} /> : <Navigate to=".." replace />} />
           <Route path="members" element={isAdmin ? <Members me={me} /> : <Navigate to=".." replace />} />
+          <Route path="settings" element={isAdmin ? <Settings me={me} /> : <Navigate to=".." replace />} />
         </Routes>
       </div>
     </EventContext.Provider>

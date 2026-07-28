@@ -374,6 +374,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .flag { margin-right: 6px; }
 .flag:empty { margin: 0; }
 
+/* ---------- Manage menu ---------- */
+.menu-wrap { position: relative; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 30; }
+.menu-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 31; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px rgba(20,28,48,0.22); min-width: 200px; padding: 6px; display: grid; gap: 2px; }
+.menu-item { display: block; padding: 12px 14px; border-radius: 8px; color: var(--text); text-decoration: none; font-weight: 700; }
+.menu-item:hover { background: #f2f3f7; }
+
 /* ---------- Archived badge / match state ---------- */
 .arch-badge { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: #fde8e8; color: var(--r); padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
 .state.progress { background: #fff2cc; color: #8a6d00; }

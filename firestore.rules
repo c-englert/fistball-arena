@@ -40,6 +40,13 @@ service cloud.firestore {
       allow delete: if isOrgAdmin() || isEventAdmin(resource.data.eventId);
     }
 
+    // Global people directory (name + email), reused when authorizing members
+    // across events. Any signed-in organizer can read/upsert.
+    match /people/{personEmail} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
     match /events/{eventId} {
       allow read: if isOrgAdmin() || isMember(eventId);
       allow create: if isOrgAdmin()
