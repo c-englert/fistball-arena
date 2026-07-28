@@ -374,6 +374,22 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .flag { margin-right: 6px; }
 .flag:empty { margin: 0; }
 
+/* ---------- Event logos ---------- */
+.brand-picks { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 6px; }
+.brand-pick-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
+.logo-chip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 92px; height: 60px; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 6px; }
+.logo-chip img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.logo-chip button { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--r); color: #fff; font-weight: 800; cursor: pointer; }
+.logo-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+.logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 8px; }
+.logo-lib { border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; background: #fff; }
+.logo-lib img { width: 100%; height: 60px; object-fit: contain; }
+.logo-name { font-size: 12px; color: var(--muted); margin: 6px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logo-actions { display: flex; gap: 4px; justify-content: center; }
+.logo-actions .btn { padding: 4px 8px; min-width: 0; }
+.promo-logo { height: 40px; background: #fff; border-radius: 8px; padding: 4px; display: inline-flex; align-items: center; flex: none; }
+.promo-logo img { height: 100%; max-width: 80px; object-fit: contain; }
+
 /* ---------- Manage menu ---------- */
 .menu-wrap { position: relative; }
 .menu-backdrop { position: fixed; inset: 0; z-index: 30; }

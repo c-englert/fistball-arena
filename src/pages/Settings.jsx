@@ -1,15 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent } from "../cloud.js";
+import {
+  setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
+  subscribeLogos, addLogo, deleteLogo, saveBranding,
+} from "../cloud.js";
+import { fileToLogoDataUrl } from "../img.js";
 import { useEvent } from "../eventContext.js";
 
 export default function Settings({ me }) {
   const nav = useNavigate();
-  const { eventId, event, archived, isAdmin } = useEvent();
+  const { eventId, event, archived, isAdmin, branding } = useEvent();
   const [live, setLive] = useState(undefined);
   const [status, setStatus] = useState("");
 
+  // logo library + this event's selection
+  const [logos, setLogos] = useState([]);
+  const [eventLogo, setEventLogo] = useState(null);
+  const [promoters, setPromoters] = useState([]);
+  const fileRef = useRef(null);
+  const initedRef = useRef(false);
+
   useEffect(() => subscribeLivePointer(setLive), []);
+  useEffect(() => subscribeLogos(setLogos), []);
+  // Load the saved selection once branding arrives.
+  useEffect(() => {
+    if (branding && !initedRef.current) {
+      setEventLogo(branding.eventLogo || null);
+      setPromoters(branding.promoters || []);
+      initedRef.current = true;
+    }
+  }, [branding]);
 
   if (!isAdmin) return <div className="empty">Admins only.</div>;
 
@@ -21,8 +41,29 @@ export default function Settings({ me }) {
   };
   const toggleArchive = async () => {
     const next = archived ? "active" : "archived";
-    if (!window.confirm(archived ? "Re-activate this event (make it editable again)?" : "Archive this event? It becomes read-only for everyone.")) return;
+    if (!window.confirm(archived ? "Re-activate this event?" : "Archive this event? It becomes read-only for everyone.")) return;
     try { await setEventStatus(next); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+  };
+
+  const onUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setStatus("Uploading logo…");
+    try {
+      const dataUrl = await fileToLogoDataUrl(file);
+      await addLogo({ name: file.name.replace(/\.[^.]+$/, ""), dataUrl }, me);
+      setStatus("Logo added to the library.");
+    } catch (e2) { setStatus("Upload failed: " + (e2?.message || e2)); }
+  };
+  const asLogo = (l) => ({ name: l.name, dataUrl: l.dataUrl });
+  const addPromoter = (l) => setPromoters((p) => (p.some((x) => x.dataUrl === l.dataUrl) ? p : [...p, asLogo(l)]));
+  const removePromoter = (i) => setPromoters((p) => p.filter((_, j) => j !== i));
+
+  const saveLogos = async () => {
+    setStatus("Saving branding…");
+    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus("Branding saved."); }
+    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
   };
 
   return (
@@ -38,6 +79,55 @@ export default function Settings({ me }) {
       </header>
 
       <div className="content">
+        {/* ---- Logos ---- */}
+        <div className="card">
+          <div className="row-between">
+            <h2 style={{ margin: 0 }}>Event logos</h2>
+            <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>+ Upload logo</button>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onUpload} />
+          <p className="muted-sm">Shown on the game report (PDF), the app topbar and Fistball Live.</p>
+
+          <div className="subhead">This event</div>
+          <div className="brand-picks">
+            <div className="brand-pick">
+              <div className="brand-pick-label">Event logo</div>
+              {eventLogo
+                ? <div className="logo-chip"><img src={eventLogo.dataUrl} alt="" /><button onClick={() => setEventLogo(null)} disabled={archived}>✕</button></div>
+                : <div className="logo-empty">none</div>}
+            </div>
+            <div className="brand-pick">
+              <div className="brand-pick-label">Promoters</div>
+              <div className="chips">
+                {promoters.map((p, i) => (
+                  <div className="logo-chip" key={i}><img src={p.dataUrl} alt="" /><button onClick={() => removePromoter(i)} disabled={archived}>✕</button></div>
+                ))}
+                {!promoters.length && <div className="logo-empty">none</div>}
+              </div>
+            </div>
+          </div>
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveLogos}>Save logos</button>}
+
+          <div className="subhead">Library ({logos.length})</div>
+          {logos.length === 0 && <p className="muted-sm">No logos yet — upload one above.</p>}
+          <div className="logo-grid">
+            {logos.map((l) => (
+              <div className="logo-lib" key={l.id}>
+                <img src={l.dataUrl} alt={l.name} title={l.name} />
+                <div className="logo-name">{l.name}</div>
+                {!archived && (
+                  <div className="logo-actions">
+                    <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>Event</button>
+                    <button className="btn sm" onClick={() => addPromoter(l)}>+Promoter</button>
+                    <button className="btn danger sm" onClick={() => window.confirm(`Delete “${l.name}” from the library?`) && deleteLogo(l.id)}>✕</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ---- Fistball Live ---- */}
         <div className="card">
           <div className="row-between">
             <div><h2 style={{ margin: 0 }}>Fistball Live</h2>
@@ -53,6 +143,7 @@ export default function Settings({ me }) {
           </div>
         </div>
 
+        {/* ---- Status ---- */}
         <div className="card">
           <div className="row-between">
             <div><h2 style={{ margin: 0 }}>Event status</h2>
@@ -61,7 +152,7 @@ export default function Settings({ me }) {
           </div>
         </div>
 
-        {status && <div className="card"><p className="muted-sm">{status}</p></div>}
+        {status && <p className="muted-sm">{status}</p>}
       </div>
     </div>
   );

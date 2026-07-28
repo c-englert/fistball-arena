@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Routes, Route, Navigate } from "react-router-dom";
-import { setEvent, subscribeEvent, subscribeMyRole } from "./cloud.js";
+import { setEvent, subscribeEvent, subscribeMyRole, subscribeBranding } from "./cloud.js";
 import { EventContext } from "./eventContext.js";
 import MatchList from "./pages/MatchList.jsx";
 import Sumula from "./pages/Sumula.jsx";
@@ -13,14 +13,17 @@ export default function EventShell({ me, onSignOut }) {
   const { eventId } = useParams();
   const [event, setEv] = useState(undefined);
   const [myRole, setMyRole] = useState(undefined);
+  const [branding, setBranding] = useState(null);
 
   useEffect(() => {
     setEvent(eventId);
     setEv(undefined);
     setMyRole(undefined);
+    setBranding(null);
     const u1 = subscribeEvent(setEv);
     const u2 = subscribeMyRole(me, setMyRole);
-    return () => { u1 && u1(); u2 && u2(); };
+    const u3 = subscribeBranding(setBranding);
+    return () => { u1 && u1(); u2 && u2(); u3 && u3(); };
   }, [eventId]);
 
   if (event === undefined || myRole === undefined) return <div className="empty">Loading event…</div>;
@@ -30,7 +33,7 @@ export default function EventShell({ me, onSignOut }) {
   const archived = event.status === "archived";
   const isAdmin = myRole === "admin" || me.admin;
   const canScore = !archived && (isAdmin || myRole === "official");
-  const ctx = { eventId, event, myRole, archived, isAdmin, canScore };
+  const ctx = { eventId, event, myRole, archived, isAdmin, canScore, branding };
 
   return (
     <EventContext.Provider value={ctx}>

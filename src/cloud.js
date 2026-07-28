@@ -140,6 +140,35 @@ export function subscribeMyRole(me, cb) {
     () => cb(null));
 }
 
+/* ----------------- logo library + event branding ----------------- */
+// Reusable logo library (global). Each logo is { name, dataUrl } (small PNG).
+export function subscribeLogos(cb) {
+  return onSnapshot(collection(db, "logos"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => { console.warn("logos unavailable:", err?.code || err); cb([]); });
+}
+export async function addLogo({ name, dataUrl }, me) {
+  const ref = doc(collection(db, "logos"));
+  await setDoc(ref, { name: name || "Logo", dataUrl, addedBy: me.email, addedAt: serverTimestamp() });
+  return ref.id;
+}
+export async function deleteLogo(id) { await deleteDoc(doc(db, "logos", id)); }
+
+// Per-event branding lives in a PUBLIC doc so the anonymous Live can read it too.
+// { eventId, name, eventLogo: {name,dataUrl}|null, promoters: [{name,dataUrl}] }
+export function subscribeBranding(cb) {
+  const eid = reqEid();
+  return onSnapshot(doc(db, "public", `event_${eid}`),
+    (d) => cb(d.exists() ? d.data() : null),
+    () => cb(null));
+}
+export async function saveBranding({ name, eventLogo, promoters }) {
+  const eid = reqEid();
+  await setDoc(doc(db, "public", `event_${eid}`), {
+    eventId: eid, name: name || "", eventLogo: eventLogo || null, promoters: promoters || [],
+  });
+}
+
 /* ----------------- Fistball Live pointer -----------------
  * A single PUBLIC doc telling the spectator app which event to show. Read
  * anonymously by Fistball Live; written by an admin of that event (or org-admin). */

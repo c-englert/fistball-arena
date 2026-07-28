@@ -42,7 +42,7 @@ function dayLabel(s) {
 
 export default function MatchList({ me, onSignOut }) {
   const nav = useNavigate();
-  const { eventId, event, isAdmin, archived } = useEvent();
+  const { eventId, event, isAdmin, archived, branding } = useEvent();
   const base = `/e/${eventId}`;
   const [games, setGames] = useState([]);
   const [reports, setReports] = useState({});
@@ -74,7 +74,10 @@ export default function MatchList({ me, onSignOut }) {
   return (
     <div className="app">
       <header className="topbar">
-        <a className="brand-logo" href="#/" title="Switch event"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></a>
+        <a className="brand-logo" href="#/" title="Switch event"><img src={branding?.eventLogo?.dataUrl || (import.meta.env.BASE_URL + "ifa-mark.png")} alt="" /></a>
+        {(branding?.promoters || []).slice(0, 3).map((p, i) => (
+          <span className="promo-logo" key={i}><img src={p.dataUrl} alt="" /></span>
+        ))}
         <div>
           <div className="title">{event?.name || "Fistball Arena"}{archived && <span className="arch-badge">Archived</span>}</div>
           <div className="sub">{[event?.place, event?.dates].filter(Boolean).join(" · ") || "Game reports"}</div>

@@ -47,6 +47,12 @@ service cloud.firestore {
       allow write: if signedIn();
     }
 
+    // Global logo library (name + small data-URL), reusable across events.
+    match /logos/{logoId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
     match /events/{eventId} {
       allow read: if isOrgAdmin() || isMember(eventId);
       allow create: if isOrgAdmin()

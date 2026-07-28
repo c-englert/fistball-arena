@@ -1,4 +1,4 @@
-import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 
 const EVENT = "2026 U18 World Championship & Women's EFA Championship";
 const EVENT_DATE = "23rd – 26th July 2026";
@@ -12,6 +12,11 @@ const s = StyleSheet.create({
   page: { padding: 22, fontSize: 8, fontFamily: "Helvetica", color: "#111" },
   // header
   hWrap: { borderWidth: 1, borderColor: LINE },
+  hLogos: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 6 },
+  hLogoLeft: { flexDirection: "row", alignItems: "center" },
+  hLogo: { height: 34, objectFit: "contain" },
+  hPromos: { flexDirection: "row", alignItems: "center", gap: 10 },
+  hPromo: { height: 28, objectFit: "contain", marginLeft: 8 },
   hTop: { backgroundColor: PURPLE, color: "#fff", padding: 6, textAlign: "center" },
   hEvent: { fontSize: 11, fontFamily: "Helvetica-Bold" },
   hMeta: { fontSize: 7, marginTop: 2 },
@@ -115,8 +120,10 @@ function TeamColumn({ team, side }) {
   );
 }
 
-export default function SumulaPDF({ draft }) {
+export default function SumulaPDF({ draft, branding }) {
   const d = draft;
+  const promos = (branding?.promoters || []).filter((p) => p?.dataUrl);
+  const hasLogos = !!(branding?.eventLogo?.dataUrl || promos.length);
   const played = d.sets.map((set, i) => ({ set, i, sc: setScore(set) })).filter((x) => x.sc.a + x.sc.b > 0);
   let setsA = 0, setsB = 0;
   for (const { sc } of played) { if (sc.a > sc.b) setsA++; else if (sc.b > sc.a) setsB++; }
@@ -131,8 +138,18 @@ export default function SumulaPDF({ draft }) {
       <Page size="A4" style={s.page}>
         {/* header */}
         <View style={s.hWrap}>
+          {hasLogos && (
+            <View style={s.hLogos}>
+              <View style={s.hLogoLeft}>
+                {branding?.eventLogo?.dataUrl ? <Image src={branding.eventLogo.dataUrl} style={s.hLogo} /> : null}
+              </View>
+              <View style={s.hPromos}>
+                {promos.map((p, i) => <Image key={i} src={p.dataUrl} style={s.hPromo} />)}
+              </View>
+            </View>
+          )}
           <View style={s.hTop}>
-            <Text style={s.hEvent}>{EVENT}</Text>
+            <Text style={s.hEvent}>{branding?.name || EVENT}</Text>
             <Text style={s.hMeta}>{EVENT_DATE}  ·  {EVENT_PLACE}</Text>
           </View>
           <Text style={s.hTitle}>Fistball Game Report</Text>

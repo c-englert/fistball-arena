@@ -20,7 +20,7 @@ const SECTIONS = [
 export default function Sumula({ me }) {
   const { id } = useParams();
   const nav = useNavigate();
-  const { eventId, canScore } = useEvent();
+  const { eventId, canScore, branding } = useEvent();
   const [draft, setDraft] = useState(null);
   const [lockedBy, setLockedBy] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -105,7 +105,7 @@ export default function Sumula({ me }) {
   }
 
   async function downloadPDF() {
-    const blob = await pdf(<SumulaPDF draft={draft} />).toBlob();
+    const blob = await pdf(<SumulaPDF draft={draft} branding={branding} />).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
