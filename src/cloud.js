@@ -210,6 +210,11 @@ export async function setLiveEvent(event) {
     startsAt: event?.startDate || "", endsAt: event?.endDate || "",
     updatedAt: serverTimestamp(),
   });
+  // Ensure the public info doc exists so the Live has place/dates/countdown.
+  await writeEventPublic(eid, {
+    name: event?.name || "", place: event?.place || "", dates: event?.dates || "",
+    startsAt: event?.startDate || "", endsAt: event?.endDate || "",
+  });
 }
 export async function clearLiveEvent() {
   await deleteDoc(doc(db, "public", "live"));
@@ -284,6 +289,24 @@ export async function publishRosters(rosters) {
     await batch.commit();
   }
 }
+/* ----------------- referees registry ----------------- */
+export function subscribeReferees(cb) {
+  return onSnapshot(ecol("referees"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => { console.warn("referees unavailable:", err?.code || err); cb([]); });
+}
+export async function publishReferees(list, { replaceAll } = {}) {
+  if (replaceAll) await clearCollection("referees");
+  for (let i = 0; i < list.length; i += 400) {
+    const batch = writeBatch(db);
+    list.slice(i, i + 400).forEach((r, j) => {
+      const id = (`${r.name}_${r.first}`).toLowerCase().replace(/[^a-z0-9]+/g, "_") || `ref_${i + j}`;
+      batch.set(edoc("referees", id), { name: r.name, first: r.first, role: r.role || "Referee", photo: r.photo || "", birthday: r.birthday || "" });
+    });
+    await batch.commit();
+  }
+}
+
 async function getRoster(teamName) {
   if (!teamName) return null;
   const s = await getDoc(edoc("rosters", teamName));
