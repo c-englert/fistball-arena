@@ -3,11 +3,26 @@ import { useNavigate } from "react-router-dom";
 import { listMyEvents, createEvent, subscribeLivePointer, setLiveEvent, clearLiveEvent } from "./cloud.js";
 import AccountMenu from "./AccountMenu.jsx";
 
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function formatRange(a, b) {
+  const p = (s) => { const m = /(\d{4})-(\d{2})-(\d{2})/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+  const da = p(a), db = p(b);
+  if (da && db) {
+    if (da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth())
+      return `${da.getDate()}–${db.getDate()} ${MON[da.getMonth()]} ${da.getFullYear()}`;
+    if (da.getFullYear() === db.getFullYear())
+      return `${da.getDate()} ${MON[da.getMonth()]} – ${db.getDate()} ${MON[db.getMonth()]} ${da.getFullYear()}`;
+    return `${da.getDate()} ${MON[da.getMonth()]} ${da.getFullYear()} – ${db.getDate()} ${MON[db.getMonth()]} ${db.getFullYear()}`;
+  }
+  const one = da || db;
+  return one ? `${one.getDate()} ${MON[one.getMonth()]} ${one.getFullYear()}` : "";
+}
+
 export default function EventPicker({ me, onSignOut }) {
   const nav = useNavigate();
   const [events, setEvents] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: "", place: "", dates: "" });
+  const [form, setForm] = useState({ name: "", place: "", startDate: "", endDate: "" });
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState("active");
   const [live, setLive] = useState(null);
@@ -26,7 +41,7 @@ export default function EventPicker({ me, onSignOut }) {
     if (!form.name.trim()) return;
     setBusy(true);
     try {
-      const id = await createEvent(form, me);
+      const id = await createEvent({ ...form, dates: formatRange(form.startDate, form.endDate) }, me);
       nav(`/e/${id}`);
     } catch (e) {
       alert("Could not create event: " + (e?.message || e));
@@ -55,12 +70,15 @@ export default function EventPicker({ me, onSignOut }) {
             <h2>New event</h2>
             <div className="field"><span>Name</span>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. 2026 U18 WC & Women's EFA" autoFocus /></div>
+            <div className="field"><span>Place</span>
+              <input value={form.place} onChange={(e) => setForm({ ...form, place: e.target.value })} placeholder="Reiden · Switzerland" /></div>
             <div className="grid2">
-              <div className="field"><span>Place</span>
-                <input value={form.place} onChange={(e) => setForm({ ...form, place: e.target.value })} placeholder="Reiden · Switzerland" /></div>
-              <div className="field"><span>Dates</span>
-                <input value={form.dates} onChange={(e) => setForm({ ...form, dates: e.target.value })} placeholder="23–26 July 2026" /></div>
+              <div className="field"><span>Starts</span>
+                <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: form.endDate && form.endDate < e.target.value ? e.target.value : form.endDate })} /></div>
+              <div className="field"><span>Ends</span>
+                <input type="date" min={form.startDate || undefined} value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></div>
             </div>
+            {(form.startDate || form.endDate) && <p className="muted-sm">{formatRange(form.startDate, form.endDate) || "Pick a start and end date"}</p>}
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn" onClick={() => setCreating(false)}>Cancel</button>
               <button className="btn primary" disabled={busy || !form.name.trim()} onClick={create}>{busy ? "Creating…" : "Create & open"}</button>

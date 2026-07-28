@@ -79,6 +79,8 @@ export async function createEvent(descriptor, me) {
     name: descriptor.name || "New event",
     place: descriptor.place || "",
     dates: descriptor.dates || "",
+    startDate: descriptor.startDate || "",
+    endDate: descriptor.endDate || "",
     status: "active",
     createdBy: me.uid,
     createdAt: serverTimestamp(),
