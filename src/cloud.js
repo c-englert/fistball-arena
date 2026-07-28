@@ -83,6 +83,29 @@ export async function publishGames(games, { replaceAll } = {}) {
   }
 }
 
+/* ----------------- players & staff registry (rosters) ----------------- */
+// One doc per "Team - Cat" (e.g. "Austria - WEC"), matching game team names.
+export function subscribeRosters(cb) {
+  return onSnapshot(collection(db, "rosters"), (snap) => {
+    const m = {};
+    snap.forEach((d) => (m[d.id] = d.data()));
+    cb(m);
+  });
+}
+export async function publishRosters(rosters) {
+  const entries = Object.entries(rosters);
+  for (let i = 0; i < entries.length; i += 400) {
+    const batch = writeBatch(db);
+    entries.slice(i, i + 400).forEach(([key, v]) => batch.set(doc(db, "rosters", key), v));
+    await batch.commit();
+  }
+}
+async function getRoster(teamName) {
+  if (!teamName) return null;
+  const s = await getDoc(doc(db, "rosters", teamName));
+  return s.exists() ? s.data() : null;
+}
+
 /* ----------------- games (seeded from the schedule) ----------------- */
 export async function ensureGames() {
   const snap = await getDocs(collection(db, "games"));
@@ -151,7 +174,13 @@ export async function ensureReport(gameId) {
   if (snap.exists()) return;
   const gsnap = await getDoc(doc(db, "games", gameId));
   if (!gsnap.exists()) return;
-  await setDoc(ref, blankReport({ id: gameId, ...gsnap.data() }));
+  const game = { id: gameId, ...gsnap.data() };
+  // Pre-fill line-ups from the roster registry when the team is known.
+  for (const side of ["teamA", "teamB"]) {
+    const r = await getRoster(game[side]?.name);
+    if (r) game[side] = { ...game[side], players: r.players, staff: r.staff };
+  }
+  await setDoc(ref, blankReport(game));
 }
 
 export function subscribeReport(gameId, cb) {

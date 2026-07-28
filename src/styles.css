@@ -333,3 +333,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .btn.danger-solid:active { transform: scale(0.97); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* ---------- Roster / team registry ---------- */
+.roster-head { width: 100%; background: transparent; border: none; cursor: pointer; padding: 0; text-align: left; }
+.roster-row { display: flex; align-items: center; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+.roster-row:last-child { border-bottom: none; }
+.roster-nr { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #eef0f6; font-weight: 800; font-size: 14px; }
+.roster-nr.role { background: #efeaf9; color: var(--brand); font-size: 12px; }
+.roster-name { flex: 1; font-weight: 700; }

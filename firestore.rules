@@ -35,5 +35,11 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if signedIn();
     }
+
+    // Rosters — players & staff registry per team.
+    match /rosters/{teamId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
   }
 }

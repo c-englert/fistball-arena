@@ -51,6 +51,7 @@ export default function MatchList({ me, onSignOut }) {
           <div className="sub">Game reports · U18 WC &amp; Women's EFA 2026</div>
         </div>
         <div className="spacer" />
+        {me.admin && <Link className="iconbtn" to="/roster" title="Players & staff">Teams</Link>}
         {me.admin && <Link className="iconbtn" to="/schedule" title="Schedule generator">Schedule</Link>}
         <button className="iconbtn" onClick={onSignOut} title="Switch user">
           {me.name}{me.admin ? " · admin" : ""}
