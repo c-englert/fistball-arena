@@ -74,6 +74,10 @@ service cloud.firestore {
         allow read: if isOrgAdmin() || isMember(eventId);
         allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
       }
+      match /referees/{refId} {
+        allow read: if isOrgAdmin() || isMember(eventId);
+        allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
+      }
       match /meta/{docId} {
         allow read: if isOrgAdmin() || isMember(eventId);
         allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));

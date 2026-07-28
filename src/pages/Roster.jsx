@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchRosters } from "../roster/importRoster.js";
-import { subscribeRosters, publishRosters, addMember } from "../cloud.js";
+import { parseExcelRoster } from "../roster/importExcel.js";
+import { subscribeRosters, publishRosters, publishReferees, addMember } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 
@@ -23,6 +24,9 @@ export default function Roster({ me }) {
   const [status, setStatus] = useState("");
   const [open, setOpen] = useState(null);           // expanded team
   const [profile, setProfile] = useState(null);     // person card
+  const [excel, setExcel] = useState(null);         // parsed xlsx { teams, referees, ... }
+  const [names, setNames] = useState({});           // original team name -> final (normalized) name
+  const fileRef = useRef(null);
 
   useEffect(() => subscribeRosters(setRosters), []);
 
@@ -54,6 +58,43 @@ export default function Roster({ me }) {
     }
   };
 
+  // ---- Excel upload (players/staff/referees) ----
+  const onExcel = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setStatus("Reading Excel…");
+    try {
+      const r = await parseExcelRoster(file);
+      setExcel(r);
+      // seed the normalization map with detected names
+      const map = {};
+      Object.keys(r.teams).forEach((k) => (map[k] = k));
+      setNames(map);
+      setStatus(`Found ${r.count} people (${r.teamCount} teams) + ${r.refereeCount} referees.`);
+    } catch (e2) {
+      setStatus("Excel read failed: " + (e2?.message || e2));
+    }
+  };
+  const saveExcel = async () => {
+    if (!excel) return;
+    setStatus("Saving…");
+    try {
+      // Re-key rosters by the final (normalized) names.
+      const rosters = {};
+      for (const [orig, t] of Object.entries(excel.teams)) {
+        const finalName = (names[orig] || orig).trim();
+        rosters[finalName] = { ...t, name: finalName };
+      }
+      await publishRosters(rosters);
+      if (excel.referees.length) await publishReferees(excel.referees, { replaceAll: true });
+      setStatus(`Saved ${excel.count} people + ${excel.refereeCount} referees.`);
+      setExcel(null);
+    } catch (e) {
+      setStatus("Save failed: " + (e?.message || e));
+    }
+  };
+
   const teams = useMemo(() => {
     const src = rosters || {};
     return Object.keys(src).sort((a, b) => a.localeCompare(b)).map((k) => ({ key: k, ...src[k] }));
@@ -78,6 +119,38 @@ export default function Roster({ me }) {
       </header>
 
       <div className="content">
+        {/* ---- Excel upload ---- */}
+        <div className="card">
+          <div className="row-between">
+            <h2 style={{ margin: 0 }}>Import from Excel file</h2>
+            <button className="btn primary" onClick={() => fileRef.current?.click()}>Choose .xlsx…</button>
+          </div>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={onExcel} />
+          <p className="muted-sm">Upload the event's DATA file (players, staff and referees).</p>
+
+          {excel?.warnings?.length > 0 && <div className="warn-box">{excel.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
+
+          {excel && (
+            <div style={{ marginTop: 8 }}>
+              <div className="subhead">Review team names ({Object.keys(excel.teams).length}) — edit to match your schedule</div>
+              {Object.entries(excel.teams).map(([orig, t]) => (
+                <div className="roster-row" key={orig}>
+                  <span className="muted-sm" style={{ flex: "0 0 200px", overflow: "hidden", textOverflow: "ellipsis" }}>{orig}</span>
+                  <span className="muted-sm">→</span>
+                  <input style={{ flex: 1 }} value={names[orig] ?? orig} onChange={(e) => setNames({ ...names, [orig]: e.target.value })} />
+                  <span className="tag">{t.players.length}P · {t.staff.length}S</span>
+                </div>
+              ))}
+              {excel.refereeCount > 0 && <p className="muted-sm" style={{ marginTop: 8 }}>+ <b>{excel.refereeCount}</b> referees will be added to the event.</p>}
+              <button className="btn primary" style={{ width: "100%", marginTop: 10 }} onClick={saveExcel}>
+                Save {excel.count} people{excel.refereeCount ? ` + ${excel.refereeCount} referees` : ""}
+              </button>
+            </div>
+          )}
+          {status && <p className="muted-sm" style={{ marginTop: 10 }}>{status}</p>}
+        </div>
+
+        {/* ---- Google Sheet import (alternative) ---- */}
         <div className="card">
           <h2>Import players &amp; staff from the DB sheet</h2>
           <p className="muted-sm">Reads the “DB” tab and stores one roster per team. Súmula line-ups then pre-fill automatically.</p>
