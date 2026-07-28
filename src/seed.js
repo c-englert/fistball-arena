@@ -67,7 +67,10 @@ const TEAMS = {
   },
 };
 
-function team(name) {
+// Build a team object from a known name; unknown names get an empty roster
+// (rosters can be filled later or via import). Exported so the schedule
+// generator can expand team-name strings into the same shape.
+export function team(name) {
   const t = TEAMS[name] || { players: [], captainNr: null, staff: [] };
   return {
     name,
@@ -75,6 +78,9 @@ function team(name) {
     staff: t.staff || [],
   };
 }
+
+// All known team names, for the schedule generator's team picker.
+export const TEAM_NAMES = Object.keys(TEAMS);
 
 export const SEED_MATCHES = [
   {

@@ -291,3 +291,23 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e07a00; animation: blink 1.2s infinite; }
 @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
 .match-card { cursor: pointer; }
+
+/* ---------- Schedule generator wizard ---------- */
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.h-input { flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-weight: 800; font-size: 16px; background: #fbfcfe; color: var(--text); }
+.field span { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.group-box { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 12px 0; background: #fbfcfe; }
+.group-title { font-weight: 800; color: var(--brand); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.team-chip { display: inline-flex; align-items: center; gap: 8px; background: #eef0f6; border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 14px; }
+.team-chip button { border: none; background: transparent; color: var(--muted); font-weight: 800; cursor: pointer; padding: 0; }
+.add-row { display: flex; gap: 8px; align-items: center; }
+.add-row input { flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: #fff; color: var(--text); }
+.muted-sm { color: var(--muted); font-size: 13px; }
+.btn.danger { background: #fde8e8; color: var(--r); border: 1px solid #f6cccc; }
+.warn-box { background: #fff5e6; border: 1px solid #f5d69a; border-radius: 10px; padding: 10px 12px; margin-top: 12px; color: #8a5a00; font-size: 14px; display: grid; gap: 4px; }
+.sched-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sched-table th { text-align: left; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.sched-table td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.sched-table td .vs { color: var(--muted); margin: 0 6px; }
+.sched-table tr.ko-row td { background: #f3f0fb; font-weight: 600; }

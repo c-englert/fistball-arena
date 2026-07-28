@@ -29,5 +29,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if signedIn();
     }
+
+    // Meta — shared admin config (e.g. the schedule-generator setup).
+    match /meta/{doc} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
   }
 }

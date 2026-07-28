@@ -1,6 +1,6 @@
 import {
   collection, doc, getDoc, getDocs, setDoc, onSnapshot, runTransaction,
-  serverTimestamp, updateDoc, deleteField,
+  serverTimestamp, updateDoc, deleteField, writeBatch, deleteDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { db, auth, googleProvider } from "./firebase.js";
@@ -35,6 +35,48 @@ export async function signInWithGoogle() {
 
 export async function signOutMe() {
   await signOut(auth);
+}
+
+/* ----------------- schedule generator ----------------- */
+// The admin wizard's config is stored in a single shared doc so multiple
+// organizers see and re-edit the same setup.
+export function subscribeScheduleConfig(cb) {
+  return onSnapshot(doc(db, "meta", "schedule"), (d) => cb(d.exists() ? d.data().config : null));
+}
+export async function saveScheduleConfig(config) {
+  await setDoc(doc(db, "meta", "schedule"), { config, updatedAt: serverTimestamp() });
+}
+
+// Delete every doc in a collection, chunked to stay under Firestore's batch limit.
+async function clearCollection(name) {
+  const snap = await getDocs(collection(db, name));
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = writeBatch(db);
+    docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+}
+
+// Write generated games. replaceAll wipes existing games + their reports +
+// published results first (fresh event). Game ids are g<nr>.
+export async function publishGames(games, { replaceAll } = {}) {
+  if (replaceAll) {
+    await clearCollection("reports");
+    await clearCollection("results");
+    await clearCollection("games");
+  }
+  for (let i = 0; i < games.length; i += 400) {
+    const batch = writeBatch(db);
+    games.slice(i, i + 400).forEach((g) => {
+      batch.set(doc(db, "games", `g${g.nr}`), {
+        nr: g.nr, date: g.date, time: g.time, court: g.court,
+        bestOf: g.bestOf, round: g.round, category: g.category,
+        teamA: g.teamA, teamB: g.teamB,
+      });
+    });
+    await batch.commit();
+  }
 }
 
 /* ----------------- games (seeded from the schedule) ----------------- */

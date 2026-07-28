@@ -4,6 +4,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import MatchList from "./pages/MatchList.jsx";
 import Sumula from "./pages/Sumula.jsx";
 import Identity from "./pages/Identity.jsx";
+import Schedule from "./pages/Schedule.jsx";
 import { onMe, signOutMe, ensureGames } from "./cloud.js";
 import "./styles.css";
 
@@ -28,6 +29,7 @@ function Root() {
       <Routes>
         <Route path="/" element={<MatchList me={me} onSignOut={signOut} />} />
         <Route path="/game/:id" element={<Sumula me={me} />} />
+        <Route path="/schedule" element={<Schedule me={me} />} />
       </Routes>
     </HashRouter>
   );
