@@ -181,6 +181,12 @@ function InfoSection({ d }) {
   );
 }
 
+function PlayerAvatar({ src, name }) {
+  const [err, setErr] = useState(false);
+  if (src && !err) return <img className="avatar" src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setErr(true)} />;
+  return <span className="avatar avatar-ph">{(name || "?").trim()[0]}</span>;
+}
+
 function LineupSection({ d, team, setTeam, update }) {
   const t = d[team];
   const toggleCaptain = (i) =>
@@ -205,6 +211,7 @@ function LineupSection({ d, team, setTeam, update }) {
         {t.players.map((p, i) => (
           <div className="player" key={i}>
             <div className="player-id">
+              <PlayerAvatar src={p.photo} name={p.name} />
               <div className="pnr">{p.nr}</div>
               <div className="pname">
                 <div className="sur">{p.name}</div>
@@ -229,6 +236,7 @@ function LineupSection({ d, team, setTeam, update }) {
         {t.staff.map((s, i) => (
           <div className="player" key={i}>
             <div className="player-id">
+              <PlayerAvatar src={s.photo} name={s.name} />
               <div className="prole">{s.role}</div>
               <div className="pname">
                 <div className="sur">{s.name}</div>

@@ -32,7 +32,8 @@ export async function fetchRosters(sheetId, tab = "DB") {
   const col = (name) => hdr.indexOf(name);
   const iFam = col("Family Name"), iGiv = col("Given Name"), iRole = col("Role"),
     iStaffRole = col("Staff Role"), iPos = col("Player Position"),
-    iBday = col("Birthday"), iNr = col("Jersey Number"), iTC = col("Team - Cat");
+    iBday = col("Birthday"), iNr = col("Jersey Number"), iTC = col("Team - Cat"),
+    iPic = col("Link to Profile Pic");
   if (iTC < 0 || iFam < 0) {
     return { rosters: {}, teamCount: 0, count: 0, warnings: ["This tab doesn't look like the DB registry (missing 'Team - Cat' / 'Family Name')."] };
   }
@@ -44,11 +45,12 @@ export async function fetchRosters(sheetId, tab = "DB") {
     const fam = r[iFam], giv = r[iGiv];
     if (!tc || (!fam && !giv)) continue;
     const t = rosters[tc] || (rosters[tc] = { name: tc, players: [], staff: [] });
+    const photo = iPic >= 0 ? (r[iPic] || "") : "";
     if ((r[iRole] || "").toLowerCase() === "player") {
       const nr = parseInt(r[iNr], 10);
-      t.players.push({ nr: isNaN(nr) ? "" : nr, name: fam, first: giv, position: r[iPos] || "", birthday: r[iBday] || "" });
+      t.players.push({ nr: isNaN(nr) ? "" : nr, name: fam, first: giv, position: r[iPos] || "", birthday: r[iBday] || "", photo });
     } else {
-      t.staff.push({ role: r[iStaffRole] || "Staff", name: fam, first: giv });
+      t.staff.push({ role: r[iStaffRole] || "Staff", name: fam, first: giv, photo });
     }
   }
 

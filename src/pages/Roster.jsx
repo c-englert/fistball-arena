@@ -5,6 +5,12 @@ import { subscribeRosters, publishRosters } from "../cloud.js";
 
 const DB_SHEET_ID = "1og9dwLSgjdlozwb79R0Au1s48etQKlVf1EHILRyyhxM";
 
+function Avatar({ src, name }) {
+  const [err, setErr] = useState(false);
+  if (src && !err) return <img className="avatar" src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setErr(true)} />;
+  return <span className="avatar avatar-ph">{(name || "?").trim()[0]}</span>;
+}
+
 export default function Roster({ me }) {
   const nav = useNavigate();
   const [rosters, setRosters] = useState(null);   // live registry from Firestore
@@ -99,6 +105,7 @@ export default function Roster({ me }) {
               <div style={{ marginTop: 10 }}>
                 {(t.players || []).map((p, i) => (
                   <div className="roster-row" key={"p" + i}>
+                    <Avatar src={p.photo} name={p.name} />
                     <span className="roster-nr">{p.nr}</span>
                     <span className="roster-name">{p.name} <span className="muted-sm">{p.first}</span></span>
                     <span className="muted-sm">{p.position}</span>
@@ -107,6 +114,7 @@ export default function Roster({ me }) {
                 {(t.staff || []).length > 0 && <div className="subhead">Staff</div>}
                 {(t.staff || []).map((s, i) => (
                   <div className="roster-row" key={"s" + i}>
+                    <Avatar src={s.photo} name={s.name} />
                     <span className="roster-nr role">{(s.role || "").split(" ").map((w) => w[0]).join("").slice(0, 3)}</span>
                     <span className="roster-name">{s.name} <span className="muted-sm">{s.first}</span></span>
                     <span className="muted-sm">{s.role}</span>
