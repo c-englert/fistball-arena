@@ -215,13 +215,23 @@ export async function publishGames(games, { replaceAll } = {}) {
     await clearCollection("results");
     await clearCollection("games");
   }
-  for (let i = 0; i < games.length; i += 400) {
+  // 200 games max per batch (2 writes each: game + its "Not Started" result).
+  for (let i = 0; i < games.length; i += 200) {
     const batch = writeBatch(db);
-    games.slice(i, i + 400).forEach((g) => {
-      batch.set(edoc("games", `g${g.nr}`), {
+    games.slice(i, i + 200).forEach((g) => {
+      const id = `g${g.nr}`;
+      batch.set(edoc("games", id), {
         nr: g.nr, date: g.date, time: g.time, court: g.court,
         bestOf: g.bestOf, round: g.round, category: g.category,
         teamA: g.teamA, teamB: g.teamB,
+      });
+      // Public results row so the spectator Live sees the whole fixture upfront.
+      batch.set(edoc("results", id), {
+        nr: g.nr, date: g.date, time: g.time, court: g.court,
+        round: g.round, category: g.category, bestOf: g.bestOf,
+        teamA: g.teamA.name, teamB: g.teamB.name,
+        setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], status: "Not Started",
+        updatedAt: serverTimestamp(),
       });
     });
     await batch.commit();
