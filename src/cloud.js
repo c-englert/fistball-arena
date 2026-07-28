@@ -90,7 +90,7 @@ export function subscribeRosters(cb) {
     const m = {};
     snap.forEach((d) => (m[d.id] = d.data()));
     cb(m);
-  });
+  }, (err) => { console.warn("rosters unavailable (publish rosters rules):", err?.code || err); cb({}); });
 }
 export async function publishRosters(rosters) {
   const entries = Object.entries(rosters);
@@ -122,9 +122,9 @@ export async function ensureGames() {
 }
 
 export function subscribeGames(cb) {
-  return onSnapshot(collection(db, "games"), (snap) =>
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-  );
+  return onSnapshot(collection(db, "games"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => console.warn("games unavailable:", err?.code || err));
 }
 
 // Live status/lock of every report (for the list badges).
@@ -136,7 +136,7 @@ export function subscribeReports(cb) {
       map[d.id] = { status: r.status || "not_started", lockedBy: r.lockedBy || null };
     });
     cb(map);
-  });
+  }, (err) => console.warn("reports unavailable:", err?.code || err));
 }
 
 /* ----------------- one report (súmula) ----------------- */
@@ -184,7 +184,9 @@ export async function ensureReport(gameId) {
 }
 
 export function subscribeReport(gameId, cb) {
-  return onSnapshot(doc(db, "reports", gameId), (d) => cb(d.exists() ? d.data() : null));
+  return onSnapshot(doc(db, "reports", gameId),
+    (d) => cb(d.exists() ? d.data() : null),
+    (err) => console.warn("report unavailable:", err?.code || err));
 }
 
 /* ----------------- locking ----------------- */
