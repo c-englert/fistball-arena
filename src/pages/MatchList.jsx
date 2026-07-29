@@ -84,6 +84,7 @@ export default function MatchList({ me, onSignOut }) {
           <div className="sub">{[event?.place, event?.dates].filter(Boolean).join(" · ") || "Game reports"}</div>
         </div>
         <div className="spacer" />
+        <Link className="iconbtn" to={`${base}/standings`} title="Standings & results">Standings</Link>
         {isAdmin && <ManageMenu base={base} />}
         <AccountMenu me={me} onSignOut={onSignOut} />
       </header>

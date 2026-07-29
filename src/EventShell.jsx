@@ -8,6 +8,7 @@ import Schedule from "./pages/Schedule.jsx";
 import Roster from "./pages/Roster.jsx";
 import Members from "./pages/Members.jsx";
 import Settings from "./pages/Settings.jsx";
+import Standings from "./pages/Standings.jsx";
 
 export default function EventShell({ me, onSignOut }) {
   const { eventId } = useParams();
@@ -41,6 +42,7 @@ export default function EventShell({ me, onSignOut }) {
         <Routes>
           <Route index element={<MatchList me={me} onSignOut={onSignOut} />} />
           <Route path="game/:id" element={<Sumula me={me} />} />
+          <Route path="standings" element={<Standings />} />
           <Route path="schedule" element={isAdmin ? <Schedule me={me} /> : <Navigate to=".." replace />} />
           <Route path="roster" element={isAdmin ? <Roster me={me} /> : <Navigate to=".." replace />} />
           <Route path="members" element={isAdmin ? <Members me={me} /> : <Navigate to=".." replace />} />

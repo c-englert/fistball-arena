@@ -400,6 +400,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .ev-promos { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .ev-promos img { height: 22px; max-width: 56px; object-fit: contain; }
 
+/* ---------- Embedded Fistball Live (Standings) ---------- */
+.live-embed { width: 100%; height: calc(100dvh - 70px); border: 0; display: block; background: #0b1220; }
+
 /* ---------- Manage menu ---------- */
 .menu-wrap { position: relative; }
 .menu-backdrop { position: fixed; inset: 0; z-index: 30; }
