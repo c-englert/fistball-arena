@@ -58,10 +58,54 @@ function parseResultRow(r0) {
   };
 }
 
-// fetchEventFromSheet(sheetId) -> { games, results, rosters, warnings, ... }
+// Parse the master "Cautions DB" (a section of the Config tab) into the same
+// per-player shape Fistball Live expects: { team, teamName, category, nr, name,
+// first, y, yr, r, events:[{game,type}] }. Anchored on the "Cautions" header;
+// columns are contiguous: Nr | Name | First | Cautions(type) | Game | Team.
+function parseCautionsRows(rows) {
+  const up = (s) => String(s || "").trim().toUpperCase();
+  let hdr = -1, cType = -1;
+  for (let r = 0; r < rows.length && hdr < 0; r++) {
+    const idx = rows[r].findIndex((c) => up(c) === "CAUTIONS" || up(c) === "CAUTION");
+    if (idx >= 3) { hdr = r; cType = idx; }
+  }
+  if (hdr < 0) return [];
+  const cNr = cType - 3, cName = cType - 2, cFirst = cType - 1, cGame = cType + 1, cTeam = cType + 2;
+  const TYPES = ["Y", "YR", "R"];
+  const players = new Map();
+  for (let r = hdr + 1; r < rows.length; r++) {
+    const row = rows[r];
+    const teamRaw = (row[cTeam] || "").trim();
+    const type = up(row[cType]);
+    if (!teamRaw || !TYPES.includes(type)) continue;
+    const nr = (row[cNr] || "").trim(), name = (row[cName] || "").trim(), first = (row[cFirst] || "").trim();
+    const key = `${teamRaw}|${nr}|${name}|${first}`;
+    if (!players.has(key)) {
+      const i = teamRaw.indexOf(" - ");
+      players.set(key, {
+        team: teamRaw, teamName: i >= 0 ? teamRaw.slice(0, i) : teamRaw,
+        category: i >= 0 ? teamRaw.slice(i + 3) : "",
+        nr, name, first, y: 0, yr: 0, r: 0, events: [],
+      });
+    }
+    const p = players.get(key);
+    p[type.toLowerCase()]++;
+    p.events.push({ game: (row[cGame] || "").trim(), type });
+  }
+  return [...players.values()];
+}
+
+async function fetchCautions(sheetId, tab) {
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}&_=${Date.now()}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Config fetch failed (${res.status})`);
+  return parseCautionsRows(parseCSV(await res.text()));
+}
+
+// fetchEventFromSheet(sheetId) -> { games, results, rosters, cautions, warnings, ... }
 // resultsTab: the tab holding the schedule + scores (named "Results" in the
 // event workbooks; the Fistball Live source sheet uses gid 0).
-export async function fetchEventFromSheet(sheetId, { resultsTab = "Results", dbTab = "DB" } = {}) {
+export async function fetchEventFromSheet(sheetId, { resultsTab = "Results", dbTab = "DB", configTab = "Config" } = {}) {
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(resultsTab)}&_=${Date.now()}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Sheet fetch failed (${res.status})`);
@@ -88,7 +132,17 @@ export async function fetchEventFromSheet(sheetId, { resultsTab = "Results", dbT
     if (r.warnings?.length) warnings.push(...r.warnings.map((w) => "DB: " + w));
   } catch (e) { warnings.push("DB tab not read: " + (e?.message || e)); }
 
+  // Cards from the Config tab's Cautions DB (optional).
+  let cautions = [];
+  try {
+    cautions = await fetchCautions(sheetId, configTab);
+  } catch (e) { warnings.push("Cautions not read: " + (e?.message || e)); }
+
   if (!games.length) warnings.push("No matches found in the Results tab.");
   const finished = results.filter((r) => r.status === "Finished").length;
-  return { games, results, rosters, warnings, gameCount: games.length, finished, teamCount: Object.keys(rosters).length };
+  return {
+    games, results, rosters, cautions, warnings,
+    gameCount: games.length, finished, teamCount: Object.keys(rosters).length,
+    cautionCount: cautions.length,
+  };
 }

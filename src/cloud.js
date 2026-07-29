@@ -272,7 +272,7 @@ export async function publishGames(games, { replaceAll } = {}) {
 }
 
 // Import a whole past event: games + real results (scores) + rosters.
-export async function publishEventImport({ games, results, rosters }, { replaceAll } = {}) {
+export async function publishEventImport({ games, results, rosters, cautions }, { replaceAll } = {}) {
   if (replaceAll) {
     await clearCollection("reports");
     await clearCollection("results");
@@ -299,6 +299,9 @@ export async function publishEventImport({ games, results, rosters }, { replaceA
     entries.slice(i, i + 400).forEach(([k, v]) => batch.set(edoc("rosters", k), v));
     await batch.commit();
   }
+  // Cards (from the sheet's Cautions DB) go on the public event doc so Fistball
+  // Live can render the Cards tab for this imported event.
+  await writeEventPublic(reqEid(), { cautions: cautions || [] });
 }
 
 /* ----------------- players & staff registry (rosters) ----------------- */
@@ -357,6 +360,15 @@ export function subscribeGames(cb) {
   return onSnapshot(ecol("games"),
     (snap) => { if (eid === _eid) cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); },
     (err) => console.warn("games unavailable:", err?.code || err));
+}
+
+// Every published result (scores + cards) — used for standings embeds and the
+// per-person match/card history on the Players & staff page.
+export function subscribeResults(cb) {
+  const eid = reqEid();
+  return onSnapshot(ecol("results"),
+    (snap) => { if (eid === _eid) cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); },
+    (err) => { console.warn("results unavailable:", err?.code || err); cb([]); });
 }
 
 // Live status/lock of every report (for the list badges).
@@ -498,6 +510,29 @@ export async function submitReport(gameId, me) {
 }
 
 /* ----------------- publish to Fistball Live ----------------- */
+// Disciplinary cards logged on a report, flattened for the public results doc.
+// Fistball Live aggregates these (across all games) into its Cards tab.
+function deriveCards(rep) {
+  const out = [];
+  const i = rep.info || {};
+  for (const side of ["teamA", "teamB"]) {
+    const t = rep[side];
+    if (!t) continue;
+    const push = (list, isStaff) => (list || []).forEach((p) => {
+      const c = p.cards || {};
+      if (!c.y && !c.yr && !c.r) return;
+      out.push({
+        team: t.name || "", category: i.category || "",
+        nr: isStaff ? "" : (p.nr || ""), name: p.name || "", first: p.first || "",
+        role: isStaff ? (p.role || "Staff") : "",
+        y: c.y ? 1 : 0, yr: c.yr ? 1 : 0, r: c.r ? 1 : 0,
+      });
+    });
+    push(t.players, false);
+    push(t.staff, true);
+  }
+  return out;
+}
 function deriveResult(rep) {
   const sets = [];
   let setsA = 0, setsB = 0, pointsA = 0, pointsB = 0;
@@ -519,6 +554,7 @@ function deriveResult(rep) {
     round: i.round, category: i.category, bestOf: i.bestOf,
     teamA: rep.teamA?.name || "", teamB: rep.teamB?.name || "",
     setsA, setsB, pointsA, pointsB, sets, status,
+    cards: deriveCards(rep),
     updatedAt: serverTimestamp(),
   };
 }

@@ -370,6 +370,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .pf-k { color: var(--muted); }
 .pf-v { font-weight: 700; }
 
+/* ---------- Person match & card history ---------- */
+.person-history { text-align: left; margin-top: 6px; }
+.hist-list { display: grid; gap: 2px; max-height: 240px; overflow-y: auto; }
+.hist-row { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.hist-row:last-child { border-bottom: none; }
+.hist-opp { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+.hist-res { width: 20px; text-align: center; font-weight: 800; border-radius: 5px; }
+.hist-res.win { color: #0a7d34; }
+.hist-res.loss { color: #b02a2a; }
+.hist-cards { display: inline-flex; gap: 3px; margin-left: auto; }
+.hist-cards .chip, .person-history .subhead .chip { padding: 1px 6px; font-size: 11px; cursor: default; }
+
 /* ---------- Team flags ---------- */
 .flag { margin-right: 6px; }
 .flag:empty { margin: 0; }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchRosters } from "../roster/importRoster.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
-import { subscribeRosters, publishRosters, addMember } from "../cloud.js";
+import { subscribeRosters, subscribeResults, publishRosters, addMember } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 
@@ -24,8 +24,10 @@ export default function Roster({ me }) {
   const [status, setStatus] = useState("");
   const [open, setOpen] = useState(null);           // expanded team
   const [profile, setProfile] = useState(null);     // person card
+  const [results, setResults] = useState([]);       // published results (for history)
 
   useEffect(() => subscribeRosters(setRosters), []);
+  useEffect(() => subscribeResults(setResults), []);
 
   if (!isAdmin) {
     return <div className="empty">Admins only. <button className="btn" onClick={() => nav(`/e/${eventId}`)}>Back</button></div>;
@@ -151,7 +153,7 @@ export default function Roster({ me }) {
         ))}
       </div>
 
-      {profile && <PersonModal person={profile} onClose={() => setProfile(null)} me={me} isAdmin={isAdmin} />}
+      {profile && <PersonModal person={profile} results={results} onClose={() => setProfile(null)} me={me} isAdmin={isAdmin} />}
     </div>
   );
 }
@@ -166,9 +168,46 @@ function ageFrom(bday) {
   return a >= 0 && a < 120 ? a : null;
 }
 
-function PersonModal({ person, onClose, me, isAdmin }) {
+// Same-person test tolerant of missing jersey numbers / accents.
+function normName(s) { return String(s || "").trim().toLowerCase(); }
+function sameCard(c, p) {
+  if (normName(c.name) !== normName(p.name)) return false;
+  if (c.first && p.first && normName(c.first) !== normName(p.first)) return false;
+  if (c.nr && p.nr && String(c.nr) !== String(p.nr)) return false;
+  return true;
+}
+
+function PersonModal({ person, results = [], onClose, me, isAdmin }) {
   const p = person;
   const age = ageFrom(p.birthday);
+
+  // Matches this person's team played, most recent first, with their cards.
+  const history = useMemo(() => {
+    const rows = [];
+    for (const r of results) {
+      const side = r.teamA === p.team ? "A" : r.teamB === p.team ? "B" : null;
+      if (!side) continue;
+      const opp = side === "A" ? r.teamB : r.teamA;
+      const my = side === "A" ? r.setsA : r.setsB;
+      const th = side === "A" ? r.setsB : r.setsA;
+      const cards = (r.cards || []).filter((c) => c.team === p.team && sameCard(c, p));
+      rows.push({
+        nr: r.nr, date: r.date, category: r.category, round: r.round,
+        opp: String(opp || "").split(" - ")[0],
+        score: `${my ?? 0}–${th ?? 0}`,
+        result: r.status === "Finished" ? (my > th ? "W" : my < th ? "L" : "–") : "",
+        status: r.status,
+        y: cards.reduce((a, c) => a + (c.y || 0), 0),
+        yr: cards.reduce((a, c) => a + (c.yr || 0), 0),
+        r: cards.reduce((a, c) => a + (c.r || 0), 0),
+      });
+    }
+    rows.sort((a, b) => (Number(b.nr) || 0) - (Number(a.nr) || 0));
+    return rows;
+  }, [results, p.team, p.name, p.first, p.nr]);
+  const totals = useMemo(() => history.reduce(
+    (t, h) => ({ y: t.y + h.y, yr: t.yr + h.yr, r: t.r + h.r }), { y: 0, yr: 0, r: 0 }
+  ), [history]);
   const [grant, setGrant] = useState({ email: "", role: "official" });
   const [granting, setGranting] = useState(false);
   const [granted, setGranted] = useState("");
@@ -204,7 +243,37 @@ function PersonModal({ person, onClose, me, isAdmin }) {
             <div className="person-fact" key={k}><span className="pf-k">{k}</span><span className="pf-v">{v}</span></div>
           ))}
         </div>
-        <p className="muted-sm" style={{ marginTop: 14 }}>Match & card history coming soon.</p>
+        <div className="person-history">
+          <div className="subhead" style={{ marginTop: 14 }}>
+            Match &amp; card history
+            {(totals.y || totals.yr || totals.r) ? (
+              <span style={{ marginLeft: 8 }}>
+                {totals.y > 0 && <span className="chip y on">Y {totals.y}</span>}
+                {totals.yr > 0 && <span className="chip yr on">YR {totals.yr}</span>}
+                {totals.r > 0 && <span className="chip r on">R {totals.r}</span>}
+              </span>
+            ) : null}
+          </div>
+          {history.length === 0 ? (
+            <p className="muted-sm">No matches recorded for {p.team} yet.</p>
+          ) : (
+            <div className="hist-list">
+              {history.map((h) => (
+                <div className="hist-row" key={h.nr}>
+                  <span className="tag">#{h.nr}</span>
+                  <span className="hist-opp">vs {h.opp}</span>
+                  <span className="hist-score">{h.status === "Not Started" ? "—" : h.score}</span>
+                  {h.result && <span className={`hist-res ${h.result === "W" ? "win" : h.result === "L" ? "loss" : ""}`}>{h.result}</span>}
+                  <span className="hist-cards">
+                    {h.y > 0 && <span className="chip y on">Y{h.y > 1 ? "×" + h.y : ""}</span>}
+                    {h.yr > 0 && <span className="chip yr on">YR{h.yr > 1 ? "×" + h.yr : ""}</span>}
+                    {h.r > 0 && <span className="chip r on">R{h.r > 1 ? "×" + h.r : ""}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {isAdmin && (
           <div className="person-grant">

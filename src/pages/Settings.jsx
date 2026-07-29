@@ -27,7 +27,7 @@ export default function Settings({ me }) {
       const id = evUrl.match(/[-\w]{25,}/)?.[0] || evUrl.trim();
       const r = await fetchEventFromSheet(id);
       setEvPreview(r);
-      setStatus(`Found ${r.gameCount} games (${r.finished} finished) + ${r.teamCount} teams.` + (r.warnings.length ? " " + r.warnings.join("; ") : ""));
+      setStatus(`Found ${r.gameCount} games (${r.finished} finished) + ${r.teamCount} teams + ${r.cautionCount} carded players.` + (r.warnings.length ? " " + r.warnings.join("; ") : ""));
     } catch (e) { setStatus("Read failed: " + (e?.message || e)); }
   };
   const publishEvent = async () => {
@@ -141,7 +141,7 @@ export default function Settings({ me }) {
             </div>
             {evPreview?.gameCount > 0 && (
               <div style={{ marginTop: 12 }}>
-                <p className="muted-sm">Ready: <b>{evPreview.gameCount}</b> games ({evPreview.finished} finished) · <b>{evPreview.teamCount}</b> rosters.</p>
+                <p className="muted-sm">Ready: <b>{evPreview.gameCount}</b> games ({evPreview.finished} finished) · <b>{evPreview.teamCount}</b> rosters · <b>{evPreview.cautionCount}</b> carded players.</p>
                 <button className="btn primary" style={{ width: "100%" }} onClick={publishEvent}>Import into this event (replace)</button>
               </div>
             )}
