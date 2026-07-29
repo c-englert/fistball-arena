@@ -144,9 +144,9 @@ export default function Settings({ me }) {
                 <div className="logo-name">{l.name}</div>
                 {!archived && (
                   <div className="logo-actions">
-                    <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>Event</button>
-                    <button className="btn sm" onClick={() => addPromoter(l)}>+Promoter</button>
-                    <button className="btn danger sm" onClick={() => window.confirm(`Delete “${l.name}” from the library?`) && deleteLogo(l.id)}>✕</button>
+                    <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>Event logo</button>
+                    <button className="btn sm" onClick={() => addPromoter(l)}>Add promoter</button>
+                    <button className="btn danger sm" onClick={() => window.confirm(`Delete “${l.name}” from the library?`) && deleteLogo(l.id)}>Delete</button>
                   </div>
                 )}
               </div>
