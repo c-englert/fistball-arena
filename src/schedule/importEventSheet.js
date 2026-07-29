@@ -47,7 +47,7 @@ function parseResultRow(r0) {
     if ((r[i + 1] || "").trim() !== "x") break;
     const a = num(r[i]), b = num(r[i + 2]);
     if (a === 0 && b === 0) continue;
-    sets.push([a, b]);
+    sets.push({ a, b });   // objects, not [a,b] — Firestore rejects nested arrays
   }
   let status = "Not Started";
   for (const c of r) { const t = c.trim(); if (STATUS.includes(t)) { status = t; break; } }

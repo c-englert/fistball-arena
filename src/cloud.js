@@ -541,7 +541,7 @@ function deriveResult(rep) {
     if (!r.length) continue;
     const a = r.filter((x) => x === "A").length;
     const b = r.filter((x) => x === "B").length;
-    sets.push([a, b]);
+    sets.push({ a, b });   // objects, not [a,b] — Firestore rejects nested arrays
     pointsA += a; pointsB += b;
     if (a > b) setsA++; else if (b > a) setsB++;
   }
