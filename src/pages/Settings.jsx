@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails,
+  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, publishEventImport,
 } from "../cloud.js";
+import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
 import { useEvent } from "../eventContext.js";
@@ -16,6 +17,28 @@ export default function Settings({ me }) {
   const [details, setDetails] = useState(() => ({
     name: event?.name || "", place: event?.place || "", startDate: event?.startDate || "", endDate: event?.endDate || "",
   }));
+
+  const [evUrl, setEvUrl] = useState("");
+  const [evPreview, setEvPreview] = useState(null);
+  const readEvent = async () => {
+    setStatus("Reading sheet…");
+    try {
+      const id = evUrl.match(/[-\w]{25,}/)?.[0] || evUrl.trim();
+      const r = await fetchEventFromSheet(id);
+      setEvPreview(r);
+      setStatus(`Found ${r.gameCount} games (${r.finished} finished) + ${r.teamCount} teams.` + (r.warnings.length ? " " + r.warnings.join("; ") : ""));
+    } catch (e) { setStatus("Read failed: " + (e?.message || e)); }
+  };
+  const publishEvent = async () => {
+    if (!evPreview?.gameCount) return;
+    if (!window.confirm(`Replace this event's games, reports and results with ${evPreview.gameCount} imported games (and ${evPreview.teamCount} rosters)? This cannot be undone.`)) return;
+    setStatus("Importing…");
+    try {
+      await publishEventImport(evPreview, { replaceAll: true });
+      setStatus(`Imported ${evPreview.gameCount} games + ${evPreview.teamCount} rosters. Open the games list / Fistball Live to see them.`);
+      setEvPreview(null);
+    } catch (e) { setStatus("Import failed: " + (e?.message || e)); }
+  };
 
   const saveDetails = async () => {
     setStatus("Saving event…");
@@ -105,6 +128,25 @@ export default function Settings({ me }) {
           {(details.startDate || details.endDate) && <p className="muted-sm">{formatRange(details.startDate, details.endDate)}</p>}
           {!archived && <button className="btn primary" onClick={saveDetails}>Save details</button>}
         </div>
+
+        {/* ---- Import a past event from a Google Sheet ---- */}
+        {!archived && (
+          <div className="card">
+            <h2>Import a past event (Google Sheet)</h2>
+            <p className="muted-sm">Brings the schedule + final scores (Results tab) and rosters (DB tab) into this event, so Fistball Live shows the full standings. Súmula line-up/card detail is separate.</p>
+            <div className="add-row" style={{ marginTop: 8 }}>
+              <input value={evUrl} onChange={(e) => setEvUrl(e.target.value)} placeholder="Google Sheet URL or ID" />
+              <button className="btn primary" onClick={readEvent}>Read</button>
+            </div>
+            {evPreview?.gameCount > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <p className="muted-sm">Ready: <b>{evPreview.gameCount}</b> games ({evPreview.finished} finished) · <b>{evPreview.teamCount}</b> rosters.</p>
+                <button className="btn primary" style={{ width: "100%" }} onClick={publishEvent}>Import into this event (replace)</button>
+              </div>
+            )}
+            <p className="muted-sm">Or import just players/staff from an Excel file on the <b>Players &amp; staff</b> page.</p>
+          </div>
+        )}
 
         {/* ---- Logos ---- */}
         <div className="card">

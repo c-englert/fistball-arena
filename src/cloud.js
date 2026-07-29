@@ -271,6 +271,36 @@ export async function publishGames(games, { replaceAll } = {}) {
   }
 }
 
+// Import a whole past event: games + real results (scores) + rosters.
+export async function publishEventImport({ games, results, rosters }, { replaceAll } = {}) {
+  if (replaceAll) {
+    await clearCollection("reports");
+    await clearCollection("results");
+    await clearCollection("games");
+    if (rosters && Object.keys(rosters).length) await clearCollection("rosters");
+  }
+  const g = games || [];
+  for (let i = 0; i < g.length; i += 200) {
+    const batch = writeBatch(db);
+    g.slice(i, i + 200).forEach((x) => batch.set(edoc("games", `g${x.nr}`), {
+      nr: x.nr, date: x.date, time: x.time, court: x.court, bestOf: x.bestOf, round: x.round, category: x.category, teamA: x.teamA, teamB: x.teamB,
+    }));
+    await batch.commit();
+  }
+  const rs = results || [];
+  for (let i = 0; i < rs.length; i += 400) {
+    const batch = writeBatch(db);
+    rs.slice(i, i + 400).forEach((x) => batch.set(edoc("results", `g${x.nr}`), { ...x, updatedAt: serverTimestamp() }));
+    await batch.commit();
+  }
+  const entries = Object.entries(rosters || {});
+  for (let i = 0; i < entries.length; i += 400) {
+    const batch = writeBatch(db);
+    entries.slice(i, i + 400).forEach(([k, v]) => batch.set(edoc("rosters", k), v));
+    await batch.commit();
+  }
+}
+
 /* ----------------- players & staff registry (rosters) ----------------- */
 export function subscribeRosters(cb) {
   const eid = reqEid();
