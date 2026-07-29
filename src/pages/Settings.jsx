@@ -5,6 +5,7 @@ import {
   subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, publishEventImport,
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
+import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
 import { useEvent } from "../eventContext.js";
@@ -144,9 +145,11 @@ export default function Settings({ me }) {
                 <button className="btn primary" style={{ width: "100%" }} onClick={publishEvent}>Import into this event (replace)</button>
               </div>
             )}
-            <p className="muted-sm">Or import just players/staff from an Excel file on the <b>Players &amp; staff</b> page.</p>
           </div>
         )}
+
+        {/* ---- Import players & staff from Excel ---- */}
+        {!archived && <ExcelImport me={me} />}
 
         {/* ---- Logos ---- */}
         <div className="card">
