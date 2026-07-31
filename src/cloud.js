@@ -255,13 +255,13 @@ export async function publishGames(games, { replaceAll } = {}) {
       const id = `g${g.nr}`;
       batch.set(edoc("games", id), {
         nr: g.nr, date: g.date, time: g.time, court: g.court,
-        bestOf: g.bestOf, round: g.round, category: g.category,
+        bestOf: g.bestOf, round: g.round, category: g.category, group: g.group || "",
         teamA: g.teamA, teamB: g.teamB,
       });
       // Public results row so the spectator Live sees the whole fixture upfront.
       batch.set(edoc("results", id), {
         nr: g.nr, date: g.date, time: g.time, court: g.court,
-        round: g.round, category: g.category, bestOf: g.bestOf,
+        round: g.round, category: g.category, group: g.group || "", bestOf: g.bestOf,
         teamA: g.teamA.name, teamB: g.teamB.name,
         setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], status: "Not Started",
         updatedAt: serverTimestamp(),
@@ -283,7 +283,7 @@ export async function publishEventImport({ games, results, rosters, cautions }, 
   for (let i = 0; i < g.length; i += 200) {
     const batch = writeBatch(db);
     g.slice(i, i + 200).forEach((x) => batch.set(edoc("games", `g${x.nr}`), {
-      nr: x.nr, date: x.date, time: x.time, court: x.court, bestOf: x.bestOf, round: x.round, category: x.category, teamA: x.teamA, teamB: x.teamB,
+      nr: x.nr, date: x.date, time: x.time, court: x.court, bestOf: x.bestOf, round: x.round, category: x.category, group: x.group || "", teamA: x.teamA, teamB: x.teamB,
     }));
     await batch.commit();
   }
@@ -401,7 +401,7 @@ function cloneTeam(t) {
 function blankReport(game) {
   return {
     matchId: game.id,
-    info: { nr: game.nr, date: game.date, time: game.time, court: game.court, bestOf: game.bestOf, round: game.round, category: game.category },
+    info: { nr: game.nr, date: game.date, time: game.time, court: game.court, bestOf: game.bestOf, round: game.round, category: game.category, group: game.group || "" },
     teamA: cloneTeam(game.teamA),
     teamB: cloneTeam(game.teamB),
     sets: Array.from({ length: game.bestOf }, () => ({ rallies: [] })),
@@ -551,7 +551,7 @@ function deriveResult(rep) {
   const i = rep.info || {};
   return {
     nr: i.nr, date: i.date, time: i.time, court: i.court,
-    round: i.round, category: i.category, bestOf: i.bestOf,
+    round: i.round, category: i.category, group: i.group || "", bestOf: i.bestOf,
     teamA: rep.teamA?.name || "", teamB: rep.teamB?.name || "",
     setsA, setsB, pointsA, pointsB, sets, status,
     cards: deriveCards(rep),

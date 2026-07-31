@@ -33,7 +33,7 @@ export function generateSchedule(config) {
         round.forEach(([a, b], i) => {
           fixtures.push({
             id: `${catKey}:grp:${g.label}:${ri}:${i}`,
-            category: cat.name, bestOf: cat.bestOf,
+            category: cat.name, bestOf: cat.bestOf, group: g.label,
             round: "Qualification round", phase: "group",
             groupRoundIndex: ri, seq: seq++,
             teamA: a, teamB: b, deps: [],
@@ -71,6 +71,7 @@ export function generateSchedule(config) {
     bestOf: p.fixture.bestOf,
     round: p.fixture.round,
     category: p.fixture.category,
+    group: p.fixture.group || "",
     teamA: team(p.fixture.teamA),
     teamB: team(p.fixture.teamB),
   }));
