@@ -434,3 +434,22 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .arch-badge { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: #fde8e8; color: var(--r); padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
 .state.progress { background: #fff2cc; color: #8a6d00; }
 .live-tag { background: #d8f3e4; color: var(--win); }
+
+/* ---------- In-app guide ---------- */
+.lang-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.guide { max-width: 760px; margin: 0 auto; line-height: 1.55; }
+.guide-title { margin: 0; font-size: 24px; font-weight: 800; color: var(--brand); }
+.guide-sub { margin: 4px 0 12px; color: var(--muted); font-size: 14px; }
+.guide-lead { margin: 0 0 8px; }
+.guide-section { margin-top: 20px; }
+.guide-h { font-size: 16px; font-weight: 800; color: var(--brand); margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.guide-p { margin: 8px 0; }
+.guide-note { margin: 8px 0; font-size: 13.5px; color: var(--muted); }
+.guide-ul, .guide-ol { margin: 8px 0; padding-left: 22px; }
+.guide-ul li, .guide-ol li { margin: 5px 0; }
+.guide-ol li::marker { color: var(--brand); font-weight: 800; }
+.guide-warn { background: #fff4e5; border-left: 3px solid #e8a33d; border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+.guide-warn-h { font-weight: 800; color: #5a3d0a; margin-bottom: 4px; }
+.guide-warn-p { margin: 6px 0; font-size: 13.5px; color: #5a3d0a; }
+.guide-summary { background: #efecf7; color: var(--brand); border-radius: 8px; padding: 12px 14px; margin-top: 20px; font-size: 14px; }
+.guide-updated { margin-top: 10px; font-size: 12px; color: var(--muted); text-align: right; }
