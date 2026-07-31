@@ -37,6 +37,56 @@ function toShortDate(s) {
   return `${dd}/${mm}/${m[3].slice(2)}`;
 }
 
+// Seed-label placeholders ("1st Group A", "Winner SF1", "Loser SF2", "5th Silver")
+// vs. real clubs that legitimately carry numbers ("SSV Bozen 2", "Widnau 1").
+function isPlaceholderName(name) {
+  const n = String(name || "").trim();
+  if (!n) return true;
+  return /(winner|loser)/i.test(n) || /\b\d+(st|nd|rd|th)\b/i.test(n) || /\b(sf|qf)\s*\d/i.test(n);
+}
+
+// Sheets have no group column, so infer groups from the fixtures: teams only
+// play within their group in the round-robin, so each connected component of the
+// "who played whom" graph (per category, real teams only) is one group. Labels
+// A/B/C… are ordered by the group's earliest match number. Only applied when a
+// category actually splits into 2+ groups; a single round-robin stays ungrouped.
+function inferGroups(games) {
+  const byCat = new Map();
+  for (const g of games) {
+    if (!byCat.has(g.category)) byCat.set(g.category, []);
+    byCat.get(g.category).push(g);
+  }
+  const LABELS = "ABCDEFGHIJKL";
+  for (const list of byCat.values()) {
+    const stage = list.filter((g) => !isPlaceholderName(g._a) && !isPlaceholderName(g._b));
+    const adj = new Map();
+    const ensure = (t) => (adj.has(t) ? adj.get(t) : (adj.set(t, new Set()), adj.get(t)));
+    for (const g of stage) { ensure(g._a).add(g._b); ensure(g._b).add(g._a); }
+    const seen = new Set(), comps = [];
+    for (const t of adj.keys()) {
+      if (seen.has(t)) continue;
+      const stack = [t], comp = [];
+      seen.add(t);
+      while (stack.length) {
+        const x = stack.pop(); comp.push(x);
+        for (const y of adj.get(x)) if (!seen.has(y)) { seen.add(y); stack.push(y); }
+      }
+      comps.push(comp);
+    }
+    if (comps.length < 2) continue; // single group → leave ungrouped
+    const minNr = (comp) => {
+      const s = new Set(comp);
+      let m = Infinity;
+      for (const g of stage) if (s.has(g._a) || s.has(g._b)) m = Math.min(m, g.nr);
+      return m;
+    };
+    comps.sort((a, b) => minNr(a) - minNr(b));
+    const label = new Map();
+    comps.forEach((comp, i) => comp.forEach((t) => label.set(t, LABELS[i] || String(i + 1))));
+    for (const g of stage) g.group = label.get(g._a) || label.get(g._b) || "";
+  }
+}
+
 // Fetch + parse the sheet into { games, warnings }.
 export async function fetchSheetGames(sheetId, gid = "0") {
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&_=${Date.now()}`;
@@ -62,11 +112,17 @@ export async function fetchSheetGames(sheetId, gid = "0") {
       bestOf: num(r[8]) || 5,
       round,
       category,
+      group: "",
       teamA: team(teamA),
       teamB: team(teamB),
+      _a: teamA, _b: teamB, // raw names for group inference (not published)
     });
   }
   games.sort((a, b) => a.nr - b.nr);
+  inferGroups(games);
+  for (const g of games) { delete g._a; delete g._b; }
   if (!games.length) warnings.push("No matches found in the sheet.");
+  const grouped = [...new Set(games.map((g) => g.group).filter(Boolean))].length;
+  if (grouped) warnings.push(`Detected ${grouped} group(s) from the fixtures.`);
   return { games, warnings, unplaced: [] };
 }
