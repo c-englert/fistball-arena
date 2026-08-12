@@ -329,6 +329,19 @@ function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPu
     return [...map.entries()];
   }, [result]);
 
+  // The assembled structure per category: group teams + each knockout round.
+  const byCat = useMemo(() => {
+    if (!result) return [];
+    const cats = new Map();
+    for (const g of result.games) {
+      if (!cats.has(g.category)) cats.set(g.category, { group: new Set(), rounds: new Map() });
+      const c = cats.get(g.category);
+      if (g.round === "Qualification round") { c.group.add(g.teamA.name); c.group.add(g.teamB.name); }
+      else { if (!c.rounds.has(g.round)) c.rounds.set(g.round, []); c.rounds.get(g.round).push(g); }
+    }
+    return [...cats.entries()];
+  }, [result]);
+
   return (
     <>
       <div className="card">
@@ -352,6 +365,24 @@ function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPu
           </div>
         )}
       </div>
+
+      {byCat.length > 0 && (
+        <div className="card">
+          <h2>Structure</h2>
+          <p className="muted-sm">The assembled bracket per category — check it before publishing.</p>
+          {byCat.map(([cat, c]) => (
+            <div className="fmt-cat" key={cat}>
+              <div className="fmt-head"><b>{cat}</b><span className="tag">{c.group.size} teams</span></div>
+              <div className="fmt-line"><span className="fmt-round">Qualification round</span> {[...c.group].join(" · ")}</div>
+              {[...c.rounds.entries()].map(([round, gs]) => (
+                <div className="fmt-line" key={round}>
+                  <span className="fmt-round">{round}</span> {gs.map((g) => `${g.teamA.name} × ${g.teamB.name}`).join(" · ")}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
 
       {byDay.map(([day, games]) => (
         <div className="card" key={day}>
