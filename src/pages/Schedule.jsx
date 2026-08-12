@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TEAM_NAMES } from "../seed.js";
-import { generateSchedule } from "../schedule/generator.js";
+import { generateSchedule, categoryLabel } from "../schedule/generator.js";
 import { fetchSheetGames } from "../schedule/importSheet.js";
 import { saveScheduleConfig, subscribeScheduleConfig, publishGames } from "../cloud.js";
 import { useEvent } from "../eventContext.js";
@@ -28,6 +28,19 @@ function defaultConfig() {
   };
 }
 
+// A generator category seeded from an event-level {name, gender} definition.
+function seedCategory(cat) {
+  return { name: categoryLabel(cat), bestOf: 5, double: false, qualifiersPerGroup: 2, knockout: true, groups: [{ label: "A", teams: [] }] };
+}
+// Pre-fill the generator with the categories the admin defined on the event
+// (Settings → Categories), so the schedule starts from those instead of a stub.
+function initialConfig(event) {
+  const base = defaultConfig();
+  const cats = (event?.categories || []).filter((c) => (c.name || "").trim());
+  if (cats.length) base.categories = cats.map(seedCategory);
+  return base;
+}
+
 // date helpers between internal "DD/MM/YY" and the <input type=date> "YYYY-MM-DD".
 const toISO = (s) => {
   const [d, m, y] = String(s).split("/");
@@ -40,8 +53,8 @@ const fromISO = (iso) => {
 
 export default function Schedule({ me }) {
   const nav = useNavigate();
-  const { eventId, isAdmin } = useEvent();
-  const [config, setConfig] = useState(defaultConfig);
+  const { eventId, isAdmin, event } = useEvent();
+  const [config, setConfig] = useState(() => initialConfig(event));
   const [step, setStep] = useState("cats");
   const [result, setResult] = useState(null); // { games, warnings, unplaced }
   const [replaceAll, setReplaceAll] = useState(true);

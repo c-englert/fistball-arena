@@ -35,6 +35,7 @@ export const GUIDE = {
           'Preencha <b>Name</b> (ex.: “2027 U18 World Championship”), <b>Place</b> (ex.: “Jona · Switzerland”) e as <b>datas</b> pelo seletor de intervalo (início e fim).',
           'Confirme. O evento é criado, abre automaticamente e nasce com status <b>active</b>.',
         ] },
+        { t: "note", text: 'Dica: logo após criar, abra <b>Manage ▾ → Settings → Categories</b> para definir as categorias e o sexo (ex.: Seleções Men/Women, Clubes Men/Women). Dá para começar antes do Excel, e essas categorias já entram pré-preenchidas no gerador de Schedule.' },
       ] },
       { h: "Parte B — Cadastrar times e pessoas (recomendado antes dos jogos)", blocks: [
         { t: "p", text: 'No menu <b>“Manage ▾”</b> (canto superior direito, dentro do evento):' },
@@ -99,6 +100,7 @@ export const GUIDE = {
           'Fill in <b>Name</b> (e.g. “2027 U18 World Championship”), <b>Place</b> (e.g. “Jona · Switzerland”) and the <b>dates</b> using the range picker (start and end).',
           'Confirm. The event is created, opens automatically and starts with status <b>active</b>.',
         ] },
+        { t: "note", text: 'Tip: right after creating, open <b>Manage ▾ → Settings → Categories</b> to define the categories and sex (e.g. Seleções Men/Women, Clubes Men/Women). You can start before the Excel, and these categories are pre-filled into the Schedule generator.' },
       ] },
       { h: "Part B — Register teams and people (recommended before the games)", blocks: [
         { t: "p", text: 'From the <b>“Manage ▾”</b> menu (top-right, inside the event):' },
@@ -163,6 +165,7 @@ export const GUIDE = {
           'Completa <b>Name</b> (ej.: “2027 U18 World Championship”), <b>Place</b> (ej.: “Jona · Switzerland”) y las <b>fechas</b> con el selector de rango (inicio y fin).',
           'Confirma. El evento se crea, se abre automáticamente y nace con estado <b>active</b>.',
         ] },
+        { t: "note", text: 'Consejo: justo después de crear, abre <b>Manage ▾ → Settings → Categories</b> para definir las categorías y el sexo (ej.: Seleções Men/Women, Clubes Men/Women). Puedes empezar antes del Excel, y esas categorías se precargan en el generador de Schedule.' },
       ] },
       { h: "Parte B — Registrar equipos y personas (recomendado antes de los partidos)", blocks: [
         { t: "p", text: 'En el menú <b>“Manage ▾”</b> (arriba a la derecha, dentro del evento):' },
@@ -227,6 +230,7 @@ export const GUIDE = {
           '<b>Name</b> (z. B. „2027 U18 World Championship“), <b>Place</b> (z. B. „Jona · Switzerland“) und die <b>Daten</b> über die Zeitraum-Auswahl (Start und Ende) ausfüllen.',
           'Bestätigen. Das Event wird erstellt, öffnet sich automatisch und startet mit Status <b>active</b>.',
         ] },
+        { t: "note", text: 'Tipp: direkt nach dem Anlegen unter <b>Manage ▾ → Settings → Categories</b> die Kategorien und das Geschlecht festlegen (z. B. Seleções Men/Women, Clubes Men/Women). Schon vor dem Excel möglich — diese Kategorien werden im Schedule-Generator vorbefüllt.' },
       ] },
       { h: "Teil B — Teams und Personen erfassen (empfohlen vor den Spielen)", blocks: [
         { t: "p", text: 'Im Menü <b>„Manage ▾“</b> (oben rechts, innerhalb des Events):' },
