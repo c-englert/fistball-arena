@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TEAM_NAMES } from "../seed.js";
 import { generateSchedule } from "../schedule/generator.js";
+import { hasFormat } from "../schedule/format.js";
 import { eventCategoryNames } from "../categories.js";
 import { fetchSheetGames } from "../schedule/importSheet.js";
 import { saveScheduleConfig, subscribeScheduleConfig, publishGames } from "../cloud.js";
@@ -60,7 +61,11 @@ export default function Schedule({ me }) {
   const nav = useNavigate();
   const { eventId, isAdmin, event } = useEvent();
   const [config, setConfig] = useState(() => initialConfig(event));
-  const [step, setStep] = useState("cats");
+  const [step, setStep] = useState(() => {
+    const cats = initialConfig(event).categories || [];
+    const preset = cats.length > 0 && cats.every((c) => hasFormat((c.groups || []).flatMap((g) => g.teams || []).length));
+    return preset ? "slots" : "cats";
+  });
   const [result, setResult] = useState(null); // { games, warnings, unplaced }
   const [replaceAll, setReplaceAll] = useState(true);
   const [status, setStatus] = useState("");
@@ -74,6 +79,13 @@ export default function Schedule({ me }) {
     });
     return unsub;
   }, [loadedRef]);
+
+  // When every category has a preset format, teams + format come from the event —
+  // skip the Groups/Format steps so it's just Slots → Generate.
+  const presetOnly = (config.categories || []).length > 0 &&
+    config.categories.every((c) => hasFormat((c.groups || []).flatMap((g) => g.teams || []).length));
+  const steps = presetOnly ? STEPS.filter(([k]) => k === "slots" || k === "preview") : STEPS;
+  useEffect(() => { if (!steps.some(([k]) => k === step)) setStep(steps[0][0]); }, [presetOnly]); // eslint-disable-line
 
   if (!isAdmin) {
     return <div className="empty">Admins only. <button className="btn" onClick={() => nav(`/e/${eventId}`)}>Back</button></div>;
@@ -144,7 +156,7 @@ export default function Schedule({ me }) {
       </header>
 
       <nav className="steps">
-        {STEPS.map(([k, label]) => (
+        {steps.map(([k, label]) => (
           <button key={k} className={`step ${step === k ? "active" : ""}`} onClick={() => setStep(k)}>{label}</button>
         ))}
       </nav>
@@ -165,7 +177,7 @@ export default function Schedule({ me }) {
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn" onClick={saveSetup}>Save setup</button>
           {step !== "preview"
-            ? <button className="btn primary" onClick={() => setStep(STEPS[STEPS.findIndex(s => s[0] === step) + 1][0])}>Next ›</button>
+            ? <button className="btn primary" onClick={() => setStep((steps[steps.findIndex((s) => s[0] === step) + 1] || steps[steps.length - 1])[0])}>Next ›</button>
             : <button className="btn primary" onClick={generate}>Generate</button>}
         </div>
       </div>
