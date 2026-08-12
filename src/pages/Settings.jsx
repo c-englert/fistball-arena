@@ -5,7 +5,7 @@ import {
   subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, publishEventImport,
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
-import { TYPES, COMMON_AGES, expandBuilder } from "../categories.js";
+import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -214,37 +214,57 @@ export default function Settings({ me }) {
             {!(details.entries || []).length ? (
               <p className="muted-sm" style={{ marginTop: 10 }}>No teams yet.</p>
             ) : (
-              <div className="matrix-wrap">
-                <table className="matrix">
-                  <thead>
-                    <tr>
-                      <th className="mx-team">Team</th>
-                      {previewCats.map((c) => <th key={c}><span className="mx-cat">{c}</span></th>)}
-                      <th aria-label="Remove" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(details.entries || []).map((t, i) => (
-                      <tr key={i}>
-                        <td className="mx-team">{t.name}</td>
-                        {previewCats.map((c) => (
-                          <td key={c} className="mx-cell">
-                            <input type="checkbox" checked={(t.cats || []).includes(c)} disabled={archived} onChange={() => toggleEntry(i, c)} />
-                          </td>
+              (() => {
+                const cols = buildColumns(cb);
+                const headRows = cols.hasAges ? 3 : 2;
+                return (
+                  <div className="matrix-wrap">
+                    <table className="matrix">
+                      <thead>
+                        <tr>
+                          <th className="mx-team" rowSpan={headRows}>Team</th>
+                          {cols.types.map((t, ti) => (
+                            <th key={ti} className="mx-type" colSpan={cols.sexes.length * cols.agesList.length}>{t}</th>
+                          ))}
+                          <th rowSpan={headRows} aria-label="Remove" />
+                        </tr>
+                        <tr>
+                          {cols.types.map((t, ti) => cols.sexes.map((s) => (
+                            <th key={ti + s} className={`mx-sex mx-sex-${s}`} colSpan={cols.agesList.length}>{s === "women" ? "♀ Women" : "♂ Men"}</th>
+                          )))}
+                        </tr>
+                        {cols.hasAges && (
+                          <tr>
+                            {cols.types.map((t, ti) => cols.sexes.map((s) => cols.agesList.map((a) => (
+                              <th key={ti + s + a} className="mx-age">{a}</th>
+                            ))))}
+                          </tr>
+                        )}
+                      </thead>
+                      <tbody>
+                        {(details.entries || []).map((t, i) => (
+                          <tr key={i}>
+                            <td className="mx-team">{t.name}</td>
+                            {cols.leaves.map((lf) => (
+                              <td key={lf.name} className="mx-cell">
+                                <input type="checkbox" checked={(t.cats || []).includes(lf.name)} disabled={archived} onChange={() => toggleEntry(i, lf.name)} title={lf.name} />
+                              </td>
+                            ))}
+                            <td>{!archived && <button className="btn danger sm" onClick={() => removeTeam(i)} aria-label="Remove">✕</button>}</td>
+                          </tr>
                         ))}
-                        <td>{!archived && <button className="btn danger sm" onClick={() => removeTeam(i)} aria-label="Remove">✕</button>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td className="mx-team dim">Teams</td>
-                      {previewCats.map((c) => <td key={c} className="mx-cell dim">{(details.entries || []).filter((t) => (t.cats || []).includes(c)).length}</td>)}
-                      <td />
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td className="mx-team dim">Teams</td>
+                          {cols.leaves.map((lf) => <td key={lf.name} className="mx-cell dim">{(details.entries || []).filter((t) => (t.cats || []).includes(lf.name)).length}</td>)}
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                );
+              })()
             )}
             {!archived && (details.entries || []).length > 0 && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveTeams}>Save teams</button>}
           </div>

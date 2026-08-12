@@ -65,6 +65,20 @@ export function expandBuilder(b) {
   }
   return out;
 }
+// Grouped columns for the teams matrix: Type (row 1) → Sex (row 2) → Age (row 3).
+// Leaves are ordered type → sex → age; each leaf's `name` is the concrete category.
+export function buildColumns(cb) {
+  const types = (cb?.types || []).map(typeLabel).filter(Boolean);
+  const sexes = cb?.sexes?.length ? cb.sexes : ["men"];
+  const ages = cb?.ages || [];
+  const agesList = ages.length ? ages : [null];
+  const leaves = [];
+  for (const type of types) for (const sex of sexes) for (const age of agesList) {
+    leaves.push({ type, sex, age, name: catName(type, age, sex) });
+  }
+  return { types, sexes, agesList, hasAges: ages.length > 0, leaves };
+}
+
 // The event's category source, preferring the chip-builder, then legacy rows.
 export function eventCategoryNames(event) {
   if (event?.categoryBuilder) return expandBuilder(event.categoryBuilder);
