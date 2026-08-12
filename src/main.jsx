@@ -6,6 +6,7 @@ import EventShell from "./EventShell.jsx";
 import Guide from "./pages/Guide.jsx";
 import Identity from "./pages/Identity.jsx";
 import InstallPrompt from "./InstallPrompt.jsx";
+import UpdatePrompt from "./UpdatePrompt.jsx";
 import { onMe, signOutMe } from "./cloud.js";
 import "./styles.css";
 
@@ -18,8 +19,8 @@ function Root() {
     return unsub;
   }, []);
 
-  if (!ready || me === undefined) return <div className="empty">Loading…</div>;
-  if (!me) return <><Identity /><InstallPrompt /></>;
+  if (!ready || me === undefined) return <><div className="empty">Loading…</div><UpdatePrompt /></>;
+  if (!me) return <><Identity /><InstallPrompt /><UpdatePrompt /></>;
 
   const signOut = () => signOutMe();
 
@@ -33,6 +34,7 @@ function Root() {
         </Routes>
       </HashRouter>
       <InstallPrompt />
+      <UpdatePrompt />
     </>
   );
 }

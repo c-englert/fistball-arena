@@ -110,6 +110,12 @@ export function subscribeEvent(cb) {
 export async function setEventStatus(status) {
   await updateDoc(doc(db, "events", reqEid()), { status });
 }
+// Write specific fields to the event doc without touching the public projection
+// (used for collaborative fields like categoryBuilder / entries).
+export async function updateEventFields(patch, eventId) {
+  await updateDoc(doc(db, "events", eventId || reqEid()), patch);
+}
+
 export async function updateEventDetails(patch, eventId) {
   const eid = eventId || reqEid();
   await updateDoc(doc(db, "events", eid), patch);

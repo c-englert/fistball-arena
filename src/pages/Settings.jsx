@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, publishEventImport,
+  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishEventImport,
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
@@ -11,41 +11,69 @@ import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
 import { useEvent } from "../eventContext.js";
 
+const fromEvent = (ev) => ({
+  name: ev?.name || "", place: ev?.place || "", startDate: ev?.startDate || "", endDate: ev?.endDate || "",
+  categoryBuilder: ev?.categoryBuilder || { types: [], sexes: [], ages: [] },
+  entries: ev?.entries || [], // [{ name, cats: [categoryName…] }]
+});
+
 export default function Settings({ me }) {
   const nav = useNavigate();
   const { eventId, event, archived, isAdmin, branding } = useEvent();
   const [live, setLive] = useState(undefined);
   const [status, setStatus] = useState("");
-  const [details, setDetails] = useState(() => ({
-    name: event?.name || "", place: event?.place || "", startDate: event?.startDate || "", endDate: event?.endDate || "",
-    categoryBuilder: event?.categoryBuilder || { types: [], sexes: [], ages: [] },
-    entries: event?.entries || [], // [{ name, cats: [categoryName…] }]
-  }));
+  const [details, setDetails] = useState(() => fromEvent(event));
+  const [dirty, setDirty] = useState(false); // has unsaved local edits
+  const [remote, setRemote] = useState(false); // someone else changed it while editing
+
+  // Live sync: pull the event doc into the form whenever it changes remotely,
+  // unless the user has unsaved edits (then just flag that it changed).
+  const lastEvent = useRef(event);
+  useEffect(() => {
+    if (event === lastEvent.current) return;
+    lastEvent.current = event;
+    if (dirty) setRemote(true);
+    else setDetails(fromEvent(event));
+  }, [event, dirty]);
+  const reloadFromEvent = () => { setDetails(fromEvent(event)); setDirty(false); setRemote(false); };
+
   const [ageInput, setAgeInput] = useState("");
   const [teamInput, setTeamInput] = useState("");
+  const edit = (updater) => { setDirty(true); setDetails(updater); };
   const cb = details.categoryBuilder;
-  const setBuilder = (patch) => setDetails((d) => ({ ...d, categoryBuilder: { ...d.categoryBuilder, ...patch } }));
+  const setBuilder = (patch) => edit((d) => ({ ...d, categoryBuilder: { ...d.categoryBuilder, ...patch } }));
   const toggleIn = (key, val) => setBuilder({ [key]: (cb[key] || []).includes(val) ? cb[key].filter((x) => x !== val) : [...(cb[key] || []), val] });
   const addAge = (a) => { const v = a.trim(); if (v && !(cb.ages || []).includes(v)) setBuilder({ ages: [...(cb.ages || []), v] }); setAgeInput(""); };
   const previewCats = expandBuilder(cb);
-  const persist = (msg) => updateEventDetails({ ...details, dates: formatRange(details.startDate, details.endDate) }).then(() => setStatus(msg)).catch((e) => setStatus("Save failed: " + (e?.message || e)));
-  const saveCategories = () => { setStatus("Saving…"); persist(`Saved — ${previewCats.length} categor${previewCats.length === 1 ? "y" : "ies"} defined.`); };
+  const afterSave = (msg) => { setDirty(false); setRemote(false); lastEvent.current = event; setStatus(msg); };
+  const saveCategories = () => {
+    setStatus("Saving…");
+    updateEventFields({ categoryBuilder: details.categoryBuilder })
+      .then(() => afterSave(`Saved — ${previewCats.length} categor${previewCats.length === 1 ? "y" : "ies"} defined.`))
+      .catch((e) => setStatus("Save failed: " + (e?.message || e)));
+  };
 
   // Team-entry matrix (rows = clubs/nations, columns = categories).
   const addTeam = (name) => {
     const v = name.trim();
     if (v && !(details.entries || []).some((t) => t.name.toLowerCase() === v.toLowerCase())) {
-      setDetails((d) => ({ ...d, entries: [...(d.entries || []), { name: v, cats: [] }] }));
+      edit((d) => ({ ...d, entries: [...(d.entries || []), { name: v, cats: [] }] }));
     }
     setTeamInput("");
   };
-  const removeTeam = (i) => setDetails((d) => ({ ...d, entries: (d.entries || []).filter((_, j) => j !== i) }));
-  const toggleEntry = (i, cat) => setDetails((d) => {
+  const removeTeam = (i) => edit((d) => ({ ...d, entries: (d.entries || []).filter((_, j) => j !== i) }));
+  const renameTeam = (i, name) => edit((d) => { const e = [...(d.entries || [])]; e[i] = { ...e[i], name }; return { ...d, entries: e }; });
+  const toggleEntry = (i, cat) => edit((d) => {
     const e = [...(d.entries || [])]; const cur = e[i].cats || [];
     e[i] = { ...e[i], cats: cur.includes(cat) ? cur.filter((c) => c !== cat) : [...cur, cat] };
     return { ...d, entries: e };
   });
-  const saveTeams = () => { setStatus("Saving teams…"); persist(`Saved ${(details.entries || []).length} team(s).`); };
+  const saveTeams = () => {
+    setStatus("Saving teams…");
+    updateEventFields({ entries: details.entries })
+      .then(() => afterSave(`Saved ${(details.entries || []).length} team(s).`))
+      .catch((e) => setStatus("Save failed: " + (e?.message || e)));
+  };
 
   const [evUrl, setEvUrl] = useState("");
   const [evPreview, setEvPreview] = useState(null);
@@ -71,7 +99,7 @@ export default function Settings({ me }) {
 
   const saveDetails = async () => {
     setStatus("Saving event…");
-    try { await updateEventDetails({ ...details, dates: formatRange(details.startDate, details.endDate) }); setStatus("Event details saved."); }
+    try { await updateEventDetails({ name: details.name, place: details.place, startDate: details.startDate, endDate: details.endDate, dates: formatRange(details.startDate, details.endDate) }); afterSave("Event details saved."); }
     catch (e) { setStatus("Save failed: " + (e?.message || e)); }
   };
 
@@ -141,18 +169,24 @@ export default function Settings({ me }) {
       </header>
 
       <div className="content">
+        {remote && (
+          <div className="sync-banner">
+            <span>Another admin just changed this event.</span>
+            <button className="btn sm" onClick={reloadFromEvent}>Load latest</button>
+          </div>
+        )}
         {/* ---- Event details ---- */}
         <div className="card">
           <h2>Event details</h2>
           <div className="field"><span>Name</span>
-            <input value={details.name} disabled={archived} onChange={(e) => setDetails({ ...details, name: e.target.value })} /></div>
+            <input value={details.name} disabled={archived} onChange={(e) => edit((d) => ({ ...d, name: e.target.value }))} /></div>
           <div className="field"><span>Place</span>
-            <input value={details.place} disabled={archived} onChange={(e) => setDetails({ ...details, place: e.target.value })} placeholder="City · Country" /></div>
+            <input value={details.place} disabled={archived} onChange={(e) => edit((d) => ({ ...d, place: e.target.value }))} placeholder="City · Country" /></div>
           <div className="grid2">
             <div className="field"><span>Starts</span>
-              <input type="date" disabled={archived} value={details.startDate} onChange={(e) => setDetails({ ...details, startDate: e.target.value, endDate: details.endDate && details.endDate < e.target.value ? e.target.value : details.endDate })} /></div>
+              <input type="date" disabled={archived} value={details.startDate} onChange={(e) => edit((d) => ({ ...d, startDate: e.target.value, endDate: d.endDate && d.endDate < e.target.value ? e.target.value : d.endDate }))} /></div>
             <div className="field"><span>Ends</span>
-              <input type="date" disabled={archived} min={details.startDate || undefined} value={details.endDate} onChange={(e) => setDetails({ ...details, endDate: e.target.value })} /></div>
+              <input type="date" disabled={archived} min={details.startDate || undefined} value={details.endDate} onChange={(e) => edit((d) => ({ ...d, endDate: e.target.value }))} /></div>
           </div>
           {(details.startDate || details.endDate) && <p className="muted-sm">{formatRange(details.startDate, details.endDate)}</p>}
           {!archived && <button className="btn primary" onClick={saveDetails}>Save details</button>}
@@ -244,7 +278,7 @@ export default function Settings({ me }) {
                       <tbody>
                         {(details.entries || []).map((t, i) => (
                           <tr key={i}>
-                            <td className="mx-team">{t.name}</td>
+                            <td className="mx-team"><input className="mx-team-input" value={t.name} disabled={archived} onChange={(e) => renameTeam(i, e.target.value)} aria-label="Team name" /></td>
                             {cols.leaves.map((lf) => (
                               <td key={lf.name} className="mx-cell">
                                 <input type="checkbox" checked={(t.cats || []).includes(lf.name)} disabled={archived} onChange={() => toggleEntry(i, lf.name)} title={lf.name} />

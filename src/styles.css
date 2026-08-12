@@ -375,6 +375,17 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .matrix tfoot td { font-size: 12px; font-weight: 800; }
 .matrix .dim { color: var(--muted); }
 .matrix tbody tr:hover { background: #faf9fe; }
+.matrix .mx-team-input { border: 1px solid transparent; background: transparent; font: inherit; font-weight: 700; color: var(--text); width: 100%; min-width: 140px; padding: 4px 6px; border-radius: 6px; }
+.matrix .mx-team-input:hover:not(:disabled) { border-color: var(--line); }
+.matrix .mx-team-input:focus { border-color: var(--brand); background: #fff; outline: none; }
+
+/* ---------- Real-time sync banner ---------- */
+.sync-banner { display: flex; align-items: center; gap: 12px; background: #fff4e5; border: 1px solid #e8a33d; color: #5a3d0a; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-weight: 700; font-size: 14px; }
+.sync-banner .btn { margin-left: auto; }
+
+/* ---------- New-version toast ---------- */
+.update-toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 200; display: flex; align-items: center; gap: 12px; background: var(--brand); color: #fff; border-radius: 999px; padding: 10px 12px 10px 18px; box-shadow: 0 12px 30px rgba(20, 28, 48, 0.35); font-weight: 700; }
+.update-toast .btn { background: #fff; color: var(--brand); border: none; border-radius: 999px; font-weight: 800; }
 .btn.danger-solid { background: var(--r); color: #fff; border: 1px solid var(--r); }
 .btn.danger-solid:active { transform: scale(0.97); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }

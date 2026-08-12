@@ -8,7 +8,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate", // no stuck old versions
+      registerType: "prompt",     // show a "new version" toast instead of silent reload
+      injectRegister: false,      // we register manually in src/UpdatePrompt.jsx
       includeAssets: ["favicon.svg"],
       workbox: { maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 },
       manifest: {
