@@ -29,16 +29,20 @@ function defaultConfig() {
   };
 }
 
-// A generator category seeded from a concrete category name.
-function seedCategory(name) {
-  return { name, bestOf: 5, double: false, qualifiersPerGroup: 2, knockout: true, groups: [{ label: "A", teams: [] }] };
+// A generator category seeded from a concrete category name + its teams (from the
+// event's Teams × categories matrix), all placed in group A to start.
+function seedCategory(name, teams) {
+  return { name, bestOf: 5, double: false, qualifiersPerGroup: 2, knockout: true, groups: [{ label: "A", teams: teams || [] }] };
 }
 // Pre-fill the generator with the categories the admin defined on the event
-// (Settings → Categories chip-builder), so the schedule starts from those.
+// (Settings → Categories chip-builder) and the teams ticked for each (matrix).
 function initialConfig(event) {
   const base = defaultConfig();
   const names = eventCategoryNames(event);
-  if (names.length) base.categories = names.map(seedCategory);
+  if (names.length) {
+    const entries = event?.entries || [];
+    base.categories = names.map((name) => seedCategory(name, entries.filter((t) => (t.cats || []).includes(name)).map((t) => t.name)));
+  }
   return base;
 }
 

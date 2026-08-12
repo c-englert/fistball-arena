@@ -19,18 +19,33 @@ export default function Settings({ me }) {
   const [details, setDetails] = useState(() => ({
     name: event?.name || "", place: event?.place || "", startDate: event?.startDate || "", endDate: event?.endDate || "",
     categoryBuilder: event?.categoryBuilder || { types: [], sexes: [], ages: [] },
+    entries: event?.entries || [], // [{ name, cats: [categoryName…] }]
   }));
   const [ageInput, setAgeInput] = useState("");
+  const [teamInput, setTeamInput] = useState("");
   const cb = details.categoryBuilder;
   const setBuilder = (patch) => setDetails((d) => ({ ...d, categoryBuilder: { ...d.categoryBuilder, ...patch } }));
   const toggleIn = (key, val) => setBuilder({ [key]: (cb[key] || []).includes(val) ? cb[key].filter((x) => x !== val) : [...(cb[key] || []), val] });
   const addAge = (a) => { const v = a.trim(); if (v && !(cb.ages || []).includes(v)) setBuilder({ ages: [...(cb.ages || []), v] }); setAgeInput(""); };
   const previewCats = expandBuilder(cb);
-  const saveCategories = async () => {
-    setStatus("Saving categories…");
-    try { await updateEventDetails({ ...details, dates: formatRange(details.startDate, details.endDate) }); setStatus(`Saved — ${previewCats.length} categor${previewCats.length === 1 ? "y" : "ies"} defined.`); }
-    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+  const persist = (msg) => updateEventDetails({ ...details, dates: formatRange(details.startDate, details.endDate) }).then(() => setStatus(msg)).catch((e) => setStatus("Save failed: " + (e?.message || e)));
+  const saveCategories = () => { setStatus("Saving…"); persist(`Saved — ${previewCats.length} categor${previewCats.length === 1 ? "y" : "ies"} defined.`); };
+
+  // Team-entry matrix (rows = clubs/nations, columns = categories).
+  const addTeam = (name) => {
+    const v = name.trim();
+    if (v && !(details.entries || []).some((t) => t.name.toLowerCase() === v.toLowerCase())) {
+      setDetails((d) => ({ ...d, entries: [...(d.entries || []), { name: v, cats: [] }] }));
+    }
+    setTeamInput("");
   };
+  const removeTeam = (i) => setDetails((d) => ({ ...d, entries: (d.entries || []).filter((_, j) => j !== i) }));
+  const toggleEntry = (i, cat) => setDetails((d) => {
+    const e = [...(d.entries || [])]; const cur = e[i].cats || [];
+    e[i] = { ...e[i], cats: cur.includes(cat) ? cur.filter((c) => c !== cat) : [...cur, cat] };
+    return { ...d, entries: e };
+  });
+  const saveTeams = () => { setStatus("Saving teams…"); persist(`Saved ${(details.entries || []).length} team(s).`); };
 
   const [evUrl, setEvUrl] = useState("");
   const [evPreview, setEvPreview] = useState(null);
@@ -183,6 +198,57 @@ export default function Settings({ me }) {
 
           {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveCategories} disabled={!previewCats.length}>Save categories</button>}
         </div>
+
+        {/* ---- Team-entry matrix (teams × categories) ---- */}
+        {previewCats.length > 0 && (
+          <div className="card">
+            <h2>Teams &amp; categories</h2>
+            <p className="muted-sm">Add each club / national team and tick the categories it plays. This is what the schedule uses.</p>
+            {!archived && (
+              <div className="add-row">
+                <input value={teamInput} onChange={(e) => setTeamInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addTeam(teamInput)} placeholder="Add club / national team" />
+                <button className="btn sm" onClick={() => addTeam(teamInput)}>Add</button>
+              </div>
+            )}
+            {!(details.entries || []).length ? (
+              <p className="muted-sm" style={{ marginTop: 10 }}>No teams yet.</p>
+            ) : (
+              <div className="matrix-wrap">
+                <table className="matrix">
+                  <thead>
+                    <tr>
+                      <th className="mx-team">Team</th>
+                      {previewCats.map((c) => <th key={c}><span className="mx-cat">{c}</span></th>)}
+                      <th aria-label="Remove" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(details.entries || []).map((t, i) => (
+                      <tr key={i}>
+                        <td className="mx-team">{t.name}</td>
+                        {previewCats.map((c) => (
+                          <td key={c} className="mx-cell">
+                            <input type="checkbox" checked={(t.cats || []).includes(c)} disabled={archived} onChange={() => toggleEntry(i, c)} />
+                          </td>
+                        ))}
+                        <td>{!archived && <button className="btn danger sm" onClick={() => removeTeam(i)} aria-label="Remove">✕</button>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td className="mx-team dim">Teams</td>
+                      {previewCats.map((c) => <td key={c} className="mx-cell dim">{(details.entries || []).filter((t) => (t.cats || []).includes(c)).length}</td>)}
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+            {!archived && (details.entries || []).length > 0 && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveTeams}>Save teams</button>}
+          </div>
+        )}
 
         {/* ---- Import a past event from a Google Sheet ---- */}
         {!archived && (

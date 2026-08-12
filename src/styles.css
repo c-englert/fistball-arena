@@ -358,6 +358,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .cat-preview-box { margin-top: 12px; padding: 12px; background: #efeaf9; border-radius: 12px; }
 .cat-preview-box .subhead { color: var(--brand); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
 .cat-preview-box .team-chip { background: #fff; color: var(--brand); border: 1px solid #d9cff0; }
+
+/* ---------- Teams × categories matrix ---------- */
+.matrix-wrap { overflow-x: auto; margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; }
+.matrix { border-collapse: collapse; width: 100%; font-size: 14px; }
+.matrix th, .matrix td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: center; }
+.matrix thead th { background: #f5f3fb; vertical-align: bottom; position: sticky; top: 0; }
+.matrix .mx-team { text-align: left; font-weight: 700; white-space: nowrap; position: sticky; left: 0; background: var(--surface); }
+.matrix thead .mx-team { background: #f5f3fb; }
+.matrix .mx-cat { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 12px; font-weight: 800; color: var(--brand); max-height: 130px; }
+.matrix .mx-cell input { width: 18px; height: 18px; accent-color: var(--brand); cursor: pointer; }
+.matrix tfoot td { font-size: 12px; font-weight: 800; }
+.matrix .dim { color: var(--muted); }
+.matrix tbody tr:hover { background: #faf9fe; }
 .btn.danger-solid { background: var(--r); color: #fff; border: 1px solid var(--r); }
 .btn.danger-solid:active { transform: scale(0.97); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
