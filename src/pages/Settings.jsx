@@ -5,6 +5,7 @@ import {
   subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, publishEventImport,
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
+import { categoryLabel } from "../schedule/generator.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -17,7 +18,16 @@ export default function Settings({ me }) {
   const [status, setStatus] = useState("");
   const [details, setDetails] = useState(() => ({
     name: event?.name || "", place: event?.place || "", startDate: event?.startDate || "", endDate: event?.endDate || "",
+    categories: event?.categories || [],
   }));
+  const addCategory = () => setDetails((d) => ({ ...d, categories: [...(d.categories || []), { name: "", gender: "men" }] }));
+  const setCategory = (i, patch) => setDetails((d) => { const c = [...(d.categories || [])]; c[i] = { ...c[i], ...patch }; return { ...d, categories: c }; });
+  const removeCategory = (i) => setDetails((d) => ({ ...d, categories: (d.categories || []).filter((_, j) => j !== i) }));
+  const saveCategories = async () => {
+    setStatus("Saving categories…");
+    try { await updateEventDetails({ ...details, dates: formatRange(details.startDate, details.endDate) }); setStatus(`Saved ${(details.categories || []).length} categor${(details.categories || []).length === 1 ? "y" : "ies"}.`); }
+    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+  };
 
   const [evUrl, setEvUrl] = useState("");
   const [evPreview, setEvPreview] = useState(null);
@@ -128,6 +138,31 @@ export default function Settings({ me }) {
           </div>
           {(details.startDate || details.endDate) && <p className="muted-sm">{formatRange(details.startDate, details.endDate)}</p>}
           {!archived && <button className="btn primary" onClick={saveDetails}>Save details</button>}
+        </div>
+
+        {/* ---- Categories & sex ---- */}
+        <div className="card">
+          <h2>Categories</h2>
+          <p className="muted-sm">Start setting up the event before the Excel: type each category and mark the sex. E.g. <b>Seleções</b> (Men &amp; Women), <b>Clubes</b> (Men &amp; Women).</p>
+          {(details.categories || []).map((c, i) => (
+            <div className="cat-row-edit" key={i}>
+              <input value={c.name || ""} disabled={archived} placeholder="Category (e.g. Seleções, Clubes)"
+                onChange={(e) => setCategory(i, { name: e.target.value })} />
+              <div className="gender-toggle">
+                <button className={`gpill ${c.gender === "men" ? "on men" : ""}`} disabled={archived} onClick={() => setCategory(i, { gender: "men" })}>♂ Men</button>
+                <button className={`gpill ${c.gender === "women" ? "on women" : ""}`} disabled={archived} onClick={() => setCategory(i, { gender: "women" })}>♀ Women</button>
+              </div>
+              <span className="cat-preview" title="Published name">{categoryLabel(c)}</span>
+              {!archived && <button className="btn danger sm" onClick={() => removeCategory(i)} aria-label="Remove">✕</button>}
+            </div>
+          ))}
+          {!(details.categories || []).length && <p className="muted-sm">No categories yet.</p>}
+          {!archived && (
+            <div className="add-row" style={{ marginTop: 10 }}>
+              <button className="btn sm" onClick={addCategory}>+ Add category</button>
+              <button className="btn primary" onClick={saveCategories}>Save categories</button>
+            </div>
+          )}
         </div>
 
         {/* ---- Import a past event from a Google Sheet ---- */}

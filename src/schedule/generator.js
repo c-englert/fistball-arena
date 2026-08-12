@@ -6,6 +6,17 @@ import { buildBracket } from "./bracket.js";
 import { allocate } from "./scheduler.js";
 import { team } from "../seed.js";
 
+// The category's published name = typed name + its sex, so the Live can split
+// Women/Men (it reads the word "Men"/"Women" from the category). If the typed
+// name already states the sex, it's used as-is; a missing sex leaves it plain.
+export function categoryLabel(cat) {
+  const name = (cat.name || "").trim();
+  const g = cat.gender === "women" ? "Women" : cat.gender === "men" ? "Men" : "";
+  if (!g) return name || "Category";
+  if (/\b(men|women)\b/i.test(name)) return name || g;
+  return name ? `${name} ${g}` : g;
+}
+
 // config:
 // {
 //   categories: [{ name, bestOf, double, qualifiersPerGroup, knockout,
@@ -19,10 +30,11 @@ export function generateSchedule(config) {
   let seq = 0;
 
   for (const cat of config.categories || []) {
-    const catKey = cat.name.replace(/\s+/g, "_");
+    const catName = categoryLabel(cat);
+    const catKey = catName.replace(/\s+/g, "_");
     const groups = (cat.groups || []).filter((g) => (g.teams || []).length >= 2);
     if (!groups.length) {
-      warnings.push(`${cat.name}: no group has 2+ teams — skipped.`);
+      warnings.push(`${catName}: no group has 2+ teams — skipped.`);
       continue;
     }
 
@@ -33,7 +45,7 @@ export function generateSchedule(config) {
         round.forEach(([a, b], i) => {
           fixtures.push({
             id: `${catKey}:grp:${g.label}:${ri}:${i}`,
-            category: cat.name, bestOf: cat.bestOf, group: g.label,
+            category: catName, bestOf: cat.bestOf, group: g.label,
             round: "Qualification round", phase: "group",
             groupRoundIndex: ri, seq: seq++,
             teamA: a, teamB: b, deps: [],
@@ -44,7 +56,7 @@ export function generateSchedule(config) {
 
     // Knockout bracket (placeholder teams). Namespace ids + deps per category.
     const { fixtures: ko, warnings: kw } = buildBracket(groups, cat.qualifiersPerGroup || 2, {
-      category: cat.name, bestOf: cat.bestOf, knockout: !!cat.knockout,
+      category: catName, bestOf: cat.bestOf, knockout: !!cat.knockout,
     });
     warnings.push(...kw);
     for (const f of ko) {
