@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TEAM_NAMES } from "../seed.js";
-import { generateSchedule, categoryLabel } from "../schedule/generator.js";
+import { generateSchedule } from "../schedule/generator.js";
+import { eventCategoryNames } from "../categories.js";
 import { fetchSheetGames } from "../schedule/importSheet.js";
 import { saveScheduleConfig, subscribeScheduleConfig, publishGames } from "../cloud.js";
 import { useEvent } from "../eventContext.js";
@@ -28,16 +29,16 @@ function defaultConfig() {
   };
 }
 
-// A generator category seeded from an event-level {name, gender} definition.
-function seedCategory(cat) {
-  return { name: categoryLabel(cat), bestOf: 5, double: false, qualifiersPerGroup: 2, knockout: true, groups: [{ label: "A", teams: [] }] };
+// A generator category seeded from a concrete category name.
+function seedCategory(name) {
+  return { name, bestOf: 5, double: false, qualifiersPerGroup: 2, knockout: true, groups: [{ label: "A", teams: [] }] };
 }
 // Pre-fill the generator with the categories the admin defined on the event
-// (Settings → Categories), so the schedule starts from those instead of a stub.
+// (Settings → Categories chip-builder), so the schedule starts from those.
 function initialConfig(event) {
   const base = defaultConfig();
-  const cats = (event?.categories || []).filter((c) => (c.name || "").trim());
-  if (cats.length) base.categories = cats.map(seedCategory);
+  const names = eventCategoryNames(event);
+  if (names.length) base.categories = names.map(seedCategory);
   return base;
 }
 

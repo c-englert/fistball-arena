@@ -345,17 +345,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .install-ghost { width: 100%; min-height: 48px; background: var(--bg); color: var(--muted); }
 .install-ghost:hover { color: var(--text); }
 
-/* ---------- Categories editor (event edit) ---------- */
-.cat-row-edit { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.cat-row-edit:last-of-type { border-bottom: none; }
-.cat-row-edit > input { flex: 1 1 160px; min-width: 120px; }
-.gender-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex: none; }
-.gpill { padding: 8px 12px; border: none; background: var(--surface); color: var(--muted); font-weight: 800; font-size: 13px; cursor: pointer; }
-.gpill + .gpill { border-left: 1px solid var(--line); }
-.gpill.on.men { background: var(--accent); color: #fff; }
-.gpill.on.women { background: #d6336c; color: #fff; }
-.gpill:disabled { cursor: default; opacity: 0.7; }
-.cat-preview { flex: 0 0 auto; font-weight: 700; color: var(--brand); font-size: 13px; min-width: 90px; }
+/* ---------- Categories chip-builder (event edit) ---------- */
+.chip-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.chip-row-label { flex: 0 0 64px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.selchip { padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font-weight: 700; font-size: 14px; cursor: pointer; }
+.selchip:hover:not(:disabled) { border-color: var(--brand); }
+.selchip.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.selchip.on.men { background: var(--accent); border-color: var(--accent); }
+.selchip.on.women { background: #d6336c; border-color: #d6336c; }
+.selchip:disabled { cursor: default; opacity: 0.6; }
+.age-input { width: 100px; padding: 7px 10px; border: 1px dashed var(--line); border-radius: 999px; background: var(--bg); font-size: 13px; }
+.cat-preview-box { margin-top: 12px; padding: 12px; background: #efeaf9; border-radius: 12px; }
+.cat-preview-box .subhead { color: var(--brand); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.cat-preview-box .team-chip { background: #fff; color: var(--brand); border: 1px solid #d9cff0; }
 .btn.danger-solid { background: var(--r); color: #fff; border: 1px solid var(--r); }
 .btn.danger-solid:active { transform: scale(0.97); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }

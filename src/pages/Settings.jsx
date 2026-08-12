@@ -5,7 +5,7 @@ import {
   subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, publishEventImport,
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
-import { categoryLabel } from "../schedule/generator.js";
+import { TYPES, COMMON_AGES, expandBuilder } from "../categories.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -18,14 +18,17 @@ export default function Settings({ me }) {
   const [status, setStatus] = useState("");
   const [details, setDetails] = useState(() => ({
     name: event?.name || "", place: event?.place || "", startDate: event?.startDate || "", endDate: event?.endDate || "",
-    categories: event?.categories || [],
+    categoryBuilder: event?.categoryBuilder || { types: [], sexes: [], ages: [] },
   }));
-  const addCategory = () => setDetails((d) => ({ ...d, categories: [...(d.categories || []), { name: "", gender: "men" }] }));
-  const setCategory = (i, patch) => setDetails((d) => { const c = [...(d.categories || [])]; c[i] = { ...c[i], ...patch }; return { ...d, categories: c }; });
-  const removeCategory = (i) => setDetails((d) => ({ ...d, categories: (d.categories || []).filter((_, j) => j !== i) }));
+  const [ageInput, setAgeInput] = useState("");
+  const cb = details.categoryBuilder;
+  const setBuilder = (patch) => setDetails((d) => ({ ...d, categoryBuilder: { ...d.categoryBuilder, ...patch } }));
+  const toggleIn = (key, val) => setBuilder({ [key]: (cb[key] || []).includes(val) ? cb[key].filter((x) => x !== val) : [...(cb[key] || []), val] });
+  const addAge = (a) => { const v = a.trim(); if (v && !(cb.ages || []).includes(v)) setBuilder({ ages: [...(cb.ages || []), v] }); setAgeInput(""); };
+  const previewCats = expandBuilder(cb);
   const saveCategories = async () => {
     setStatus("Saving categories…");
-    try { await updateEventDetails({ ...details, dates: formatRange(details.startDate, details.endDate) }); setStatus(`Saved ${(details.categories || []).length} categor${(details.categories || []).length === 1 ? "y" : "ies"}.`); }
+    try { await updateEventDetails({ ...details, dates: formatRange(details.startDate, details.endDate) }); setStatus(`Saved — ${previewCats.length} categor${previewCats.length === 1 ? "y" : "ies"} defined.`); }
     catch (e) { setStatus("Save failed: " + (e?.message || e)); }
   };
 
@@ -140,29 +143,45 @@ export default function Settings({ me }) {
           {!archived && <button className="btn primary" onClick={saveDetails}>Save details</button>}
         </div>
 
-        {/* ---- Categories & sex ---- */}
+        {/* ---- Categories (chip builder) ---- */}
         <div className="card">
           <h2>Categories</h2>
-          <p className="muted-sm">Start setting up the event before the Excel: type each category and mark the sex. E.g. <b>Seleções</b> (Men &amp; Women), <b>Clubes</b> (Men &amp; Women).</p>
-          {(details.categories || []).map((c, i) => (
-            <div className="cat-row-edit" key={i}>
-              <input value={c.name || ""} disabled={archived} placeholder="Category (e.g. Seleções, Clubes)"
-                onChange={(e) => setCategory(i, { name: e.target.value })} />
-              <div className="gender-toggle">
-                <button className={`gpill ${c.gender === "men" ? "on men" : ""}`} disabled={archived} onClick={() => setCategory(i, { gender: "men" })}>♂ Men</button>
-                <button className={`gpill ${c.gender === "women" ? "on women" : ""}`} disabled={archived} onClick={() => setCategory(i, { gender: "women" })}>♀ Women</button>
-              </div>
-              <span className="cat-preview" title="Published name">{categoryLabel(c)}</span>
-              {!archived && <button className="btn danger sm" onClick={() => removeCategory(i)} aria-label="Remove">✕</button>}
-            </div>
-          ))}
-          {!(details.categories || []).length && <p className="muted-sm">No categories yet.</p>}
-          {!archived && (
-            <div className="add-row" style={{ marginTop: 10 }}>
-              <button className="btn sm" onClick={addCategory}>+ Add category</button>
-              <button className="btn primary" onClick={saveCategories}>Save categories</button>
-            </div>
-          )}
+          <p className="muted-sm">Start before the Excel: mark the chips and the app creates every category (type × age × sex).</p>
+
+          <div className="chip-row">
+            <span className="chip-row-label">Type</span>
+            {TYPES.map((t) => (
+              <button key={t.id} disabled={archived} className={`selchip ${(cb.types || []).includes(t.id) ? "on" : ""}`} onClick={() => toggleIn("types", t.id)}>{t.label}</button>
+            ))}
+          </div>
+
+          <div className="chip-row">
+            <span className="chip-row-label">Sex</span>
+            <button disabled={archived} className={`selchip ${(cb.sexes || []).includes("men") ? "on men" : ""}`} onClick={() => toggleIn("sexes", "men")}>♂ Men</button>
+            <button disabled={archived} className={`selchip ${(cb.sexes || []).includes("women") ? "on women" : ""}`} onClick={() => toggleIn("sexes", "women")}>♀ Women</button>
+          </div>
+
+          <div className="chip-row">
+            <span className="chip-row-label">Ages <span className="muted-sm" style={{ fontWeight: 400 }}>(optional)</span></span>
+            {[...COMMON_AGES, ...(cb.ages || []).filter((a) => !COMMON_AGES.includes(a))].map((a) => (
+              <button key={a} disabled={archived} className={`selchip ${(cb.ages || []).includes(a) ? "on" : ""}`} onClick={() => toggleIn("ages", a)}>{a}</button>
+            ))}
+            {!archived && (
+              <input className="age-input" value={ageInput} onChange={(e) => setAgeInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addAge(ageInput)} placeholder="+ custom" />
+            )}
+          </div>
+
+          <div className="cat-preview-box">
+            {previewCats.length ? (
+              <>
+                <div className="subhead">Creates {previewCats.length} categor{previewCats.length === 1 ? "y" : "ies"}</div>
+                <div className="chips">{previewCats.map((n) => <span className="team-chip" key={n}>{n}</span>)}</div>
+              </>
+            ) : <p className="muted-sm" style={{ margin: 0 }}>Pick a type and a sex to see the categories.</p>}
+          </div>
+
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveCategories} disabled={!previewCats.length}>Save categories</button>}
         </div>
 
         {/* ---- Import a past event from a Google Sheet ---- */}
