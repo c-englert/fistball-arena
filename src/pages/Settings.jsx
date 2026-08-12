@@ -6,6 +6,7 @@ import {
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
+import { describeFormat } from "../schedule/format.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -301,6 +302,36 @@ export default function Settings({ me }) {
               })()
             )}
             {!archived && (details.entries || []).length > 0 && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveTeams}>Save teams</button>}
+          </div>
+        )}
+
+        {/* ---- Format per category (auto by team count) ---- */}
+        {previewCats.length > 0 && (
+          <div className="card">
+            <h2>Format</h2>
+            <p className="muted-sm">Auto-selected for each category by the number of teams (from the matrix). This is what the schedule will use.</p>
+            {previewCats.map((cat) => {
+              const count = (details.entries || []).filter((t) => (t.cats || []).includes(cat)).length;
+              const d = describeFormat(count);
+              return (
+                <div className="fmt-cat" key={cat}>
+                  <div className="fmt-head"><b>{cat}</b><span className="tag">{count} team{count === 1 ? "" : "s"}</span></div>
+                  {!count ? (
+                    <p className="muted-sm" style={{ margin: "2px 0 0" }}>No teams ticked yet.</p>
+                  ) : d ? (
+                    <>
+                      <div className="fmt-line"><span className="fmt-round">Qualification Round</span> one group · round-robin · {d.qrGames} games</div>
+                      {d.rounds.map((r, i) => (
+                        <div className="fmt-line" key={i}><span className="fmt-round">{r.round}</span> {r.matches.join(" · ")}</div>
+                      ))}
+                      <div className="muted-sm" style={{ marginTop: 4 }}>Total <b>{d.total}</b> games · best of 3</div>
+                    </>
+                  ) : (
+                    <p className="muted-sm" style={{ margin: "2px 0 0" }}>No preset for {count} teams yet — a manual format will be needed.</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

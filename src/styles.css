@@ -379,6 +379,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .matrix .mx-team-input:hover:not(:disabled) { border-color: var(--line); }
 .matrix .mx-team-input:focus { border-color: var(--brand); background: #fff; outline: none; }
 
+/* ---------- Format per category ---------- */
+.fmt-cat { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.fmt-cat:last-of-type { border-bottom: none; }
+.fmt-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 15px; }
+.fmt-head .tag { background: #efeaf9; color: var(--brand); }
+.fmt-line { font-size: 13.5px; margin: 3px 0; color: var(--text); }
+.fmt-round { display: inline-block; min-width: 148px; font-weight: 800; color: var(--brand); }
+
 /* ---------- Real-time sync banner ---------- */
 .sync-banner { display: flex; align-items: center; gap: 12px; background: #fff4e5; border: 1px solid #e8a33d; color: #5a3d0a; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-weight: 700; font-size: 14px; }
 .sync-banner .btn { margin-left: auto; }
