@@ -29,10 +29,15 @@ export default function UpdatePrompt() {
     }
   }, []);
 
-  const apply = () => {
-    const waiting = regRef.current && regRef.current.waiting;
-    if (waiting) { waiting.postMessage({ type: "SKIP_WAITING" }); return; }
-    if (updateRef.current) { updateRef.current(true); return; } // fallback
+  // Bulletproof: tell the waiting worker to activate, and regardless unregister
+  // the SW + clear caches and hard-reload so the newest build always loads.
+  const apply = async () => {
+    try { regRef.current?.waiting?.postMessage({ type: "SKIP_WAITING" }); } catch { /* ignore */ }
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+      if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map((k) => caches.delete(k))); }
+    } catch { /* ignore */ }
     window.location.reload();
   };
 

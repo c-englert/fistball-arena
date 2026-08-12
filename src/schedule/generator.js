@@ -38,8 +38,12 @@ export function generateSchedule(config) {
     const allTeams = (cat.groups || []).flatMap((g) => g.teams || []);
     if (hasFormat(allTeams.length)) {
       const built = buildFormat(allTeams, { category: catName, bestOf: cat.bestOf || 3 });
+      const nsSrc = (s) => (s && s.dep ? { ...s, dep: `${catKey}:${s.dep}` } : s);
       for (const f of built.fixtures) {
-        fixtures.push({ ...f, id: `${catKey}:${f.id}`, deps: (f.deps || []).map((d) => `${catKey}:${d}`), seq: seq++ });
+        fixtures.push({
+          ...f, id: `${catKey}:${f.id}`, deps: (f.deps || []).map((d) => `${catKey}:${d}`), seq: seq++,
+          srcA: nsSrc(f.srcA), srcB: nsSrc(f.srcB),
+        });
       }
       continue;
     }
@@ -87,8 +91,16 @@ export function generateSchedule(config) {
   warnings.push(...aw);
 
   let nr = Number(config.startNr) || 1;
+  const idToNr = new Map();
+  for (const p of placed) idToNr.set(p.fixture.id, nr++);
+  const mapSrc = (s, category) => {
+    if (!s) return undefined;
+    if (s.type === "seed") return { type: "seed", rank: s.rank, category };
+    const n = idToNr.get(s.dep);
+    return n ? { type: s.type, game: `g${n}` } : undefined;
+  };
   const games = placed.map((p) => ({
-    nr: nr++,
+    nr: idToNr.get(p.fixture.id),
     date: p.date,
     time: p.time,
     court: p.court,
@@ -98,6 +110,8 @@ export function generateSchedule(config) {
     group: p.fixture.group || "",
     teamA: team(p.fixture.teamA),
     teamB: team(p.fixture.teamB),
+    srcA: mapSrc(p.fixture.srcA, p.fixture.category) || null,
+    srcB: mapSrc(p.fixture.srcB, p.fixture.category) || null,
   }));
 
   return { games, warnings, unplaced, fixtureCount: fixtures.length };

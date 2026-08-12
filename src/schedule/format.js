@@ -1,41 +1,45 @@
 // Championship format templates keyed by team count. Each category plays a
 // SINGLE round-robin group (Qualification Round); the knockout is seeded by the
-// final group ranking (1st, 2nd, …). Placeholder names ("1st", "Winner SF1")
-// resolve as results come in. Best of 3 sets throughout, per the championship.
+// final group ranking (1st, 2nd, …). Best of 3 sets throughout.
+//
+// Each knockout slot also carries a structured source (src) so results can
+// auto-advance teams into later phases:
+//   { type:"seed",   rank:N }        -> the Nth-ranked team of the QR group
+//   { type:"winner", dep:"ko:sf1" }  -> winner of another fixture (local id)
+//   { type:"loser",  dep:"ko:sf1" }  -> loser of another fixture
 //
 // buildFormat(teams, { category, bestOf }) -> { fixtures, warnings } | null
-// Returns null when there is no template for that team count (caller falls back).
 
 import { roundRobin } from "./roundRobin.js";
 
 const ORD = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
 export const seed = (n) => ORD[n] || `${n}th`;
 
-// Knockout templates: each match has a bucket `stage` (qf<sf<bronze<final, used
-// to order/space the KO) plus `idx`, the display `round`, the two placeholder
-// refs and the match ids it depends on.
+const S = (n) => ({ label: seed(n), src: { type: "seed", rank: n } });
+const W = (ref, label) => ({ label: label || `Winner ${ref.toUpperCase()}`, src: { type: "winner", dep: `ko:${ref}` } });
+const L = (ref, label) => ({ label: label || `Loser ${ref.toUpperCase()}`, src: { type: "loser", dep: `ko:${ref}` } });
+
 const KO = {
   3: () => [
-    { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: seed(1), b: seed(2) },
+    { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: S(1), b: S(2) },
   ],
   5: () => [
-    { id: "pi",  stage: "qf", idx: 0, round: "Play-off",  a: seed(4), b: seed(5) },
-    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal", a: seed(1), b: "Winner 4th-5th", deps: ["pi"] },
-    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal", a: seed(2), b: seed(3) },
-    { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: "Winner SF1", b: "Winner SF2", deps: ["sf1", "sf2"] },
-    // P3 triangular: losers of SF1, SF2 and the play-off (5th).
-    { id: "p35a", stage: "bronze", idx: 0, round: "Placement 3-5", a: "Loser SF1", b: "Loser SF2",     deps: ["sf1", "sf2"] },
-    { id: "p35b", stage: "bronze", idx: 1, round: "Placement 3-5", a: "Loser SF1", b: "Loser 4th-5th", deps: ["sf1", "pi"] },
-    { id: "p35c", stage: "bronze", idx: 2, round: "Placement 3-5", a: "Loser SF2", b: "Loser 4th-5th", deps: ["sf2", "pi"] },
+    { id: "pi",  stage: "qf", idx: 0, round: "Play-off",  a: S(4), b: S(5) },
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal", a: S(1), b: W("pi", "Winner 4th-5th"), deps: ["pi"] },
+    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal", a: S(2), b: S(3) },
+    { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: W("sf1"), b: W("sf2"), deps: ["sf1", "sf2"] },
+    { id: "p35a", stage: "bronze", idx: 0, round: "Placement 3-5", a: L("sf1"), b: L("sf2"), deps: ["sf1", "sf2"] },
+    { id: "p35b", stage: "bronze", idx: 1, round: "Placement 3-5", a: L("sf1"), b: L("pi", "Loser 4th-5th"), deps: ["sf1", "pi"] },
+    { id: "p35c", stage: "bronze", idx: 2, round: "Placement 3-5", a: L("sf2"), b: L("pi", "Loser 4th-5th"), deps: ["sf2", "pi"] },
   ],
   8: () => [
-    { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal", a: seed(3), b: seed(6) },
-    { id: "qf2", stage: "qf", idx: 1, round: "Quarterfinal", a: seed(4), b: seed(5) },
-    { id: "p7",  stage: "qf", idx: 2, round: "Placement 7-8", a: seed(7), b: seed(8) },
-    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal", a: seed(1), b: "Winner QF2", deps: ["qf2"] },
-    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal", a: seed(2), b: "Winner QF1", deps: ["qf1"] },
-    { id: "final",  stage: "final",  idx: 0, round: "Gold medal match",   a: "Winner SF1", b: "Winner SF2", deps: ["sf1", "sf2"] },
-    { id: "bronze", stage: "bronze", idx: 0, round: "Bronze medal match", a: "Loser SF1",  b: "Loser SF2",  deps: ["sf1", "sf2"] },
+    { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal", a: S(3), b: S(6) },
+    { id: "qf2", stage: "qf", idx: 1, round: "Quarterfinal", a: S(4), b: S(5) },
+    { id: "p7",  stage: "qf", idx: 2, round: "Placement 7-8", a: S(7), b: S(8) },
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal", a: S(1), b: W("qf2"), deps: ["qf2"] },
+    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal", a: S(2), b: W("qf1"), deps: ["qf1"] },
+    { id: "final",  stage: "final",  idx: 0, round: "Gold medal match",   a: W("sf1"), b: W("sf2"), deps: ["sf1", "sf2"] },
+    { id: "bronze", stage: "bronze", idx: 0, round: "Bronze medal match", a: L("sf1"), b: L("sf2"), deps: ["sf1", "sf2"] },
   ],
 };
 
@@ -50,7 +54,7 @@ export function describeFormat(teamCount) {
   for (const m of ko) {
     let r = rounds.find((x) => x.round === m.round);
     if (!r) { r = { round: m.round, matches: [] }; rounds.push(r); }
-    r.matches.push(`${m.a} × ${m.b}`);
+    r.matches.push(`${m.a.label} × ${m.b.label}`);
   }
   return { teamCount, qrGames, rounds, total: qrGames + ko.length };
 }
@@ -77,7 +81,8 @@ export function buildFormat(teams, { category, bestOf = 3 } = {}) {
     fixtures.push({
       id: `ko:${m.id}`, category, bestOf,
       round: m.round, phase: "ko", koStage: m.stage, koIndex: m.idx, seq: seq++,
-      teamA: m.a, teamB: m.b, deps: (m.deps || []).map((d) => `ko:${d}`),
+      teamA: m.a.label, teamB: m.b.label, srcA: m.a.src, srcB: m.b.src,
+      deps: (m.deps || []).map((d) => `ko:${d}`),
     });
   }
 

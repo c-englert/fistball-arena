@@ -4,6 +4,8 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { db, auth, googleProvider } from "./firebase.js";
+import { team } from "./seed.js";
+import { resolveAdvancement } from "./schedule/advance.js";
 
 /* ----------------- identity (Google login) ----------------- */
 // Org-admins can create events and manage members of any event. Kept in sync
@@ -262,7 +264,7 @@ export async function publishGames(games, { replaceAll } = {}) {
       batch.set(edoc("games", id), {
         nr: g.nr, date: g.date, time: g.time, court: g.court,
         bestOf: g.bestOf, round: g.round, category: g.category, group: g.group || "",
-        teamA: g.teamA, teamB: g.teamB,
+        teamA: g.teamA, teamB: g.teamB, srcA: g.srcA || null, srcB: g.srcB || null,
       });
       // Public results row so the spectator Live sees the whole fixture upfront.
       batch.set(edoc("results", id), {
@@ -513,6 +515,49 @@ export async function submitReport(gameId, me) {
     submittedAt: serverTimestamp(),
   });
   await publishResult(gameId);
+  try { const g = await getDoc(edoc("games", gameId)); await runAdvancement(g.data()?.category); } catch (_) { /* best effort */ }
+}
+
+// Auto-advancement: after a result lands, fill the placeholder slots of later
+// knockout games — seeds from the QR ranking, and winners/losers of finished
+// games — updating the game, its public result and (if present) its report.
+export async function runAdvancement(category) {
+  if (!category) return;
+  try {
+    const gsnap = await getDocs(ecol("games"));
+    const games = gsnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((g) => g.category === category);
+    if (!games.length) return;
+    const rsnap = await getDocs(ecol("results"));
+    const resultsById = {};
+    rsnap.forEach((d) => { const r = d.data(); if (r.category === category) resultsById[d.id] = r; });
+
+    const qrTeams = new Set();
+    games.filter((g) => g.round === "Qualification round").forEach((g) => {
+      if (g.teamA?.name) qrTeams.add(g.teamA.name);
+      if (g.teamB?.name) qrTeams.add(g.teamB.name);
+    });
+    const shaped = games.map((g) => ({
+      id: g.id, category: g.category, phase: g.round === "Qualification round" ? "group" : "ko",
+      round: g.round, teamA: g.teamA?.name, teamB: g.teamB?.name, srcA: g.srcA, srcB: g.srcB,
+    }));
+    const patches = resolveAdvancement(shaped, resultsById, qrTeams.size);
+
+    for (const [gid, patch] of Object.entries(patches)) {
+      const gameUpd = {}, resUpd = {}, repUpd = {};
+      for (const side of ["teamA", "teamB"]) {
+        const name = patch[side];
+        if (!name) continue;
+        const roster = await getRoster(name);
+        gameUpd[side] = team(name);
+        resUpd[side] = name;
+        repUpd[side] = cloneTeam({ name, players: roster?.players || [], staff: roster?.staff || [] });
+      }
+      if (Object.keys(gameUpd).length) await updateDoc(edoc("games", gid), gameUpd);
+      if (Object.keys(resUpd).length) await setDoc(edoc("results", gid), resUpd, { merge: true });
+      const rep = await getDoc(edoc("reports", gid));
+      if (rep.exists()) await updateDoc(edoc("reports", gid), repUpd);
+    }
+  } catch (e) { console.warn("runAdvancement failed:", e?.code || e); }
 }
 
 /* ----------------- publish to Fistball Live ----------------- */
