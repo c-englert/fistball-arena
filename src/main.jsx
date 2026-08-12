@@ -5,6 +5,7 @@ import EventPicker from "./EventPicker.jsx";
 import EventShell from "./EventShell.jsx";
 import Guide from "./pages/Guide.jsx";
 import Identity from "./pages/Identity.jsx";
+import InstallPrompt from "./InstallPrompt.jsx";
 import { onMe, signOutMe } from "./cloud.js";
 import "./styles.css";
 
@@ -18,18 +19,21 @@ function Root() {
   }, []);
 
   if (!ready || me === undefined) return <div className="empty">Loading…</div>;
-  if (!me) return <Identity />;
+  if (!me) return <><Identity /><InstallPrompt /></>;
 
   const signOut = () => signOutMe();
 
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<EventPicker me={me} onSignOut={signOut} />} />
-        <Route path="/guide" element={<Guide me={me} onSignOut={signOut} />} />
-        <Route path="/e/:eventId/*" element={<EventShell me={me} onSignOut={signOut} />} />
-      </Routes>
-    </HashRouter>
+    <>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<EventPicker me={me} onSignOut={signOut} />} />
+          <Route path="/guide" element={<Guide me={me} onSignOut={signOut} />} />
+          <Route path="/e/:eventId/*" element={<EventShell me={me} onSignOut={signOut} />} />
+        </Routes>
+      </HashRouter>
+      <InstallPrompt />
+    </>
   );
 }
 
