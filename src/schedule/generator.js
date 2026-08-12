@@ -3,6 +3,7 @@
 
 import { roundRobin } from "./roundRobin.js";
 import { buildBracket } from "./bracket.js";
+import { buildFormat, hasFormat } from "./format.js";
 import { allocate } from "./scheduler.js";
 import { team } from "../seed.js";
 
@@ -32,6 +33,17 @@ export function generateSchedule(config) {
   for (const cat of config.categories || []) {
     const catName = categoryLabel(cat);
     const catKey = catName.replace(/\s+/g, "_");
+
+    // Championship preset by team count (single group + rank-seeded knockout).
+    const allTeams = (cat.groups || []).flatMap((g) => g.teams || []);
+    if (hasFormat(allTeams.length)) {
+      const built = buildFormat(allTeams, { category: catName, bestOf: cat.bestOf || 3 });
+      for (const f of built.fixtures) {
+        fixtures.push({ ...f, id: `${catKey}:${f.id}`, deps: (f.deps || []).map((d) => `${catKey}:${d}`), seq: seq++ });
+      }
+      continue;
+    }
+
     const groups = (cat.groups || []).filter((g) => (g.teams || []).length >= 2);
     if (!groups.length) {
       warnings.push(`${catName}: no group has 2+ teams — skipped.`);
