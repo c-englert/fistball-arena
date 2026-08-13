@@ -86,6 +86,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .tag { background: #eef0f6; border-radius: 8px; padding: 3px 9px; font-size: 12px; font-weight: 700; color: var(--muted); }
 .tag.tag-f { background: #fbe4f0; color: #b0247a; }
 .tag.tag-m { background: #e2ecfb; color: #235fb0; }
+.tag.tag-ok { background: #e2f5ea; color: #1c8a54; }
+.tag.tag-warn { background: #fdf0d8; color: #a9761c; }
 .roster-row.row-warn { border-left: 3px solid #e0a63a; padding-left: 7px; background: #fdf6e9; border-radius: 6px; }
 .roster-row.row-dup { border-left: 3px solid #d0454f; padding-left: 7px; background: #fbeaec; border-radius: 6px; }
 .import-history > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 13px; }
