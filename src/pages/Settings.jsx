@@ -6,7 +6,7 @@ import {
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
-import { describeFormat, formatMatches, slotOptions, parseSlot, slotValue } from "../schedule/format.js";
+import { describeFormat, formatMatches, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -38,14 +38,25 @@ export default function Settings({ me }) {
   const openOrToggle = (n) => setOpenStep((s) => (s === n ? 0 : n));
   const [bracketIdx, setBracketIdx] = useState(null); // category index shown in the bracket modal
   const teamsInCat = (cat) => (details.entries || []).filter((t) => (t.cats || []).includes(cat)).map((t) => t.name);
-  // Edit which variable feeds a knockout slot (per category override).
-  const setSlot = (cat, matchId, slot, value) => edit((d) => {
+  // Per-category format override: edit slots, remove or add knockout matches.
+  const mutateOv = (cat, fn) => edit((d) => {
     const fo = { ...(d.formatOverrides || {}) };
-    const c = { ...(fo[cat] || {}) };
-    const m = { ...(c[matchId] || {}) };
-    m[slot] = parseSlot(value);
-    c[matchId] = m; fo[cat] = c;
+    const cur = normalizeOverride(fo[cat]);
+    const ov = { edits: { ...cur.edits }, removed: [...cur.removed], added: cur.added.map((m) => ({ ...m })) };
+    fn(ov);
+    fo[cat] = ov;
     return { ...d, formatOverrides: fo };
+  });
+  const setSlot = (cat, matchId, slot, value, isAdded) => mutateOv(cat, (ov) => {
+    const src = parseSlot(value);
+    if (isAdded) { const m = ov.added.find((x) => x.id === matchId); if (m) m[slot] = src; }
+    else ov.edits[matchId] = { ...(ov.edits[matchId] || {}), [slot]: src };
+  });
+  const setRound = (cat, matchId, round) => mutateOv(cat, (ov) => { const m = ov.added.find((x) => x.id === matchId); if (m) m.round = round; });
+  const addMatch = (cat) => mutateOv(cat, (ov) => ov.added.push({ id: `x${Date.now()}`, round: "Placement 5-6", a: { type: "seed", rank: 5 }, b: { type: "seed", rank: 6 } }));
+  const removeMatch = (cat, matchId, isAdded) => mutateOv(cat, (ov) => {
+    if (isAdded) ov.added = ov.added.filter((m) => m.id !== matchId);
+    else if (!ov.removed.includes(matchId)) ov.removed.push(matchId);
   });
   const resetFormat = (cat) => edit((d) => { const fo = { ...(d.formatOverrides || {}) }; delete fo[cat]; return { ...d, formatOverrides: fo }; });
   const saveOverrides = () => { setStatus("Saving format…"); updateEventFields({ formatOverrides: details.formatOverrides }).then(() => afterSave("Format saved.")).catch((e) => setStatus("Save failed: " + (e?.message || e))); };
@@ -473,7 +484,10 @@ export default function Settings({ me }) {
           category={previewCats[bracketIdx]}
           teams={teamsInCat(previewCats[bracketIdx])}
           override={details.formatOverrides?.[previewCats[bracketIdx]]}
-          onSlot={(matchId, slot, value) => setSlot(previewCats[bracketIdx], matchId, slot, value)}
+          onSlot={(matchId, slot, value, isAdded) => setSlot(previewCats[bracketIdx], matchId, slot, value, isAdded)}
+          onRound={(matchId, round) => setRound(previewCats[bracketIdx], matchId, round)}
+          onAdd={() => addMatch(previewCats[bracketIdx])}
+          onRemove={(matchId, isAdded) => removeMatch(previewCats[bracketIdx], matchId, isAdded)}
           onReset={() => resetFormat(previewCats[bracketIdx])}
           onSave={saveOverrides}
           archived={archived}
@@ -490,7 +504,7 @@ export default function Settings({ me }) {
 // Editable bracket of one category (group + every knockout match) in a modal.
 // Each slot is a dropdown (seed / winner-of / loser-of); changes are saved as a
 // per-category override. Stepped through one category at a time.
-function BracketModal({ category, teams, override, onSlot, onReset, onSave, archived, idx, total, onClose, onNext }) {
+function BracketModal({ category, teams, override, onSlot, onRound, onAdd, onRemove, onReset, onSave, archived, idx, total, onClose, onNext }) {
   const n = teams.length;
   const matches = formatMatches(n, override);
   const last = idx + 1 >= total;
@@ -498,8 +512,8 @@ function BracketModal({ category, teams, override, onSlot, onReset, onSave, arch
     const slot = side === "a" ? m.a : m.b;
     if (archived) return <span className="brk-slot-ro">{slot.label}</span>;
     return (
-      <select className="brk-slot" value={slotValue(slot.src)} onChange={(e) => onSlot(m.id, side, e.target.value)}>
-        {slotOptions(n, m.id).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      <select className="brk-slot" value={slotValue(slot.src)} onChange={(e) => onSlot(m.id, side, e.target.value, m.added)}>
+        {slotOptions(n, m.id, override).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     );
   };
@@ -520,15 +534,24 @@ function BracketModal({ category, teams, override, onSlot, onReset, onSave, arch
             <div className="brk-edit-list">
               {matches.map((m) => (
                 <div className="brk-edit-row" key={m.id}>
-                  <span className="brk-erd">{m.round}</span>
+                  {m.added && !archived
+                    ? <select className="brk-erd-sel" value={m.round} onChange={(e) => onRound(m.id, e.target.value)}>
+                        {ROUND_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    : <span className="brk-erd">{m.round}</span>}
                   <Slot m={m} side="a" /><span className="brk-x">×</span><Slot m={m} side="b" />
+                  {!archived && <button className="brk-del" title="Remove match" onClick={() => onRemove(m.id, m.added)}>✕</button>}
                 </div>
               ))}
             </div>
-            <div className="brk-editnote">
-              <span className="muted-sm">Change any slot if the pairing isn’t right. Placeholders fill in automatically as games finish.</span>
-              {!archived && override && Object.keys(override).length > 0 && <button className="btn sm" onClick={onReset}>Reset to preset</button>}
-            </div>
+            {!archived && (
+              <div className="brk-editnote">
+                <button className="btn sm" onClick={onAdd}>+ Add match</button>
+                {override && normalizeOverride(override) && (normalizeOverride(override).removed.length || normalizeOverride(override).added.length || Object.keys(normalizeOverride(override).edits).length)
+                  ? <button className="btn sm" onClick={onReset}>Reset to preset</button> : null}
+              </div>
+            )}
+            <p className="muted-sm">Remove a match with ✕, or add one. Placeholders (“Winner SF1”…) fill in automatically as games finish.</p>
           </>
         )}
         <div className="modal-actions">

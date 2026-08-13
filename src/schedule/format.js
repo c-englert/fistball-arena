@@ -52,29 +52,52 @@ function labelOf(src) {
   return `${src.type === "winner" ? "Winner" : "Loser"} ${shortOf(src.dep)}`;
 }
 
-// Merge preset knockout with a per-category override. Returns matches with
-// resolved a/b { src, label } and recomputed deps.
-export function koFor(teamCount, override) {
-  const base = KO[teamCount] ? KO[teamCount]() : [];
-  const ov = override || {};
-  return base.map((m) => {
-    const o = ov[m.id] || {};
-    const a = o.a ? { src: o.a, label: labelOf(o.a) } : { src: m.a.src, label: m.a.label };
-    const b = o.b ? { src: o.b, label: labelOf(o.b) } : { src: m.b.src, label: m.b.label };
-    const deps = [a.src, b.src].filter((s) => s && s.type !== "seed").map((s) => s.dep);
-    return { id: m.id, stage: m.stage, idx: m.idx, round: m.round, a, b, deps };
-  });
+// Rounds offered when adding a custom match.
+export const ROUND_OPTIONS = ["Quarterfinal", "Semifinal", "Play-off", "Placement 5-6", "Placement 7-8", "Placement 3-5", "Bronze medal match", "Gold medal match"];
+const STAGE_OF = (round) => /gold/i.test(round) ? "final" : /semi/i.test(round) ? "sf" : /quarter|play-off/i.test(round) ? "qf" : "bronze";
+
+// Override may be a legacy flat map (matchId -> {a,b}) or the richer shape
+// { edits:{matchId:{a,b}}, removed:[matchId], added:[{id,round,a,b}] }.
+export function normalizeOverride(ov) {
+  if (!ov) return { edits: {}, removed: [], added: [] };
+  if (ov.edits || ov.removed || ov.added) return { edits: ov.edits || {}, removed: ov.removed || [], added: ov.added || [] };
+  return { edits: ov, removed: [], added: [] };
+}
+function mk(id, stage, idx, round, a, b, added) {
+  const deps = [a.src, b.src].filter((s) => s && s.type !== "seed").map((s) => s.dep);
+  return { id, stage, idx, round, a, b, deps, added: !!added };
 }
 
-// Options for editing a slot: every seed, plus winner/loser of any EARLIER match
-// (so a match never depends on a later one).
-export function slotOptions(teamCount, matchId) {
-  const ko = KO[teamCount] ? KO[teamCount]() : [];
-  const idx = ko.findIndex((m) => m.id === matchId);
+// Merge preset knockout with a per-category override (edits + removed + added).
+export function koFor(teamCount, override) {
+  const ov = normalizeOverride(override);
+  const base = (KO[teamCount] ? KO[teamCount]() : [])
+    .filter((m) => !ov.removed.includes(m.id))
+    .map((m) => {
+      const o = ov.edits[m.id] || {};
+      const a = o.a ? { src: o.a, label: labelOf(o.a) } : { src: m.a.src, label: m.a.label };
+      const b = o.b ? { src: o.b, label: labelOf(o.b) } : { src: m.b.src, label: m.b.label };
+      return mk(m.id, m.stage, m.idx, m.round, a, b, false);
+    });
+  const added = (ov.added || []).map((m, i) =>
+    mk(m.id, STAGE_OF(m.round || ""), 20 + i, m.round || "Placement", { src: m.a, label: labelOf(m.a) }, { src: m.b, label: labelOf(m.b) }, true));
+  return [...base, ...added];
+}
+
+// Options for a slot: every seed, plus winner/loser of any preset match that
+// comes earlier (added matches, which run last, may reference any preset match).
+export function slotOptions(teamCount, matchId, override) {
+  const base = KO[teamCount] ? KO[teamCount]() : [];
+  const ov = normalizeOverride(override);
+  const idx = base.findIndex((m) => m.id === matchId); // -1 for an added match
   const opts = [];
   for (let r = 1; r <= teamCount; r++) opts.push({ value: `seed:${r}`, label: `${seed(r)} place` });
-  ko.forEach((m, i) => {
-    if (i < idx) { opts.push({ value: `winner:ko:${m.id}`, label: `Winner · ${m.round}` }); opts.push({ value: `loser:ko:${m.id}`, label: `Loser · ${m.round}` }); }
+  base.forEach((m, i) => {
+    if (ov.removed.includes(m.id)) return;
+    if (idx === -1 || i < idx) {
+      opts.push({ value: `winner:ko:${m.id}`, label: `Winner · ${m.round}` });
+      opts.push({ value: `loser:ko:${m.id}`, label: `Loser · ${m.round}` });
+    }
   });
   return opts;
 }
