@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishEventImport,
+  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishEventImport, publishGames,
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
 import { describeFormat, formatMatches, formatWarnings, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
 import SlotsEditor from "../schedule/SlotsEditor.jsx";
+import { generateSchedule } from "../schedule/generator.js";
+import { eventToConfig } from "../schedule/eventToConfig.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -34,7 +36,7 @@ export default function Settings({ me }) {
     const d = fromEvent(event);
     const nt = (d.entries || []).length > 0;
     const courts = (d.slots?.courts || []).length > 0 && (d.slots?.days || []).length > 0;
-    const flags = [!!(d.name && d.startDate), expandBuilder(d.categoryBuilder).length > 0, nt, nt, courts, false, false];
+    const flags = [!!(d.name && d.startDate), expandBuilder(d.categoryBuilder).length > 0, nt, nt, courts, false, false, false];
     const i = flags.findIndex((f) => !f);
     return i === -1 ? 0 : i + 1;
   });
@@ -197,6 +199,22 @@ export default function Settings({ me }) {
   const setSlots = (next) => edit((d) => ({ ...d, slots: next }));
   const saveSlots = () => { setStatus("Saving courts…"); updateEventFields({ slots: details.slots }).then(() => { afterSave("Courts & schedule saved."); setOpenStep(6); }).catch((e) => setStatus("Save failed: " + (e?.message || e))); };
 
+  // Step 8 — generate & publish the schedule from the saved setup.
+  const [genResult, setGenResult] = useState(null);
+  const [published, setPublished] = useState(false);
+  const doGenerate = () => {
+    const r = generateSchedule(eventToConfig(event));
+    setGenResult(r);
+    setStatus(`${r.games.length} games generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
+  };
+  const doPublish = async () => {
+    if (!genResult?.games.length) return;
+    if (!window.confirm(`Publish ${genResult.games.length} games? This replaces ALL current games, reports and results for this event.`)) return;
+    setStatus("Publishing…");
+    try { await publishGames(genResult.games, { replaceAll: true }); setPublished(true); setStatus(`Published ${genResult.games.length} games. See the games list / Fistball Live.`); }
+    catch (e) { setStatus("Publish failed: " + (e?.message || e)); }
+  };
+
   // Guided-setup step state: which are done, and which are still locked.
   const nTeams = (details.entries || []).length;
   const courtsDone = (details.slots?.courts || []).length > 0 && (details.slots?.days || []).length > 0;
@@ -208,8 +226,9 @@ export default function Settings({ me }) {
     courtsDone,
     !!(branding?.eventLogo || (branding?.promoters || []).length),
     thisIsLive,
+    published,
   ];
-  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3], !done[3]];
+  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3], !done[3], !done[4]];
 
   return (
     <div className="app">
@@ -457,6 +476,23 @@ export default function Settings({ me }) {
           {thisIsLive
             ? <button className="btn danger" onClick={stopLive}>Stop showing</button>
             : <button className="btn primary" onClick={publishLive}>{live?.eventId ? "Show this instead" : "Publish to Live"}</button>}
+        </Step>
+
+        {/* ---- 8. Generate & publish schedule ---- */}
+        <Step n={8} title="Generate & publish schedule" sub={done[7] ? "published" : ""} done={done[7]} locked={locked[7]} open={openStep === 8} onToggle={() => openOrToggle(8)}>
+          <p className="muted-sm">Builds all games from your categories, teams, format and courts — then publishes them (they appear on the games list and Fistball Live).</p>
+          {!archived && <button className="btn" onClick={doGenerate}>{genResult ? "Regenerate" : "Generate schedule"}</button>}
+          {genResult && (
+            <>
+              {genResult.warnings?.length > 0 && <div className="warn-box" style={{ marginTop: 10 }}>{genResult.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
+              <p className="muted-sm" style={{ marginTop: 8 }}>Ready: <b>{genResult.games.length}</b> games{genResult.unplaced.length ? ` · ${genResult.unplaced.length} unplaced` : ""}.</p>
+              {Object.entries(genResult.games.reduce((a, g) => { a[g.category] = (a[g.category] || 0) + 1; return a; }, {})).map(([c, cnt]) => (
+                <div className="fmt-line" key={c}><span className="fmt-round">{c}</span> {cnt} games</div>
+              ))}
+              {!archived && <button className="btn primary" style={{ marginTop: 12, width: "100%" }} onClick={doPublish} disabled={!genResult.games.length}>Publish {genResult.games.length} games (replace all)</button>}
+              {done[7] && <p className="muted-sm">✅ Published. Open the games list or Fistball Live to see them.</p>}
+            </>
+          )}
         </Step>
 
         <div className="tools-divider">Tools (optional)</div>
