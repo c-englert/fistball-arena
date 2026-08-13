@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listMyEvents, createEvent, subscribeLivePointer, setLiveEvent, clearLiveEvent, subscribeAllBranding } from "./cloud.js";
+import { listMyEvents, createEvent, setEvent, publishEventImport, subscribeLivePointer, setLiveEvent, clearLiveEvent, subscribeAllBranding } from "./cloud.js";
+import { fetchEventFromSheet } from "./schedule/importEventSheet.js";
 import AccountMenu from "./AccountMenu.jsx";
 import { formatRange } from "./dates.js";
 
@@ -13,6 +14,10 @@ export default function EventPicker({ me, onSignOut }) {
   const [tab, setTab] = useState("active");
   const [live, setLive] = useState(null);
   const [brandings, setBrandings] = useState({});
+  const [imp, setImp] = useState(null); // Google-Sheet import modal: null = closed
+  const [impPreview, setImpPreview] = useState(null);
+  const [impStatus, setImpStatus] = useState("");
+  const [impBusy, setImpBusy] = useState(false);
 
   useEffect(() => listMyEvents(me, setEvents), [me]);
   useEffect(() => subscribeLivePointer(setLive), []);
@@ -37,6 +42,29 @@ export default function EventPicker({ me, onSignOut }) {
     }
   };
 
+  // Import a past event from a Google Sheet: read a preview, then create a new
+  // event and publish the games/rosters/results into it.
+  const openImport = () => { setImp({ name: "", place: "", startDate: "", endDate: "", url: "" }); setImpPreview(null); setImpStatus(""); };
+  const readImport = async () => {
+    setImpStatus("Reading sheet…"); setImpPreview(null);
+    try {
+      const id = imp.url.match(/[-\w]{25,}/)?.[0] || imp.url.trim();
+      const r = await fetchEventFromSheet(id);
+      setImpPreview(r);
+      setImpStatus(`Found ${r.gameCount} games (${r.finished} finished) · ${r.teamCount} teams · ${r.cautionCount} carded.` + (r.warnings.length ? " " + r.warnings.join("; ") : ""));
+    } catch (e) { setImpStatus("Read failed: " + (e?.message || e)); }
+  };
+  const runImport = async () => {
+    if (!impPreview?.gameCount || !imp.name.trim()) return;
+    setImpBusy(true); setImpStatus("Creating event & importing…");
+    try {
+      const id = await createEvent({ name: imp.name, place: imp.place, dates: formatRange(imp.startDate, imp.endDate) }, me);
+      setEvent(id);
+      await publishEventImport(impPreview, { replaceAll: true });
+      nav(`/e/${id}`);
+    } catch (e) { setImpStatus("Import failed: " + (e?.message || e)); setImpBusy(false); }
+  };
+
   return (
     <div className="app">
       <header className="topbar">
@@ -51,7 +79,10 @@ export default function EventPicker({ me, onSignOut }) {
 
       <div className="content">
         {me.admin && !creating && (
-          <button className="btn primary" style={{ width: "100%", marginBottom: 16 }} onClick={() => setCreating(true)}>+ New event</button>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <button className="btn primary" style={{ flex: 1 }} onClick={() => setCreating(true)}>+ New event</button>
+            <button className="btn" onClick={openImport} title="Create an event from a past Google Sheet">⬇ Import from Google Sheet</button>
+          </div>
         )}
         {me.admin && creating && (
           <div className="card">
@@ -114,6 +145,46 @@ export default function EventPicker({ me, onSignOut }) {
           );
         })}
       </div>
+
+      {imp && (
+        <div className="modal-overlay" onClick={() => !impBusy && setImp(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <button className="modal-x" onClick={() => setImp(null)} aria-label="Close">✕</button>
+            <h3 className="modal-title" style={{ marginBottom: 2 }}>Import a past event (Google Sheet)</h3>
+            <p className="muted-sm" style={{ marginTop: 0 }}>Creates a new event from a results sheet — schedule + final scores (Results tab) and rosters (DB tab), so Fistball Live shows the full standings.</p>
+
+            <div className="field"><span>Name</span>
+              <input value={imp.name} onChange={(e) => setImp({ ...imp, name: e.target.value })} placeholder="e.g. 2025 South American Championship" autoFocus /></div>
+            <div className="field"><span>Place</span>
+              <input value={imp.place} onChange={(e) => setImp({ ...imp, place: e.target.value })} placeholder="Rosario · Argentina" /></div>
+            <div className="grid2">
+              <div className="field"><span>Starts</span>
+                <input type="date" value={imp.startDate} onChange={(e) => setImp({ ...imp, startDate: e.target.value, endDate: imp.endDate && imp.endDate < e.target.value ? e.target.value : imp.endDate })} /></div>
+              <div className="field"><span>Ends</span>
+                <input type="date" min={imp.startDate || undefined} value={imp.endDate} onChange={(e) => setImp({ ...imp, endDate: e.target.value })} /></div>
+            </div>
+
+            <div className="field"><span>Google Sheet URL or ID</span>
+              <div className="add-row">
+                <input value={imp.url} onChange={(e) => setImp({ ...imp, url: e.target.value })} placeholder="https://docs.google.com/spreadsheets/d/…" />
+                <button className="btn" onClick={readImport} disabled={!imp.url.trim()}>Read</button>
+              </div>
+            </div>
+
+            {impPreview?.gameCount > 0 && (
+              <p className="muted-sm">Ready: <b>{impPreview.gameCount}</b> games ({impPreview.finished} finished) · <b>{impPreview.teamCount}</b> rosters · <b>{impPreview.cautionCount}</b> carded.</p>
+            )}
+            {impStatus && <p className="muted-sm">{impStatus}</p>}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+              <button className="btn" onClick={() => setImp(null)} disabled={impBusy}>Cancel</button>
+              <button className="btn primary" style={{ flex: 1 }} disabled={impBusy || !impPreview?.gameCount || !imp.name.trim()} onClick={runImport}>
+                {impBusy ? "Importing…" : "Create event & import"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

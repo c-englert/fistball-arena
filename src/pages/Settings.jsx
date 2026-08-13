@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishEventImport, publishGames,
+  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishGames,
 } from "../cloud.js";
-import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
 import { describeFormat, formatMatches, formatWarnings, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
 import SlotsEditor from "../schedule/SlotsEditor.jsx";
@@ -115,28 +114,6 @@ export default function Settings({ me }) {
     updateEventFields({ entries: details.entries })
       .then(() => { afterSave(`Saved ${(details.entries || []).length} team(s).`); setOpenStep(4); })
       .catch((e) => setStatus("Save failed: " + (e?.message || e)));
-  };
-
-  const [evUrl, setEvUrl] = useState("");
-  const [evPreview, setEvPreview] = useState(null);
-  const readEvent = async () => {
-    setStatus("Reading sheet…");
-    try {
-      const id = evUrl.match(/[-\w]{25,}/)?.[0] || evUrl.trim();
-      const r = await fetchEventFromSheet(id);
-      setEvPreview(r);
-      setStatus(`Found ${r.gameCount} games (${r.finished} finished) + ${r.teamCount} teams + ${r.cautionCount} carded players.` + (r.warnings.length ? " " + r.warnings.join("; ") : ""));
-    } catch (e) { setStatus("Read failed: " + (e?.message || e)); }
-  };
-  const publishEvent = async () => {
-    if (!evPreview?.gameCount) return;
-    if (!window.confirm(`Replace this event's games, reports and results with ${evPreview.gameCount} imported games (and ${evPreview.teamCount} rosters)? This cannot be undone.`)) return;
-    setStatus("Importing…");
-    try {
-      await publishEventImport(evPreview, { replaceAll: true });
-      setStatus(`Imported ${evPreview.gameCount} games + ${evPreview.teamCount} rosters. Open the games list / Fistball Live to see them.`);
-      setEvPreview(null);
-    } catch (e) { setStatus("Import failed: " + (e?.message || e)); }
   };
 
   const saveDetails = async () => {
@@ -488,24 +465,6 @@ export default function Settings({ me }) {
         </Step>
 
         <div className="tools-divider">Tools (optional)</div>
-
-        {/* ---- Import a past event from a Google Sheet (org-admin only, hidden by default) ---- */}
-        {!archived && me?.admin && (
-          <details className="card adv-tool">
-            <summary>Advanced · Import a past event (Google Sheet)</summary>
-            <p className="muted-sm">Brings the schedule + final scores (Results tab) and rosters (DB tab) into this event, so Fistball Live shows the full standings. Súmula line-up/card detail is separate.</p>
-            <div className="add-row" style={{ marginTop: 8 }}>
-              <input value={evUrl} onChange={(e) => setEvUrl(e.target.value)} placeholder="Google Sheet URL or ID" />
-              <button className="btn primary" onClick={readEvent}>Read</button>
-            </div>
-            {evPreview?.gameCount > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <p className="muted-sm">Ready: <b>{evPreview.gameCount}</b> games ({evPreview.finished} finished) · <b>{evPreview.teamCount}</b> rosters · <b>{evPreview.cautionCount}</b> carded players.</p>
-                <button className="btn primary" style={{ width: "100%" }} onClick={publishEvent}>Import into this event (replace)</button>
-              </div>
-            )}
-          </details>
-        )}
 
         {/* ---- Import players & staff from Excel ---- */}
         {!archived && <ExcelImport me={me} teamNames={(details.entries || []).map((e) => e.name)} />}
