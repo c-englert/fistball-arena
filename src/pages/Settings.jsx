@@ -502,10 +502,10 @@ export default function Settings({ me }) {
 
         <div className="tools-divider">Tools (optional)</div>
 
-        {/* ---- Import a past event from a Google Sheet (org-admin only) ---- */}
+        {/* ---- Import a past event from a Google Sheet (org-admin only, hidden by default) ---- */}
         {!archived && me?.admin && (
-          <div className="card">
-            <h2>Import a past event (Google Sheet)</h2>
+          <details className="card adv-tool">
+            <summary>Advanced · Import a past event (Google Sheet)</summary>
             <p className="muted-sm">Brings the schedule + final scores (Results tab) and rosters (DB tab) into this event, so Fistball Live shows the full standings. Súmula line-up/card detail is separate.</p>
             <div className="add-row" style={{ marginTop: 8 }}>
               <input value={evUrl} onChange={(e) => setEvUrl(e.target.value)} placeholder="Google Sheet URL or ID" />
@@ -517,7 +517,7 @@ export default function Settings({ me }) {
                 <button className="btn primary" style={{ width: "100%" }} onClick={publishEvent}>Import into this event (replace)</button>
               </div>
             )}
-          </div>
+          </details>
         )}
 
         {/* ---- Import players & staff from Excel ---- */}
