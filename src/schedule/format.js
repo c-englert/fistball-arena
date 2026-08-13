@@ -14,9 +14,18 @@ import { roundRobin } from "./roundRobin.js";
 const ORD = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
 export const seed = (n) => ORD[n] || `${n}th`;
 
+// Full, unambiguous names for each match id (used in slot labels so it's clear
+// which semifinal/quarterfinal a winner/loser comes from).
+const NAME = {
+  pi: "Quarterfinal", qf1: "Quarterfinal 1", qf2: "Quarterfinal 2", p7: "Placement 7-8",
+  sf1: "Semifinal 1", sf2: "Semifinal 2", final: "Final", bronze: "Bronze",
+  p35a: "Placement 3-5", p35b: "Placement 3-5", p35c: "Placement 3-5",
+};
+const nameOf = (ref) => NAME[String(ref).replace("ko:", "")] || String(ref).replace("ko:", "").toUpperCase();
+
 const S = (n) => ({ label: seed(n), src: { type: "seed", rank: n } });
-const W = (ref, label) => ({ label: label || `Winner ${ref.toUpperCase()}`, src: { type: "winner", dep: `ko:${ref}` } });
-const L = (ref, label) => ({ label: label || `Loser ${ref.toUpperCase()}`, src: { type: "loser", dep: `ko:${ref}` } });
+const W = (ref, label) => ({ label: label || `Winner ${nameOf(ref)}`, src: { type: "winner", dep: `ko:${ref}` } });
+const L = (ref, label) => ({ label: label || `Loser ${nameOf(ref)}`, src: { type: "loser", dep: `ko:${ref}` } });
 
 const KO = {
   3: () => [
@@ -24,19 +33,19 @@ const KO = {
   ],
   5: () => [
     { id: "pi",  stage: "qf", idx: 0, round: "Quarterfinal", a: S(4), b: S(5) },
-    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal", a: S(1), b: W("pi", "Winner QF") },
-    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal", a: S(2), b: S(3) },
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal 1", a: S(1), b: W("pi") },
+    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal 2", a: S(2), b: S(3) },
     { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: W("sf1"), b: W("sf2") },
     { id: "p35a", stage: "bronze", idx: 0, round: "Placement 3-5", a: L("sf1"), b: L("sf2") },
-    { id: "p35b", stage: "bronze", idx: 1, round: "Placement 3-5", a: L("sf1"), b: L("pi", "Loser QF") },
-    { id: "p35c", stage: "bronze", idx: 2, round: "Placement 3-5", a: L("sf2"), b: L("pi", "Loser QF") },
+    { id: "p35b", stage: "bronze", idx: 1, round: "Placement 3-5", a: L("sf1"), b: L("pi") },
+    { id: "p35c", stage: "bronze", idx: 2, round: "Placement 3-5", a: L("sf2"), b: L("pi") },
   ],
   8: () => [
-    { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal", a: S(3), b: S(6) },
-    { id: "qf2", stage: "qf", idx: 1, round: "Quarterfinal", a: S(4), b: S(5) },
+    { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal 1", a: S(3), b: S(6) },
+    { id: "qf2", stage: "qf", idx: 1, round: "Quarterfinal 2", a: S(4), b: S(5) },
     { id: "p7",  stage: "qf", idx: 2, round: "Placement 7-8", a: S(7), b: S(8) },
-    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal", a: S(1), b: W("qf2") },
-    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal", a: S(2), b: W("qf1") },
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal 1", a: S(1), b: W("qf2") },
+    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal 2", a: S(2), b: W("qf1") },
     { id: "final",  stage: "final",  idx: 0, round: "Gold medal match",   a: W("sf1"), b: W("sf2") },
     { id: "bronze", stage: "bronze", idx: 0, round: "Bronze medal match", a: L("sf1"), b: L("sf2") },
   ],
@@ -44,16 +53,14 @@ const KO = {
 
 export function hasFormat(teamCount) { return !!KO[teamCount]; }
 
-const SHORT = { pi: "QF", qf1: "QF1", qf2: "QF2", p7: "P7", sf1: "SF1", sf2: "SF2", final: "F", bronze: "B", p35a: "P3a", p35b: "P3b", p35c: "P3c" };
-const shortOf = (dep) => SHORT[String(dep).replace("ko:", "")] || String(dep).replace("ko:", "").toUpperCase();
 function labelOf(src) {
   if (!src) return "?";
   if (src.type === "seed") return seed(src.rank);
-  return `${src.type === "winner" ? "Winner" : "Loser"} ${shortOf(src.dep)}`;
+  return `${src.type === "winner" ? "Winner" : "Loser"} ${nameOf(src.dep)}`;
 }
 
 // Rounds offered when adding a custom match.
-export const ROUND_OPTIONS = ["Quarterfinal", "Semifinal", "Play-off", "Placement 5-6", "Placement 7-8", "Placement 3-5", "Bronze medal match", "Gold medal match"];
+export const ROUND_OPTIONS = ["Quarterfinal 1", "Quarterfinal 2", "Semifinal 1", "Semifinal 2", "Placement 5-6", "Placement 7-8", "Placement 3-5", "Bronze medal match", "Gold medal match"];
 const STAGE_OF = (round) => /gold/i.test(round) ? "final" : /semi/i.test(round) ? "sf" : /quarter|play-off/i.test(round) ? "qf" : "bronze";
 
 // Override may be a legacy flat map (matchId -> {a,b}) or the richer shape
