@@ -16,7 +16,7 @@ function Avatar({ src, name }) {
 
 export default function Roster({ me }) {
   const nav = useNavigate();
-  const { eventId, isAdmin } = useEvent();
+  const { eventId, isAdmin, event } = useEvent();
   const [rosters, setRosters] = useState(null);   // live registry from Firestore
   const [preview, setPreview] = useState(null);     // parsed import { rosters, teamCount, count, warnings }
   const [sheetId, setSheetId] = useState(DB_SHEET_ID);
@@ -82,7 +82,7 @@ export default function Roster({ me }) {
 
       <div className="content">
         {/* ---- Excel upload ---- */}
-        <ExcelImport me={me} />
+        <ExcelImport me={me} teamNames={(event?.entries || []).map((e) => e.name)} />
 
         {/* ---- Google Sheet import (alternative) ---- */}
         <div className="card">

@@ -521,7 +521,7 @@ export default function Settings({ me }) {
         )}
 
         {/* ---- Import players & staff from Excel ---- */}
-        {!archived && <ExcelImport me={me} />}
+        {!archived && <ExcelImport me={me} teamNames={(details.entries || []).map((e) => e.name)} />}
 
         {/* ---- Status ---- */}
         <div className="card">
