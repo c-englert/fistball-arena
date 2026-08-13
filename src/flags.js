@@ -8,6 +8,10 @@ export const FLAGS = {
   "New Zealand": "🇳🇿", Italy: "🇮🇹", "Czech Republic": "🇨🇿", Denmark: "🇩🇰",
   Serbia: "🇷🇸", Argentina: "🇦🇷", Poland: "🇵🇱", "United States": "🇺🇸",
   France: "🇫🇷", Belgium: "🇧🇪", Spain: "🇪🇸", Netherlands: "🇳🇱",
+  // Portuguese/Spanish spellings + rest of South America
+  Brasil: "🇧🇷", Uruguay: "🇺🇾", Uruguai: "🇺🇾", Paraguay: "🇵🇾", Paraguai: "🇵🇾",
+  Colombia: "🇨🇴", "Colômbia": "🇨🇴", Peru: "🇵🇪", "Perú": "🇵🇪", Bolivia: "🇧🇴",
+  "Bolívia": "🇧🇴", Ecuador: "🇪🇨", Equador: "🇪🇨", Venezuela: "🇻🇪",
 };
 
 export function countryOf(teamName) {

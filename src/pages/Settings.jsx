@@ -13,6 +13,7 @@ import { eventToConfig } from "../schedule/eventToConfig.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
+import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 
 const fromEvent = (ev) => ({
@@ -353,7 +354,7 @@ export default function Settings({ me }) {
                       <tbody>
                         {(details.entries || []).map((t, i) => (
                           <tr key={i}>
-                            <td className="mx-team"><input className="mx-team-input" value={t.name} disabled={archived} onChange={(e) => renameTeam(i, e.target.value)} aria-label="Team name" /></td>
+                            <td className="mx-team"><span className="mx-team-cell"><span className="flag">{flagFor(t.name)}</span><input className="mx-team-input" value={t.name} disabled={archived} onChange={(e) => renameTeam(i, e.target.value)} aria-label="Team name" /></span></td>
                             {cols.leaves.map((lf) => (
                               <td key={lf.name} className="mx-cell">
                                 <input type="checkbox" checked={(t.cats || []).includes(lf.name)} disabled={archived} onChange={() => toggleEntry(i, lf.name)} title={lf.name} />

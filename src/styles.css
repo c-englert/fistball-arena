@@ -375,7 +375,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .matrix tfoot td { font-size: 12px; font-weight: 800; }
 .matrix .dim { color: var(--muted); }
 .matrix tbody tr:hover { background: #faf9fe; }
-.matrix .mx-team-input { border: 1px solid transparent; background: transparent; font: inherit; font-weight: 700; color: var(--text); width: 100%; min-width: 140px; padding: 4px 6px; border-radius: 6px; }
+.mx-team-cell { display: flex; align-items: center; gap: 6px; }
+.matrix .mx-team-input { border: 1px solid transparent; background: transparent; font: inherit; font-weight: 700; color: var(--text); flex: 1; min-width: 130px; padding: 4px 6px; border-radius: 6px; }
 .matrix .mx-team-input:hover:not(:disabled) { border-color: var(--line); }
 .matrix .mx-team-input:focus { border-color: var(--brand); background: #fff; outline: none; }
 
