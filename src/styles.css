@@ -88,6 +88,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .tag.tag-m { background: #e2ecfb; color: #235fb0; }
 .tag.tag-ok { background: #e2f5ea; color: #1c8a54; }
 .tag.tag-warn { background: #fdf0d8; color: #a9761c; }
+.combo { position: relative; flex: 1; min-width: 0; }
+.combo > input { width: 100%; }
+.combo-list { position: absolute; z-index: 40; top: calc(100% + 3px); left: 0; right: 0; margin: 0; padding: 4px; list-style: none; max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(20, 20, 60, 0.16); }
+.combo-opt { padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.combo-opt.hi { background: #efeaf9; }
+.combo-opt.sel { font-weight: 700; color: var(--brand); }
 .roster-row.row-warn { border-left: 3px solid #e0a63a; padding-left: 7px; background: #fdf6e9; border-radius: 6px; }
 .roster-row.row-dup { border-left: 3px solid #d0454f; padding-left: 7px; background: #fbeaec; border-radius: 6px; }
 .import-history > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 13px; }
