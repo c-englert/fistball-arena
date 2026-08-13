@@ -19,9 +19,11 @@ export default function ExcelImport({ me }) {
       const r = await parseExcelRoster(file);
       setExcel(r);
       const map = {};
-      Object.keys(r.teams).forEach((k) => (map[k] = k));
+      // Suggest "Club - Gender" so women's/men's teams of the same club don't collide.
+      Object.entries(r.teams).forEach(([k, t]) => (map[k] = t.gender ? `${t.name} - ${t.gender}` : t.name));
       setNames(map);
-      setStatus(`Found ${r.count} people (${r.teamCount} teams) + ${r.refereeCount} referees.`);
+      const gnote = r.genders?.length ? ` · ${r.genders.join(" + ")}` : "";
+      setStatus(`Found ${r.count} people (${r.teamCount} teams${gnote}) + ${r.refereeCount} referees.`);
     } catch (e2) { setStatus("Excel read failed: " + (e2?.message || e2)); }
   };
   const saveExcel = async () => {
@@ -56,7 +58,8 @@ export default function ExcelImport({ me }) {
           <div className="subhead">Review team names ({Object.keys(excel.teams).length}) — edit to match your schedule</div>
           {Object.entries(excel.teams).map(([orig, t]) => (
             <div className="roster-row" key={orig}>
-              <span className="muted-sm" style={{ flex: "0 0 190px", overflow: "hidden", textOverflow: "ellipsis" }}>{orig}</span>
+              <span className="muted-sm" style={{ flex: "0 0 170px", overflow: "hidden", textOverflow: "ellipsis" }} title={orig}>{t.name}</span>
+              {t.gender && <span className={`tag ${t.gender === "Female" ? "tag-f" : "tag-m"}`}>{t.gender === "Female" ? "F" : "M"}</span>}
               <span className="muted-sm">→</span>
               <input style={{ flex: 1 }} value={names[orig] ?? orig} onChange={(e) => setNames({ ...names, [orig]: e.target.value })} />
               <span className="tag">{t.players.length}P · {t.staff.length}S</span>

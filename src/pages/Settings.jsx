@@ -502,8 +502,8 @@ export default function Settings({ me }) {
 
         <div className="tools-divider">Tools (optional)</div>
 
-        {/* ---- Import a past event from a Google Sheet ---- */}
-        {!archived && (
+        {/* ---- Import a past event from a Google Sheet (org-admin only) ---- */}
+        {!archived && me?.admin && (
           <div className="card">
             <h2>Import a past event (Google Sheet)</h2>
             <p className="muted-sm">Brings the schedule + final scores (Results tab) and rosters (DB tab) into this event, so Fistball Live shows the full standings. Súmula line-up/card detail is separate.</p>

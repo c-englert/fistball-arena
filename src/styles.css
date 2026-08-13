@@ -84,6 +84,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .match-card:active { transform: scale(0.995); }
 .mc-top { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin-bottom: 10px; flex-wrap: wrap; }
 .tag { background: #eef0f6; border-radius: 8px; padding: 3px 9px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.tag.tag-f { background: #fbe4f0; color: #b0247a; }
+.tag.tag-m { background: #e2ecfb; color: #235fb0; }
 .mc-teams { font-size: 20px; font-weight: 700; }
 .mc-teams .vs { color: var(--muted); font-weight: 500; margin: 0 8px; }
 .state {
