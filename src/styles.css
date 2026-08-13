@@ -88,6 +88,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .tag.tag-m { background: #e2ecfb; color: #235fb0; }
 .roster-row.row-warn { border-left: 3px solid #e0a63a; padding-left: 7px; background: #fdf6e9; border-radius: 6px; }
 .roster-row.row-dup { border-left: 3px solid #d0454f; padding-left: 7px; background: #fbeaec; border-radius: 6px; }
+.import-history > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 13px; }
+.import-log { list-style: none; margin: 8px 0 0; padding: 0; }
+.import-log li { padding: 8px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: baseline; font-size: 13px; }
+.import-log .il-when { font-weight: 700; white-space: nowrap; }
+.import-log .il-by { text-align: right; }
+.import-log .il-teams { grid-column: 1 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 details.adv-tool > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 14px; list-style: none; }
 details.adv-tool > summary::-webkit-details-marker { display: none; }
 details.adv-tool > summary::before { content: "▸ "; color: var(--muted); }

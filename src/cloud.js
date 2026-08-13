@@ -238,6 +238,22 @@ export async function saveScheduleConfig(config) {
   await setDoc(edoc("meta", "schedule"), { config, updatedAt: serverTimestamp() });
 }
 
+/* ----------------- Excel import history ----------------- */
+// A rolling log of roster imports, kept in one event-scoped meta doc.
+// `at` is a client ISO string (serverTimestamp can't live inside an array).
+export function subscribeImportLog(cb) {
+  return onSnapshot(edoc("meta", "importLog"),
+    (d) => cb(d.exists() ? (d.data().entries || []) : []),
+    (err) => { console.warn("import log unavailable:", err?.code || err); cb([]); });
+}
+export async function appendImportLog(entry) {
+  const ref = edoc("meta", "importLog");
+  const snap = await getDoc(ref);
+  const prev = snap.exists() ? (snap.data().entries || []) : [];
+  const entries = [{ at: new Date().toISOString(), ...entry }, ...prev].slice(0, 20);
+  await setDoc(ref, { entries, updatedAt: serverTimestamp() });
+}
+
 // Delete every doc in an event subcollection, chunked under the batch limit.
 async function clearCollection(name) {
   const snap = await getDocs(ecol(name));
