@@ -203,7 +203,11 @@ export default function Settings({ me }) {
   const [genResult, setGenResult] = useState(null);
   const [published, setPublished] = useState(false);
   const doGenerate = () => {
-    const r = generateSchedule(eventToConfig(event));
+    // Use the current (possibly unsaved) setup so the preview is WYSIWYG.
+    const r = generateSchedule(eventToConfig({
+      categoryBuilder: details.categoryBuilder, entries: details.entries,
+      formatOverrides: details.formatOverrides, slots: details.slots,
+    }));
     setGenResult(r);
     setStatus(`${r.games.length} games generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
   };
