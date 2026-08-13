@@ -425,6 +425,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .slot-time { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
 .slot-time input { padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; }
 .slot-cap { font-size: 12px; color: var(--brand); font-weight: 800; }
+.court-chip { display: inline-flex; align-items: center; gap: 4px; background: #eef0f6; border-radius: 8px; padding: 2px 6px 2px 4px; }
+.court-input { border: 1px solid transparent; background: transparent; font: inherit; font-size: 13px; font-weight: 700; color: var(--muted); padding: 3px 5px; border-radius: 6px; }
+.court-input:hover:not(:disabled) { border-color: var(--line); background: #fff; }
+.court-input:focus { border-color: var(--brand); background: #fff; color: var(--text); outline: none; }
+.court-chip button { border: none; background: none; color: var(--muted); cursor: pointer; font-weight: 800; }
 
 /* ---------- Real-time sync banner ---------- */
 .sync-banner { display: flex; align-items: center; gap: 12px; background: #fff4e5; border: 1px solid #e8a33d; color: #5a3d0a; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-weight: 700; font-size: 14px; }

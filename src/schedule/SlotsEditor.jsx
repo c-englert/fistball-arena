@@ -23,7 +23,13 @@ export default function SlotsEditor({ value, onChange, disabled }) {
     <div>
       <div className="subhead">Courts</div>
       <div className="chips">
-        {s.courts.map((c, i) => <span className="team-chip" key={i}>{c}{!disabled && <button onClick={() => set({ courts: s.courts.filter((_, j) => j !== i) })}>✕</button>}</span>)}
+        {s.courts.map((c, i) => (
+          <span className="court-chip" key={i}>
+            <input className="court-input" value={c} disabled={disabled} size={Math.max(4, c.length)} aria-label="Court name"
+              onChange={(e) => set({ courts: s.courts.map((x, j) => (j === i ? e.target.value : x)) })} />
+            {!disabled && <button onClick={() => set({ courts: s.courts.filter((_, j) => j !== i) })}>✕</button>}
+          </span>
+        ))}
         {!s.courts.length && <span className="muted-sm">No courts yet</span>}
       </div>
       {!disabled && (
