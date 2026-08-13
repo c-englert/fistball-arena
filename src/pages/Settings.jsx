@@ -25,6 +25,16 @@ export default function Settings({ me }) {
   const [status, setStatus] = useState("");
   const [details, setDetails] = useState(() => fromEvent(event));
   const [dirty, setDirty] = useState(false); // has unsaved local edits
+  // Guided setup accordion: the open step (0 = all closed). Starts on the first
+  // step that isn't done yet.
+  const [openStep, setOpenStep] = useState(() => {
+    const d = fromEvent(event);
+    const flags = [!!(d.name && d.startDate), expandBuilder(d.categoryBuilder).length > 0,
+      (d.entries || []).length > 0, (d.entries || []).length > 0, false, false];
+    const i = flags.findIndex((f) => !f);
+    return i === -1 ? 0 : i + 1;
+  });
+  const openOrToggle = (n) => setOpenStep((s) => (s === n ? 0 : n));
   const [remote, setRemote] = useState(false); // someone else changed it while editing
 
   // Live sync: pull the event doc into the form whenever it changes remotely,
@@ -50,7 +60,7 @@ export default function Settings({ me }) {
   const saveCategories = () => {
     setStatus("Saving…");
     updateEventFields({ categoryBuilder: details.categoryBuilder })
-      .then(() => afterSave(`Saved — ${previewCats.length} categor${previewCats.length === 1 ? "y" : "ies"} defined.`))
+      .then(() => { afterSave(`Saved — ${previewCats.length} categor${previewCats.length === 1 ? "y" : "ies"} defined.`); setOpenStep(3); })
       .catch((e) => setStatus("Save failed: " + (e?.message || e)));
   };
 
@@ -72,7 +82,7 @@ export default function Settings({ me }) {
   const saveTeams = () => {
     setStatus("Saving teams…");
     updateEventFields({ entries: details.entries })
-      .then(() => afterSave(`Saved ${(details.entries || []).length} team(s).`))
+      .then(() => { afterSave(`Saved ${(details.entries || []).length} team(s).`); setOpenStep(4); })
       .catch((e) => setStatus("Save failed: " + (e?.message || e)));
   };
 
@@ -100,7 +110,7 @@ export default function Settings({ me }) {
 
   const saveDetails = async () => {
     setStatus("Saving event…");
-    try { await updateEventDetails({ name: details.name, place: details.place, startDate: details.startDate, endDate: details.endDate, dates: formatRange(details.startDate, details.endDate) }); afterSave("Event details saved."); }
+    try { await updateEventDetails({ name: details.name, place: details.place, startDate: details.startDate, endDate: details.endDate, dates: formatRange(details.startDate, details.endDate) }); afterSave("Event details saved."); setOpenStep(2); }
     catch (e) { setStatus("Save failed: " + (e?.message || e)); }
   };
 
@@ -153,9 +163,21 @@ export default function Settings({ me }) {
 
   const saveLogos = async () => {
     setStatus("Saving branding…");
-    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus("Branding saved."); }
+    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus("Branding saved."); setOpenStep(6); }
     catch (e) { setStatus("Save failed: " + (e?.message || e)); }
   };
+
+  // Guided-setup step state: which are done, and which are still locked.
+  const nTeams = (details.entries || []).length;
+  const done = [
+    !!(details.name && details.startDate),
+    previewCats.length > 0,
+    nTeams > 0,
+    nTeams > 0,
+    !!(branding?.eventLogo || (branding?.promoters || []).length),
+    thisIsLive,
+  ];
+  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3]];
 
   return (
     <div className="app">
@@ -176,9 +198,8 @@ export default function Settings({ me }) {
             <button className="btn sm" onClick={reloadFromEvent}>Load latest</button>
           </div>
         )}
-        {/* ---- Event details ---- */}
-        <div className="card">
-          <h2>Event details</h2>
+        {/* ---- 1. Event details ---- */}
+        <Step n={1} title="Event details" sub={done[0] ? details.name : ""} done={done[0]} locked={locked[0]} open={openStep === 1} onToggle={() => openOrToggle(1)}>
           <div className="field"><span>Name</span>
             <input value={details.name} disabled={archived} onChange={(e) => edit((d) => ({ ...d, name: e.target.value }))} /></div>
           <div className="field"><span>Place</span>
@@ -191,12 +212,11 @@ export default function Settings({ me }) {
           </div>
           {(details.startDate || details.endDate) && <p className="muted-sm">{formatRange(details.startDate, details.endDate)}</p>}
           {!archived && <button className="btn primary" onClick={saveDetails}>Save details</button>}
-        </div>
+        </Step>
 
-        {/* ---- Categories (chip builder) ---- */}
-        <div className="card">
-          <h2>Categories</h2>
-          <p className="muted-sm">Start before the Excel: mark the chips and the app creates every category (type × age × sex).</p>
+        {/* ---- 2. Categories (chip builder) ---- */}
+        <Step n={2} title="Categories" sub={done[1] ? `${previewCats.length} categories` : ""} done={done[1]} locked={locked[1]} open={openStep === 2} onToggle={() => openOrToggle(2)}>
+          <p className="muted-sm">Mark the chips and the app creates every category (type × age × sex).</p>
 
           <div className="chip-row">
             <span className="chip-row-label">Type</span>
@@ -232,12 +252,11 @@ export default function Settings({ me }) {
           </div>
 
           {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveCategories} disabled={!previewCats.length}>Save categories</button>}
-        </div>
+        </Step>
 
-        {/* ---- Team-entry matrix (teams × categories) ---- */}
-        {previewCats.length > 0 && (
-          <div className="card">
-            <h2>Teams &amp; categories</h2>
+        {/* ---- 3. Team-entry matrix (teams × categories) ---- */}
+        <Step n={3} title="Teams & categories" sub={done[2] ? `${nTeams} teams` : ""} done={done[2]} locked={locked[2]} open={openStep === 3} onToggle={() => openOrToggle(3)}>
+          <div>
             <p className="muted-sm">Add each club / national team and tick the categories it plays. This is what the schedule uses.</p>
             {!archived && (
               <div className="add-row">
@@ -303,12 +322,11 @@ export default function Settings({ me }) {
             )}
             {!archived && (details.entries || []).length > 0 && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveTeams}>Save teams</button>}
           </div>
-        )}
+        </Step>
 
-        {/* ---- Format per category (auto by team count) ---- */}
-        {previewCats.length > 0 && (
-          <div className="card">
-            <h2>Format</h2>
+        {/* ---- 4. Format per category (auto by team count) ---- */}
+        <Step n={4} title="Format" sub={done[3] ? `${previewCats.length} categories` : ""} done={done[3]} locked={locked[3]} open={openStep === 4} onToggle={() => openOrToggle(4)}>
+          <div>
             <p className="muted-sm">Auto-selected for each category by the number of teams (from the matrix). This is what the schedule will use.</p>
             {previewCats.map((cat) => {
               const count = (details.entries || []).filter((t) => (t.cats || []).includes(cat)).length;
@@ -333,7 +351,70 @@ export default function Settings({ me }) {
               );
             })}
           </div>
-        )}
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={() => setOpenStep(5)}>Looks good — continue</button>}
+        </Step>
+
+        {/* ---- 5. Event logos ---- */}
+        <Step n={5} title="Event logos" sub={done[4] ? "set" : "optional"} done={done[4]} locked={locked[4]} open={openStep === 5} onToggle={() => openOrToggle(5)}>
+          <div className="row-between">
+            <span className="muted-sm">Shown on the game report (PDF), the app topbar and Fistball Live.</span>
+            <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>+ Upload logo</button>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onUpload} />
+
+          <div className="subhead">This event</div>
+          <div className="brand-picks">
+            <div className="brand-pick">
+              <div className="brand-pick-label">Event logo</div>
+              {eventLogo
+                ? <div className="logo-chip"><img src={eventLogo.dataUrl} alt="" /><button onClick={() => setEventLogo(null)} disabled={archived}>✕</button></div>
+                : <div className="logo-empty">none</div>}
+            </div>
+            <div className="brand-pick">
+              <div className="brand-pick-label">Promoters</div>
+              <div className="chips">
+                {promoters.map((p, i) => (
+                  <div className="logo-chip" key={i}><img src={p.dataUrl} alt="" /><button onClick={() => removePromoter(i)} disabled={archived}>✕</button></div>
+                ))}
+                {!promoters.length && <div className="logo-empty">none</div>}
+              </div>
+            </div>
+          </div>
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveLogos}>Save logos &amp; continue</button>}
+
+          <div className="subhead">Library ({logos.length})</div>
+          {logos.length === 0 && <p className="muted-sm">No logos yet — upload one above.</p>}
+          <div className="logo-grid">
+            {logos.map((l) => (
+              <div className="logo-lib" key={l.id}>
+                <img src={l.dataUrl} alt={l.name} title={l.name} />
+                <div className="logo-name">{l.name}</div>
+                {!archived && (
+                  <div className="logo-actions">
+                    <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>Event logo</button>
+                    <button className="btn sm" onClick={() => addPromoter(l)}>Add promoter</button>
+                    <button className="btn danger sm" onClick={() => window.confirm(`Delete “${l.name}” from the library?`) && deleteLogo(l.id)}>Delete</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Step>
+
+        {/* ---- 6. Publish to Fistball Live ---- */}
+        <Step n={6} title="Publish to Fistball Live" sub={done[5] ? "On air" : ""} done={done[5]} locked={locked[5]} open={openStep === 6} onToggle={() => openOrToggle(6)}>
+          <p className="muted-sm">
+            {live === undefined ? "Checking…"
+              : thisIsLive ? "✅ This event is showing on the public scoreboard."
+              : live?.eventId ? `Another event is live: “${live.name || live.eventId}”.`
+              : "No event is on the public scoreboard yet."}
+          </p>
+          {thisIsLive
+            ? <button className="btn danger" onClick={stopLive}>Stop showing</button>
+            : <button className="btn primary" onClick={publishLive}>{live?.eventId ? "Show this instead" : "Publish to Live"}</button>}
+        </Step>
+
+        <div className="tools-divider">Tools (optional)</div>
 
         {/* ---- Import a past event from a Google Sheet ---- */}
         {!archived && (
@@ -356,70 +437,6 @@ export default function Settings({ me }) {
         {/* ---- Import players & staff from Excel ---- */}
         {!archived && <ExcelImport me={me} />}
 
-        {/* ---- Logos ---- */}
-        <div className="card">
-          <div className="row-between">
-            <h2 style={{ margin: 0 }}>Event logos</h2>
-            <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>+ Upload logo</button>
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onUpload} />
-          <p className="muted-sm">Shown on the game report (PDF), the app topbar and Fistball Live.</p>
-
-          <div className="subhead">This event</div>
-          <div className="brand-picks">
-            <div className="brand-pick">
-              <div className="brand-pick-label">Event logo</div>
-              {eventLogo
-                ? <div className="logo-chip"><img src={eventLogo.dataUrl} alt="" /><button onClick={() => setEventLogo(null)} disabled={archived}>✕</button></div>
-                : <div className="logo-empty">none</div>}
-            </div>
-            <div className="brand-pick">
-              <div className="brand-pick-label">Promoters</div>
-              <div className="chips">
-                {promoters.map((p, i) => (
-                  <div className="logo-chip" key={i}><img src={p.dataUrl} alt="" /><button onClick={() => removePromoter(i)} disabled={archived}>✕</button></div>
-                ))}
-                {!promoters.length && <div className="logo-empty">none</div>}
-              </div>
-            </div>
-          </div>
-          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveLogos}>Save logos</button>}
-
-          <div className="subhead">Library ({logos.length})</div>
-          {logos.length === 0 && <p className="muted-sm">No logos yet — upload one above.</p>}
-          <div className="logo-grid">
-            {logos.map((l) => (
-              <div className="logo-lib" key={l.id}>
-                <img src={l.dataUrl} alt={l.name} title={l.name} />
-                <div className="logo-name">{l.name}</div>
-                {!archived && (
-                  <div className="logo-actions">
-                    <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>Event logo</button>
-                    <button className="btn sm" onClick={() => addPromoter(l)}>Add promoter</button>
-                    <button className="btn danger sm" onClick={() => window.confirm(`Delete “${l.name}” from the library?`) && deleteLogo(l.id)}>Delete</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ---- Fistball Live ---- */}
-        <div className="card">
-          <div className="row-between">
-            <div><h2 style={{ margin: 0 }}>Fistball Live</h2>
-              <p className="muted-sm">
-                {live === undefined ? "Checking…"
-                  : thisIsLive ? "✅ This event is showing on the public scoreboard."
-                  : live?.eventId ? `Another event is live: “${live.name || live.eventId}”.`
-                  : "No event is on the public scoreboard yet."}
-              </p></div>
-            {thisIsLive
-              ? <button className="btn danger" onClick={stopLive}>Stop showing</button>
-              : <button className="btn primary" onClick={publishLive}>{live?.eventId ? "Show this instead" : "Publish to Live"}</button>}
-          </div>
-        </div>
-
         {/* ---- Status ---- */}
         <div className="card">
           <div className="row-between">
@@ -431,6 +448,22 @@ export default function Settings({ me }) {
 
         {status && <p className="muted-sm">{status}</p>}
       </div>
+    </div>
+  );
+}
+
+// One numbered, collapsible step of the guided event setup. The number stays on
+// completed steps (turns green); the current step is open, later steps locked.
+function Step({ n, title, sub, done, locked, open, onToggle, children }) {
+  return (
+    <div className="sec-card">
+      <button className="sec-head" onClick={onToggle} disabled={locked}>
+        <span className={`sec-num ${done ? "done" : ""} ${locked ? "locked" : ""}`}>{n}</span>
+        <span className={`sec-title ${locked ? "locked" : ""}`}>{title}</span>
+        {sub ? <span className="sec-sub">{sub}</span> : null}
+        <span className="sec-chev">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && !locked && <div className="sec-body">{children}</div>}
     </div>
   );
 }

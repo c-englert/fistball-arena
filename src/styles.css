@@ -387,6 +387,20 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .fmt-line { font-size: 13.5px; margin: 3px 0; color: var(--text); }
 .fmt-round { display: inline-block; min-width: 148px; font-weight: 800; color: var(--brand); }
 
+/* ---------- Guided setup (numbered accordion) ---------- */
+.sec-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(20, 28, 48, 0.05); }
+.sec-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 15px 18px; background: none; border: none; cursor: pointer; font: inherit; text-align: left; }
+.sec-head:disabled { cursor: default; }
+.sec-num { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 14px; background: #eceaf6; color: var(--brand); }
+.sec-num.done { background: var(--win, #0a7d34); color: #fff; }
+.sec-num.locked { background: #eef0f4; color: #b9c0cf; }
+.sec-title { flex: 1; font-size: 16px; font-weight: 800; }
+.sec-title.locked { color: #b9c0cf; }
+.sec-sub { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.sec-chev { color: var(--muted); font-size: 13px; }
+.sec-body { padding: 4px 18px 18px; border-top: 1px solid var(--line); }
+.tools-divider { margin: 20px 4px 2px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+
 /* ---------- Real-time sync banner ---------- */
 .sync-banner { display: flex; align-items: center; gap: 12px; background: #fff4e5; border: 1px solid #e8a33d; color: #5a3d0a; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-weight: 700; font-size: 14px; }
 .sync-banner .btn { margin-left: auto; }
