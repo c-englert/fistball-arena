@@ -418,6 +418,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .brk-erd-sel { flex: 0 0 130px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 12px; font-weight: 700; color: var(--brand); }
 .brk-del { flex: none; width: 30px; height: 30px; border-radius: 8px; border: 1px solid #f0caca; background: #fdecec; color: #b02a2a; font-weight: 800; cursor: pointer; }
 
+/* ---------- Courts & schedule editor ---------- */
+.slot-day { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.slot-day:last-of-type { border-bottom: none; }
+.slot-date { flex: 0 0 120px; font-weight: 700; font-size: 14px; }
+.slot-time { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.slot-time input { padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; }
+.slot-cap { font-size: 12px; color: var(--brand); font-weight: 800; }
+
 /* ---------- Real-time sync banner ---------- */
 .sync-banner { display: flex; align-items: center; gap: 12px; background: #fff4e5; border: 1px solid #e8a33d; color: #5a3d0a; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-weight: 700; font-size: 14px; }
 .sync-banner .btn { margin-left: auto; }

@@ -1,0 +1,58 @@
+import { useState } from "react";
+import { normalizeSlots, slotsPerDay } from "./scheduler.js";
+
+const toISO = (s) => { const [d, m, y] = String(s).split("/"); return d ? `20${y}-${m}-${d}` : ""; };
+const fromISO = (iso) => { const [y, m, d] = String(iso).split("-"); return d ? `${d}/${m}/${y.slice(2)}` : ""; };
+const wd = (date) => { const [d, m, y] = date.split("/"); const dt = new Date(2000 + +y, m - 1, +d); return dt.toLocaleDateString("en-US", { weekday: "short" }); };
+
+// Courts + per-day windows + game/break minutes. value/onChange use the rich
+// slots shape; legacy values are migrated on read.
+export default function SlotsEditor({ value, onChange, disabled }) {
+  const s = normalizeSlots(value);
+  const set = (patch) => onChange({ ...s, ...patch });
+  const [court, setCourt] = useState("");
+
+  const addCourt = () => { const v = court.trim(); if (v && !s.courts.includes(v)) set({ courts: [...s.courts, v] }); setCourt(""); };
+  const addDay = (iso) => { const date = fromISO(iso); if (date && !s.days.some((d) => d.date === date)) set({ days: [...s.days, { date, start: "09:00", end: "18:00" }].sort((a, b) => toISO(a.date).localeCompare(toISO(b.date))) }); };
+  const setDay = (i, patch) => set({ days: s.days.map((d, j) => (j === i ? { ...d, ...patch } : d)) });
+  const removeDay = (i) => set({ days: s.days.filter((_, j) => j !== i) });
+
+  const perDay = (d) => slotsPerDay(d, s.gameMinutes, s.breakMinutes) * s.courts.length;
+
+  return (
+    <div>
+      <div className="subhead">Courts</div>
+      <div className="chips">
+        {s.courts.map((c, i) => <span className="team-chip" key={i}>{c}{!disabled && <button onClick={() => set({ courts: s.courts.filter((_, j) => j !== i) })}>✕</button>}</span>)}
+        {!s.courts.length && <span className="muted-sm">No courts yet</span>}
+      </div>
+      {!disabled && (
+        <div className="add-row" style={{ marginTop: 8 }}>
+          <input value={court} onChange={(e) => setCourt(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCourt()} placeholder="Court name/number" />
+          <button className="btn sm" onClick={addCourt}>Add</button>
+        </div>
+      )}
+
+      <div className="subhead" style={{ marginTop: 16 }}>Days &amp; times</div>
+      {s.days.map((d, i) => (
+        <div className="slot-day" key={i}>
+          <span className="slot-date">{wd(d.date)} {d.date}</span>
+          <label className="slot-time">start <input type="time" disabled={disabled} value={d.start} onChange={(e) => setDay(i, { start: e.target.value })} /></label>
+          <label className="slot-time">end <input type="time" disabled={disabled} value={d.end} onChange={(e) => setDay(i, { end: e.target.value })} /></label>
+          <span className="slot-cap">~{perDay(d)} games</span>
+          {!disabled && <button className="btn danger sm" onClick={() => removeDay(i)}>✕</button>}
+        </div>
+      ))}
+      {!s.days.length && <p className="muted-sm">No days yet — add one below.</p>}
+      {!disabled && <div className="add-row" style={{ marginTop: 8 }}><input type="date" onChange={(e) => { addDay(e.target.value); e.target.value = ""; }} /></div>}
+
+      <div className="grid2" style={{ marginTop: 16 }}>
+        <label className="field"><span>Game duration (min)</span>
+          <input type="number" min="10" step="5" disabled={disabled} value={s.gameMinutes} onChange={(e) => set({ gameMinutes: Number(e.target.value) })} /></label>
+        <label className="field"><span>Break between games (min)</span>
+          <input type="number" min="0" step="5" disabled={disabled} value={s.breakMinutes} onChange={(e) => set({ breakMinutes: Number(e.target.value) })} /></label>
+      </div>
+      <p className="muted-sm">Max games/day is set by each day’s window ÷ (duration + break) × courts.</p>
+    </div>
+  );
+}

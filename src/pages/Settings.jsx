@@ -7,6 +7,7 @@ import {
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
 import { describeFormat, formatMatches, formatWarnings, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
+import SlotsEditor from "../schedule/SlotsEditor.jsx";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -17,6 +18,7 @@ const fromEvent = (ev) => ({
   categoryBuilder: ev?.categoryBuilder || { types: [], sexes: [], ages: [] },
   entries: ev?.entries || [], // [{ name, cats: [categoryName…] }]
   formatOverrides: ev?.formatOverrides || {}, // { [category]: { [matchId]: { a?, b? } } }
+  slots: ev?.slots || { courts: [], days: [], gameMinutes: 45, breakMinutes: 0 },
 });
 
 export default function Settings({ me }) {
@@ -30,8 +32,9 @@ export default function Settings({ me }) {
   // step that isn't done yet.
   const [openStep, setOpenStep] = useState(() => {
     const d = fromEvent(event);
-    const flags = [!!(d.name && d.startDate), expandBuilder(d.categoryBuilder).length > 0,
-      (d.entries || []).length > 0, (d.entries || []).length > 0, false, false];
+    const nt = (d.entries || []).length > 0;
+    const courts = (d.slots?.courts || []).length > 0 && (d.slots?.days || []).length > 0;
+    const flags = [!!(d.name && d.startDate), expandBuilder(d.categoryBuilder).length > 0, nt, nt, courts, false, false];
     const i = flags.findIndex((f) => !f);
     return i === -1 ? 0 : i + 1;
   });
@@ -188,21 +191,25 @@ export default function Settings({ me }) {
 
   const saveLogos = async () => {
     setStatus("Saving branding…");
-    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus("Branding saved."); setOpenStep(6); }
+    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus("Branding saved."); setOpenStep(7); }
     catch (e) { setStatus("Save failed: " + (e?.message || e)); }
   };
+  const setSlots = (next) => edit((d) => ({ ...d, slots: next }));
+  const saveSlots = () => { setStatus("Saving courts…"); updateEventFields({ slots: details.slots }).then(() => { afterSave("Courts & schedule saved."); setOpenStep(6); }).catch((e) => setStatus("Save failed: " + (e?.message || e))); };
 
   // Guided-setup step state: which are done, and which are still locked.
   const nTeams = (details.entries || []).length;
+  const courtsDone = (details.slots?.courts || []).length > 0 && (details.slots?.days || []).length > 0;
   const done = [
     !!(details.name && details.startDate),
     previewCats.length > 0,
     nTeams > 0,
     nTeams > 0,
+    courtsDone,
     !!(branding?.eventLogo || (branding?.promoters || []).length),
     thisIsLive,
   ];
-  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3]];
+  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3], !done[3]];
 
   return (
     <div className="app">
@@ -385,8 +392,15 @@ export default function Settings({ me }) {
           {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={() => setOpenStep(5)}>Looks good — continue</button>}
         </Step>
 
-        {/* ---- 5. Event logos ---- */}
-        <Step n={5} title="Event logos" sub={done[4] ? "set" : "optional"} done={done[4]} locked={locked[4]} open={openStep === 5} onToggle={() => openOrToggle(5)}>
+        {/* ---- 5. Courts & schedule ---- */}
+        <Step n={5} title="Courts & schedule" sub={done[4] ? `${(details.slots?.courts || []).length} courts · ${(details.slots?.days || []).length} days` : ""} done={done[4]} locked={locked[4]} open={openStep === 5} onToggle={() => openOrToggle(5)}>
+          <p className="muted-sm">Define the courts and each day’s window. The schedule generator uses this to place the games.</p>
+          <SlotsEditor value={details.slots} onChange={setSlots} disabled={archived} />
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveSlots} disabled={!courtsDone}>Save courts &amp; continue</button>}
+        </Step>
+
+        {/* ---- 6. Event logos ---- */}
+        <Step n={6} title="Event logos" sub={done[5] ? "set" : "optional"} done={done[5]} locked={locked[5]} open={openStep === 6} onToggle={() => openOrToggle(6)}>
           <div className="row-between">
             <span className="muted-sm">Shown on the game report (PDF), the app topbar and Fistball Live.</span>
             <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>+ Upload logo</button>
@@ -432,8 +446,8 @@ export default function Settings({ me }) {
           </div>
         </Step>
 
-        {/* ---- 6. Publish to Fistball Live ---- */}
-        <Step n={6} title="Publish to Fistball Live" sub={done[5] ? "On air" : ""} done={done[5]} locked={locked[5]} open={openStep === 6} onToggle={() => openOrToggle(6)}>
+        {/* ---- 7. Publish to Fistball Live ---- */}
+        <Step n={7} title="Publish to Fistball Live" sub={done[6] ? "On air" : ""} done={done[6]} locked={locked[6]} open={openStep === 7} onToggle={() => openOrToggle(7)}>
           <p className="muted-sm">
             {live === undefined ? "Checking…"
               : thisIsLive ? "✅ This event is showing on the public scoreboard."

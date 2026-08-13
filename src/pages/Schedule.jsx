@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TEAM_NAMES } from "../seed.js";
 import { generateSchedule } from "../schedule/generator.js";
+import SlotsEditor from "../schedule/SlotsEditor.jsx";
 import { hasFormat } from "../schedule/format.js";
 import { eventCategoryNames } from "../categories.js";
 import { fetchSheetGames } from "../schedule/importSheet.js";
@@ -39,6 +40,7 @@ function seedCategory(name, teams, override) {
 // (Settings → Categories chip-builder) and the teams ticked for each (matrix).
 function initialConfig(event) {
   const base = defaultConfig();
+  if (event?.slots?.courts) base.slots = event.slots; // courts/days/times from Settings
   const names = eventCategoryNames(event);
   if (names.length) {
     const entries = event?.entries || [];
@@ -291,44 +293,13 @@ function FormatStep({ config, patch }) {
 
 /* ---------------- Step 3: slots ---------------- */
 function SlotsStep({ config, patch }) {
-  const s = config.slots;
-  const [court, setCourt] = useState("");
   return (
     <div className="card">
-      <h2>Courts</h2>
-      <div className="chips">
-        {s.courts.map((c, i) => (
-          <span className="team-chip" key={i}>Court {c}<button onClick={() => patch((n) => n.slots.courts.splice(i, 1))}>✕</button></span>
-        ))}
-      </div>
-      <div className="add-row">
-        <input value={court} onChange={(e) => setCourt(e.target.value)} placeholder="Court name/number"
-          onKeyDown={(e) => e.key === "Enter" && court.trim() && (patch((n) => n.slots.courts.push(court.trim())), setCourt(""))} />
-        <button className="btn sm" onClick={() => court.trim() && (patch((n) => n.slots.courts.push(court.trim())), setCourt(""))}>Add</button>
-      </div>
-
-      <h2 style={{ marginTop: 18 }}>Days</h2>
-      <div className="chips">
-        {s.days.map((d, i) => (
-          <span className="team-chip" key={i}>{d}<button onClick={() => patch((n) => n.slots.days.splice(i, 1))}>✕</button></span>
-        ))}
-      </div>
-      <div className="add-row">
-        <input type="date" onChange={(e) => { const v = fromISO(e.target.value); if (v) patch((n) => { if (!n.slots.days.includes(v)) n.slots.days.push(v); }); }} />
-      </div>
-
-      <h2 style={{ marginTop: 18 }}>Timing</h2>
-      <div className="grid2">
-        <label className="field"><span>Start time</span>
-          <input type="time" value={s.startTime} onChange={(e) => patch((n) => (n.slots.startTime = e.target.value))} /></label>
-        <label className="field"><span>Slot length (min)</span>
-          <input type="number" min="15" step="5" value={s.slotMinutes} onChange={(e) => patch((n) => (n.slots.slotMinutes = Number(e.target.value)))} /></label>
-        <label className="field"><span>Slots per day</span>
-          <input type="number" min="1" value={s.slotsPerDay} onChange={(e) => patch((n) => (n.slots.slotsPerDay = Number(e.target.value)))} /></label>
-        <label className="field"><span>First match #</span>
-          <input type="number" min="1" value={config.startNr} onChange={(e) => patch((n) => (n.startNr = Number(e.target.value)))} /></label>
-      </div>
-      <p className="muted-sm">Capacity: {s.courts.length} courts × {s.slotsPerDay} slots × {s.days.length} days = {s.courts.length * s.slotsPerDay * s.days.length} matches.</p>
+      <h2>Courts &amp; schedule</h2>
+      <p className="muted-sm">Comes from the event’s “Courts &amp; schedule” step — tweak here if needed.</p>
+      <SlotsEditor value={config.slots} onChange={(next) => patch((n) => { n.slots = next; })} />
+      <label className="field" style={{ maxWidth: 160, marginTop: 12 }}><span>First match #</span>
+        <input type="number" min="1" value={config.startNr} onChange={(e) => patch((n) => (n.startNr = Number(e.target.value)))} /></label>
     </div>
   );
 }
