@@ -130,6 +130,20 @@ export function describeFormat(teamCount, override) {
 // The editable knockout matches (id/round + current a/b) for the modal editor.
 export function formatMatches(teamCount, override) { return koFor(teamCount, override); }
 
+// Warn when a slot references a match that no longer exists (removed), so its
+// placeholder would never resolve.
+export function formatWarnings(teamCount, override) {
+  const ko = koFor(teamCount, override);
+  const ids = new Set(ko.map((m) => `ko:${m.id}`));
+  const out = [];
+  for (const m of ko) {
+    for (const s of [m.a.src, m.b.src]) {
+      if (s && s.type !== "seed" && !ids.has(s.dep)) out.push(`${m.round}: “${labelOf(s)}” — that match was removed.`);
+    }
+  }
+  return out;
+}
+
 // buildFormat: QR (single group round-robin) + seeded knockout, as fixtures.
 export function buildFormat(teams, { category, bestOf = 3, override } = {}) {
   const real = (teams || []).filter(Boolean);

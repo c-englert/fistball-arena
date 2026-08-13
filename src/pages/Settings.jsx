@@ -6,7 +6,7 @@ import {
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
-import { describeFormat, formatMatches, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
+import { describeFormat, formatMatches, formatWarnings, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -362,6 +362,7 @@ export default function Settings({ me }) {
               return (
                 <div className="fmt-cat" key={cat}>
                   <div className="fmt-head"><b>{cat}</b><span className="tag">{count} team{count === 1 ? "" : "s"}</span>
+                    {count > 0 && d && formatWarnings(count, details.formatOverrides?.[cat]).length > 0 && <span className="tag" style={{ background: "#fff4e5", color: "#8a5a00" }}>⚠️ check</span>}
                     {count > 0 && d && <button className="btn sm" style={{ marginLeft: "auto" }} onClick={() => setBracketIdx(ci)}>View bracket</button>}
                   </div>
                   {!count ? (
@@ -507,6 +508,7 @@ export default function Settings({ me }) {
 function BracketModal({ category, teams, override, onSlot, onRound, onAdd, onRemove, onReset, onSave, archived, idx, total, onClose, onNext }) {
   const n = teams.length;
   const matches = formatMatches(n, override);
+  const warnings = formatWarnings(n, override);
   const last = idx + 1 >= total;
   const Slot = ({ m, side }) => {
     const slot = side === "a" ? m.a : m.b;
@@ -550,6 +552,9 @@ function BracketModal({ category, teams, override, onSlot, onRound, onAdd, onRem
                 {override && normalizeOverride(override) && (normalizeOverride(override).removed.length || normalizeOverride(override).added.length || Object.keys(normalizeOverride(override).edits).length)
                   ? <button className="btn sm" onClick={onReset}>Reset to preset</button> : null}
               </div>
+            )}
+            {warnings.length > 0 && (
+              <div className="warn-box">{warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>
             )}
             <p className="muted-sm">Remove a match with ✕, or add one. Placeholders (“Winner SF1”…) fill in automatically as games finish.</p>
           </>
