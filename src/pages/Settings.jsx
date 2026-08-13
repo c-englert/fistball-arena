@@ -35,6 +35,8 @@ export default function Settings({ me }) {
     return i === -1 ? 0 : i + 1;
   });
   const openOrToggle = (n) => setOpenStep((s) => (s === n ? 0 : n));
+  const [bracketIdx, setBracketIdx] = useState(null); // category index shown in the bracket modal
+  const teamsInCat = (cat) => (details.entries || []).filter((t) => (t.cats || []).includes(cat)).map((t) => t.name);
   const [remote, setRemote] = useState(false); // someone else changed it while editing
 
   // Live sync: pull the event doc into the form whenever it changes remotely,
@@ -328,12 +330,17 @@ export default function Settings({ me }) {
         <Step n={4} title="Format" sub={done[3] ? `${previewCats.length} categories` : ""} done={done[3]} locked={locked[3]} open={openStep === 4} onToggle={() => openOrToggle(4)}>
           <div>
             <p className="muted-sm">Auto-selected for each category by the number of teams (from the matrix). This is what the schedule will use.</p>
-            {previewCats.map((cat) => {
+            {previewCats.length > 0 && (
+              <button className="btn" style={{ marginBottom: 10 }} onClick={() => setBracketIdx(0)}>👁 Review each bracket →</button>
+            )}
+            {previewCats.map((cat, ci) => {
               const count = (details.entries || []).filter((t) => (t.cats || []).includes(cat)).length;
               const d = describeFormat(count);
               return (
                 <div className="fmt-cat" key={cat}>
-                  <div className="fmt-head"><b>{cat}</b><span className="tag">{count} team{count === 1 ? "" : "s"}</span></div>
+                  <div className="fmt-head"><b>{cat}</b><span className="tag">{count} team{count === 1 ? "" : "s"}</span>
+                    {count > 0 && d && <button className="btn sm" style={{ marginLeft: "auto" }} onClick={() => setBracketIdx(ci)}>View bracket</button>}
+                  </div>
                   {!count ? (
                     <p className="muted-sm" style={{ margin: "2px 0 0" }}>No teams ticked yet.</p>
                   ) : d ? (
@@ -447,6 +454,56 @@ export default function Settings({ me }) {
         </div>
 
         {status && <p className="muted-sm">{status}</p>}
+      </div>
+
+      {bracketIdx !== null && previewCats[bracketIdx] && (
+        <BracketModal
+          category={previewCats[bracketIdx]}
+          teams={teamsInCat(previewCats[bracketIdx])}
+          idx={bracketIdx}
+          total={previewCats.length}
+          onClose={() => setBracketIdx(null)}
+          onNext={() => setBracketIdx((i) => (i + 1 < previewCats.length ? i + 1 : null))}
+        />
+      )}
+    </div>
+  );
+}
+
+// Visual bracket of one category (group + evolution to the final) in a modal,
+// stepped through one category at a time.
+function BracketModal({ category, teams, idx, total, onClose, onNext }) {
+  const d = describeFormat(teams.length);
+  const last = idx + 1 >= total;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal bracket-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
+        <h3 className="modal-title" style={{ marginBottom: 2 }}>{category}</h3>
+        <p className="muted-sm" style={{ marginTop: 0 }}>{teams.length} teams · category {idx + 1} of {total}</p>
+        {!d ? (
+          <p className="muted-sm">No preset for {teams.length} teams yet.</p>
+        ) : (
+          <>
+            <div className="brk-group">
+              <div className="brk-col-title">Qualification Round · one group ({d.qrGames} games)</div>
+              <div className="chips">{teams.map((t) => <span className="team-chip" key={t}>{t}</span>)}</div>
+            </div>
+            <div className="brk-cols">
+              {d.rounds.map((r, i) => (
+                <div className="brk-col" key={i}>
+                  <div className="brk-col-title">{r.round}</div>
+                  {r.matches.map((m, j) => <div className="brk-match" key={j}>{m}</div>)}
+                </div>
+              ))}
+            </div>
+            <p className="muted-sm">Placeholders (“1st”, “Winner SF1”…) fill in automatically as games finish.</p>
+          </>
+        )}
+        <div className="modal-actions">
+          <button className="btn" onClick={onClose}>Close</button>
+          <button className="btn primary" onClick={onNext}>{last ? "OK — done" : "OK — next category"}</button>
+        </div>
       </div>
     </div>
   );

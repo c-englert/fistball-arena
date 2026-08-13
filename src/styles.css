@@ -401,6 +401,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .sec-body { padding: 4px 18px 18px; border-top: 1px solid var(--line); }
 .tools-divider { margin: 20px 4px 2px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
 
+/* ---------- Bracket modal ---------- */
+.bracket-modal { max-width: 640px; text-align: left; }
+.brk-group { margin: 10px 0 14px; }
+.brk-col-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--brand); margin-bottom: 6px; }
+.brk-cols { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
+.brk-col { min-width: 150px; flex: none; }
+.brk-match { background: #f5f3fb; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; margin-bottom: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+
 /* ---------- Real-time sync banner ---------- */
 .sync-banner { display: flex; align-items: center; gap: 12px; background: #fff4e5; border: 1px solid #e8a33d; color: #5a3d0a; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-weight: 700; font-size: 14px; }
 .sync-banner .btn { margin-left: auto; }
