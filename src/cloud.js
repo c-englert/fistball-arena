@@ -89,7 +89,7 @@ export async function createEvent(descriptor, me) {
     dates: descriptor.dates || "",
     startDate: descriptor.startDate || "",
     endDate: descriptor.endDate || "",
-    status: "active",
+    status: descriptor.status === "archived" ? "archived" : "active",
     createdBy: me.uid,
     createdAt: serverTimestamp(),
   });

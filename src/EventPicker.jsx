@@ -58,7 +58,7 @@ export default function EventPicker({ me, onSignOut }) {
     if (!impPreview?.gameCount || !imp.name.trim()) return;
     setImpBusy(true); setImpStatus("Creating event & importing…");
     try {
-      const id = await createEvent({ name: imp.name, place: imp.place, dates: formatRange(imp.startDate, imp.endDate) }, me);
+      const id = await createEvent({ name: imp.name, place: imp.place, startDate: imp.startDate, endDate: imp.endDate, dates: formatRange(imp.startDate, imp.endDate), status: "archived" }, me);
       setEvent(id);
       await publishEventImport(impPreview, { replaceAll: true });
       nav(`/e/${id}`);
@@ -79,10 +79,7 @@ export default function EventPicker({ me, onSignOut }) {
 
       <div className="content">
         {me.admin && !creating && (
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            <button className="btn primary" style={{ flex: 1 }} onClick={() => setCreating(true)}>+ New event</button>
-            <button className="btn" onClick={openImport} title="Create an event from a past Google Sheet">⬇ Import from Google Sheet</button>
-          </div>
+          <button className="btn primary" style={{ width: "100%", marginBottom: 16 }} onClick={() => setCreating(true)}>+ New event</button>
         )}
         {me.admin && creating && (
           <div className="card">
@@ -105,9 +102,13 @@ export default function EventPicker({ me, onSignOut }) {
           </div>
         )}
 
-        <div className="filter-bar" style={{ padding: "0 0 12px" }}>
+        <div className="filter-bar" style={{ padding: "0 0 12px", alignItems: "center" }}>
           <button className={`filter-pill ${tab === "active" ? "active" : ""}`} onClick={() => setTab("active")}>Active &amp; upcoming</button>
           <button className={`filter-pill ${tab === "archived" ? "active" : ""}`} onClick={() => setTab("archived")}>Archived</button>
+          <span style={{ flex: 1 }} />
+          {me.admin && tab === "archived" && (
+            <button className="btn sm" onClick={openImport} title="Create an archived event from a past Google Sheet">⬇ Import from Google Sheet</button>
+          )}
         </div>
 
         {events === null && <div className="empty">Loading events…</div>}
@@ -151,7 +152,7 @@ export default function EventPicker({ me, onSignOut }) {
           <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <button className="modal-x" onClick={() => setImp(null)} aria-label="Close">✕</button>
             <h3 className="modal-title" style={{ marginBottom: 2 }}>Import a past event (Google Sheet)</h3>
-            <p className="muted-sm" style={{ marginTop: 0 }}>Creates a new event from a results sheet — schedule + final scores (Results tab) and rosters (DB tab), so Fistball Live shows the full standings.</p>
+            <p className="muted-sm" style={{ marginTop: 0 }}>Creates a new <b>archived</b> event from a results sheet — schedule + final scores (Results tab) and rosters (DB tab), so Fistball Live shows the full standings. You can re-activate it later from its settings.</p>
 
             <div className="field"><span>Name</span>
               <input value={imp.name} onChange={(e) => setImp({ ...imp, name: e.target.value })} placeholder="e.g. 2025 South American Championship" autoFocus /></div>
