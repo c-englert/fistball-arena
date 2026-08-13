@@ -281,7 +281,7 @@ export default function Settings({ me }) {
           </div>
 
           <div className="chip-row">
-            <span className="chip-row-label">Sex</span>
+            <span className="chip-row-label">Gender</span>
             <button disabled={archived} className={`selchip ${(cb.sexes || []).includes("men") ? "on men" : ""}`} onClick={() => toggleIn("sexes", "men")}>♂ Men</button>
             <button disabled={archived} className={`selchip ${(cb.sexes || []).includes("women") ? "on women" : ""}`} onClick={() => toggleIn("sexes", "women")}>♀ Women</button>
           </div>
