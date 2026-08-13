@@ -408,6 +408,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .brk-cols { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
 .brk-col { min-width: 150px; flex: none; }
 .brk-match { background: #f5f3fb; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; margin-bottom: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.brk-edit-list { display: grid; gap: 8px; margin-bottom: 10px; max-height: 46vh; overflow-y: auto; }
+.brk-edit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.brk-erd { flex: 0 0 130px; font-size: 12px; font-weight: 800; color: var(--brand); }
+.brk-slot { flex: 1 1 130px; min-width: 120px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 13px; font-weight: 600; }
+.brk-slot-ro { flex: 1 1 130px; font-size: 13px; font-weight: 600; }
+.brk-x { color: var(--muted); font-weight: 800; }
+.brk-editnote { display: flex; align-items: center; gap: 10px; justify-content: space-between; margin-bottom: 4px; }
 
 /* ---------- Real-time sync banner ---------- */
 .sync-banner { display: flex; align-items: center; gap: 12px; background: #fff4e5; border: 1px solid #e8a33d; color: #5a3d0a; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-weight: 700; font-size: 14px; }

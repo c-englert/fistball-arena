@@ -6,7 +6,7 @@ import {
 } from "../cloud.js";
 import { fetchEventFromSheet } from "../schedule/importEventSheet.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
-import { describeFormat } from "../schedule/format.js";
+import { describeFormat, formatMatches, slotOptions, parseSlot, slotValue } from "../schedule/format.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
@@ -16,6 +16,7 @@ const fromEvent = (ev) => ({
   name: ev?.name || "", place: ev?.place || "", startDate: ev?.startDate || "", endDate: ev?.endDate || "",
   categoryBuilder: ev?.categoryBuilder || { types: [], sexes: [], ages: [] },
   entries: ev?.entries || [], // [{ name, cats: [categoryName…] }]
+  formatOverrides: ev?.formatOverrides || {}, // { [category]: { [matchId]: { a?, b? } } }
 });
 
 export default function Settings({ me }) {
@@ -37,6 +38,17 @@ export default function Settings({ me }) {
   const openOrToggle = (n) => setOpenStep((s) => (s === n ? 0 : n));
   const [bracketIdx, setBracketIdx] = useState(null); // category index shown in the bracket modal
   const teamsInCat = (cat) => (details.entries || []).filter((t) => (t.cats || []).includes(cat)).map((t) => t.name);
+  // Edit which variable feeds a knockout slot (per category override).
+  const setSlot = (cat, matchId, slot, value) => edit((d) => {
+    const fo = { ...(d.formatOverrides || {}) };
+    const c = { ...(fo[cat] || {}) };
+    const m = { ...(c[matchId] || {}) };
+    m[slot] = parseSlot(value);
+    c[matchId] = m; fo[cat] = c;
+    return { ...d, formatOverrides: fo };
+  });
+  const resetFormat = (cat) => edit((d) => { const fo = { ...(d.formatOverrides || {}) }; delete fo[cat]; return { ...d, formatOverrides: fo }; });
+  const saveOverrides = () => { setStatus("Saving format…"); updateEventFields({ formatOverrides: details.formatOverrides }).then(() => afterSave("Format saved.")).catch((e) => setStatus("Save failed: " + (e?.message || e))); };
   const [remote, setRemote] = useState(false); // someone else changed it while editing
 
   // Live sync: pull the event doc into the form whenever it changes remotely,
@@ -335,7 +347,7 @@ export default function Settings({ me }) {
             )}
             {previewCats.map((cat, ci) => {
               const count = (details.entries || []).filter((t) => (t.cats || []).includes(cat)).length;
-              const d = describeFormat(count);
+              const d = describeFormat(count, details.formatOverrides?.[cat]);
               return (
                 <div className="fmt-cat" key={cat}>
                   <div className="fmt-head"><b>{cat}</b><span className="tag">{count} team{count === 1 ? "" : "s"}</span>
@@ -460,49 +472,68 @@ export default function Settings({ me }) {
         <BracketModal
           category={previewCats[bracketIdx]}
           teams={teamsInCat(previewCats[bracketIdx])}
+          override={details.formatOverrides?.[previewCats[bracketIdx]]}
+          onSlot={(matchId, slot, value) => setSlot(previewCats[bracketIdx], matchId, slot, value)}
+          onReset={() => resetFormat(previewCats[bracketIdx])}
+          onSave={saveOverrides}
+          archived={archived}
           idx={bracketIdx}
           total={previewCats.length}
           onClose={() => setBracketIdx(null)}
-          onNext={() => setBracketIdx((i) => (i + 1 < previewCats.length ? i + 1 : null))}
+          onNext={() => { saveOverrides(); setBracketIdx((i) => (i + 1 < previewCats.length ? i + 1 : null)); }}
         />
       )}
     </div>
   );
 }
 
-// Visual bracket of one category (group + evolution to the final) in a modal,
-// stepped through one category at a time.
-function BracketModal({ category, teams, idx, total, onClose, onNext }) {
-  const d = describeFormat(teams.length);
+// Editable bracket of one category (group + every knockout match) in a modal.
+// Each slot is a dropdown (seed / winner-of / loser-of); changes are saved as a
+// per-category override. Stepped through one category at a time.
+function BracketModal({ category, teams, override, onSlot, onReset, onSave, archived, idx, total, onClose, onNext }) {
+  const n = teams.length;
+  const matches = formatMatches(n, override);
   const last = idx + 1 >= total;
+  const Slot = ({ m, side }) => {
+    const slot = side === "a" ? m.a : m.b;
+    if (archived) return <span className="brk-slot-ro">{slot.label}</span>;
+    return (
+      <select className="brk-slot" value={slotValue(slot.src)} onChange={(e) => onSlot(m.id, side, e.target.value)}>
+        {slotOptions(n, m.id).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    );
+  };
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal bracket-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
         <h3 className="modal-title" style={{ marginBottom: 2 }}>{category}</h3>
-        <p className="muted-sm" style={{ marginTop: 0 }}>{teams.length} teams · category {idx + 1} of {total}</p>
-        {!d ? (
-          <p className="muted-sm">No preset for {teams.length} teams yet.</p>
+        <p className="muted-sm" style={{ marginTop: 0 }}>{n} teams · category {idx + 1} of {total}</p>
+        {!matches.length ? (
+          <p className="muted-sm">No preset for {n} teams yet.</p>
         ) : (
           <>
             <div className="brk-group">
-              <div className="brk-col-title">Qualification Round · one group ({d.qrGames} games)</div>
+              <div className="brk-col-title">Qualification Round · one group</div>
               <div className="chips">{teams.map((t) => <span className="team-chip" key={t}>{t}</span>)}</div>
             </div>
-            <div className="brk-cols">
-              {d.rounds.map((r, i) => (
-                <div className="brk-col" key={i}>
-                  <div className="brk-col-title">{r.round}</div>
-                  {r.matches.map((m, j) => <div className="brk-match" key={j}>{m}</div>)}
+            <div className="brk-edit-list">
+              {matches.map((m) => (
+                <div className="brk-edit-row" key={m.id}>
+                  <span className="brk-erd">{m.round}</span>
+                  <Slot m={m} side="a" /><span className="brk-x">×</span><Slot m={m} side="b" />
                 </div>
               ))}
             </div>
-            <p className="muted-sm">Placeholders (“1st”, “Winner SF1”…) fill in automatically as games finish.</p>
+            <div className="brk-editnote">
+              <span className="muted-sm">Change any slot if the pairing isn’t right. Placeholders fill in automatically as games finish.</span>
+              {!archived && override && Object.keys(override).length > 0 && <button className="btn sm" onClick={onReset}>Reset to preset</button>}
+            </div>
           </>
         )}
         <div className="modal-actions">
           <button className="btn" onClick={onClose}>Close</button>
-          <button className="btn primary" onClick={onNext}>{last ? "OK — done" : "OK — next category"}</button>
+          <button className="btn primary" onClick={onNext}>{last ? "Save — done" : "Save — next category"}</button>
         </div>
       </div>
     </div>

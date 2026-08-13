@@ -37,7 +37,7 @@ export function generateSchedule(config) {
     // Championship preset by team count (single group + rank-seeded knockout).
     const allTeams = (cat.groups || []).flatMap((g) => g.teams || []);
     if (hasFormat(allTeams.length)) {
-      const built = buildFormat(allTeams, { category: catName, bestOf: cat.bestOf || 3 });
+      const built = buildFormat(allTeams, { category: catName, bestOf: cat.bestOf || 3, override: cat.override });
       const nsSrc = (s) => (s && s.dep ? { ...s, dep: `${catKey}:${s.dep}` } : s);
       for (const f of built.fixtures) {
         fixtures.push({
