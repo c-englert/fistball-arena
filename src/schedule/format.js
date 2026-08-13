@@ -41,11 +41,14 @@ const KO = {
     { id: "p35c", stage: "bronze", idx: 2, round: "Placement 3-5", a: L("sf2"), b: L("pi") },
   ],
   8: () => [
-    { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal 1", a: S(3), b: S(6) },
-    { id: "qf2", stage: "qf", idx: 1, round: "Quarterfinal 2", a: S(4), b: S(5) },
+    // QF1 feeds SF1 and QF2 feeds SF2, drawn top→top / bottom→bottom so the
+    // bracket connectors don't cross. Pairings match the spec: 1st plays the
+    // winner of 4th×5th, 2nd plays the winner of 3rd×6th.
+    { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal 1", a: S(4), b: S(5) },
+    { id: "qf2", stage: "qf", idx: 1, round: "Quarterfinal 2", a: S(3), b: S(6) },
     { id: "p7",  stage: "qf", idx: 2, round: "Placement 7-8", a: S(7), b: S(8) },
-    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal 1", a: S(1), b: W("qf2") },
-    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal 2", a: S(2), b: W("qf1") },
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal 1", a: S(1), b: W("qf1") },
+    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal 2", a: S(2), b: W("qf2") },
     { id: "final",  stage: "final",  idx: 0, round: "Gold medal match",   a: W("sf1"), b: W("sf2") },
     { id: "bronze", stage: "bronze", idx: 0, round: "Bronze medal match", a: L("sf1"), b: L("sf2") },
   ],
