@@ -149,6 +149,7 @@ export default function Settings({ me }) {
   const [logos, setLogos] = useState([]);
   const [eventLogo, setEventLogo] = useState(null);
   const [promoters, setPromoters] = useState([]);
+  const [libOpen, setLibOpen] = useState(false);
   const fileRef = useRef(null);
   const initedRef = useRef(false);
 
@@ -451,23 +452,9 @@ export default function Settings({ me }) {
           </div>
           {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveLogos}>Save logos &amp; continue</button>}
 
-          <div className="subhead">Library ({logos.length})</div>
-          {logos.length === 0 && <p className="muted-sm">No logos yet — upload one above.</p>}
-          <div className="logo-grid">
-            {logos.map((l) => (
-              <div className="logo-lib" key={l.id}>
-                <img src={l.dataUrl} alt={l.name} title={l.name} />
-                <div className="logo-name">{l.name}</div>
-                {!archived && (
-                  <div className="logo-actions">
-                    <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>Event logo</button>
-                    <button className="btn sm" onClick={() => addPromoter(l)}>Add promoter</button>
-                    <button className="btn danger sm" onClick={() => window.confirm(`Delete “${l.name}” from the library?`) && deleteLogo(l.id)}>Delete</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <button className="btn sm" style={{ marginTop: 12 }} onClick={() => setLibOpen(true)}>
+            📁 Logo library ({logos.length})
+          </button>
         </Step>
 
         {/* ---- 7. Publish to Fistball Live ---- */}
@@ -552,6 +539,33 @@ export default function Settings({ me }) {
           onClose={() => setBracketIdx(null)}
           onNext={() => { saveOverrides(); setBracketIdx((i) => (i + 1 < previewCats.length ? i + 1 : null)); }}
         />
+      )}
+
+      {libOpen && (
+        <div className="modal-overlay" onClick={() => setLibOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <button className="modal-x" onClick={() => setLibOpen(false)} aria-label="Close">✕</button>
+            <h3 className="modal-title" style={{ marginBottom: 2 }}>Logo library ({logos.length})</h3>
+            <p className="muted-sm" style={{ marginTop: 0 }}>Pick a logo to use in this event, or upload a new one.</p>
+            <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>+ Upload logo</button>
+            {logos.length === 0 && <p className="muted-sm" style={{ marginTop: 10 }}>No logos yet — upload one above.</p>}
+            <div className="logo-grid" style={{ marginTop: 10 }}>
+              {logos.map((l) => (
+                <div className="logo-lib" key={l.id}>
+                  <img src={l.dataUrl} alt={l.name} title={l.name} />
+                  <div className="logo-name">{l.name}</div>
+                  {!archived && (
+                    <div className="logo-actions">
+                      <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>Event logo</button>
+                      <button className="btn sm" onClick={() => addPromoter(l)}>Add promoter</button>
+                      <button className="btn danger sm" onClick={() => window.confirm(`Delete “${l.name}” from the library?`) && deleteLogo(l.id)}>Delete</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
