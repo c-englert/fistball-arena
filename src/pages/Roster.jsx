@@ -4,9 +4,8 @@ import { fetchRosters } from "../roster/importRoster.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import { subscribeRosters, subscribeResults, publishRosters, addMember } from "../cloud.js";
 import { flagFor } from "../flags.js";
+import { eventCategoryNames } from "../categories.js";
 import { useEvent } from "../eventContext.js";
-
-const DB_SHEET_ID = "1og9dwLSgjdlozwb79R0Au1s48etQKlVf1EHILRyyhxM";
 
 function Avatar({ src, name }) {
   const [err, setErr] = useState(false);
@@ -19,7 +18,7 @@ export default function Roster({ me }) {
   const { eventId, isAdmin, event } = useEvent();
   const [rosters, setRosters] = useState(null);   // live registry from Firestore
   const [preview, setPreview] = useState(null);     // parsed import { rosters, teamCount, count, warnings }
-  const [sheetId, setSheetId] = useState(DB_SHEET_ID);
+  const [sheetId, setSheetId] = useState("");
   const [tab, setTab] = useState("DB");
   const [status, setStatus] = useState("");
   const [open, setOpen] = useState(null);           // expanded team
@@ -82,7 +81,7 @@ export default function Roster({ me }) {
 
       <div className="content">
         {/* ---- Excel upload ---- */}
-        <ExcelImport me={me} teamNames={(event?.entries || []).map((e) => e.name)} />
+        <ExcelImport me={me} teamNames={(event?.entries || []).map((e) => e.name)} categories={eventCategoryNames(event)} />
 
         {/* ---- Google Sheet import (alternative) ---- */}
         <div className="card">

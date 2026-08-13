@@ -467,7 +467,7 @@ export default function Settings({ me }) {
         <div className="tools-divider">Tools (optional)</div>
 
         {/* ---- Import players & staff from Excel ---- */}
-        {!archived && <ExcelImport me={me} teamNames={(details.entries || []).map((e) => e.name)} />}
+        {!archived && <ExcelImport me={me} teamNames={(details.entries || []).map((e) => e.name)} categories={previewCats} />}
 
         {/* ---- Status ---- */}
         <div className="card">

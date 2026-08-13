@@ -94,6 +94,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .combo-opt { padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .combo-opt.hi { background: #efeaf9; }
 .combo-opt.sel { font-weight: 700; color: var(--brand); }
+.import-file { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; background: #fbfbfe; }
+.import-file-name { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; max-width: 220px; }
+.cat-select.cat-missing { border-color: #d0454f; background: #fbeaec; }
 .roster-row.row-warn { border-left: 3px solid #e0a63a; padding-left: 7px; background: #fdf6e9; border-radius: 6px; }
 .roster-row.row-dup { border-left: 3px solid #d0454f; padding-left: 7px; background: #fbeaec; border-radius: 6px; }
 .import-history > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 13px; }

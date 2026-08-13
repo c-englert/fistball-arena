@@ -86,7 +86,7 @@ export default function Sumula({ me }) {
   async function loadRoster() {
     if (readOnly) return;
     const cur = draftRef.current;
-    const map = await fetchTeamRosters([cur.teamA.name, cur.teamB.name]);
+    const map = await fetchTeamRosters([cur.teamA.name, cur.teamB.name], cur.info?.category);
     if (!Object.keys(map).length) { alert("No roster found for these teams. Import players in the Teams page first."); return; }
     update((n) => {
       for (const side of ["teamA", "teamB"]) {

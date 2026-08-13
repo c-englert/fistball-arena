@@ -346,6 +346,8 @@ export async function publishRosters(rosters) {
     await batch.commit();
   }
 }
+// Wipe the whole players & staff registry for the current event.
+export async function clearRosters() { await clearCollection("rosters"); }
 /* ----------------- referees registry ----------------- */
 export function subscribeReferees(cb) {
   return onSnapshot(ecol("referees"),
@@ -364,15 +366,22 @@ export async function publishReferees(list, { replaceAll } = {}) {
   }
 }
 
-async function getRoster(teamName) {
+// Rosters are keyed by "<team> - <category>" (so the same club/country can field
+// a squad in more than one category), with a plain "<team>" fallback for older
+// imports and events whose team names already carry the category.
+async function getRoster(teamName, category) {
   if (!teamName) return null;
-  const s = await getDoc(edoc("rosters", teamName));
-  return s.exists() ? s.data() : null;
+  const keys = category ? [`${teamName} - ${category}`, teamName] : [teamName];
+  for (const k of keys) {
+    const s = await getDoc(edoc("rosters", k));
+    if (s.exists()) return s.data();
+  }
+  return null;
 }
-export async function fetchTeamRosters(names) {
+export async function fetchTeamRosters(names, category) {
   const out = {};
   for (const name of [...new Set(names)]) {
-    const r = await getRoster(name);
+    const r = await getRoster(name, category);
     if (r) out[name] = r;
   }
   return out;
@@ -446,7 +455,7 @@ export async function ensureReport(gameId) {
   if (!gsnap.exists()) return;
   const game = { id: gameId, ...gsnap.data() };
   for (const side of ["teamA", "teamB"]) {
-    const r = await getRoster(game[side]?.name);
+    const r = await getRoster(game[side]?.name, game.category);
     if (r) game[side] = { ...game[side], players: r.players, staff: r.staff };
   }
   try { await setDoc(ref, blankReport(game)); }
@@ -470,7 +479,7 @@ export async function reloadReportRoster(gameId) {
   const updated = [], missing = [];
   for (const side of ["teamA", "teamB"]) {
     const name = rep[side]?.name;
-    const r = await getRoster(name);
+    const r = await getRoster(name, rep.info?.category);
     if (r) { patch[side] = cloneTeam({ name, players: r.players, staff: r.staff }); updated.push(name); }
     else if (name) missing.push(name);
   }
@@ -563,7 +572,7 @@ export async function runAdvancement(category) {
       for (const side of ["teamA", "teamB"]) {
         const name = patch[side];
         if (!name) continue;
-        const roster = await getRoster(name);
+        const roster = await getRoster(name, category);
         gameUpd[side] = team(name);
         resUpd[side] = name;
         repUpd[side] = cloneTeam({ name, players: roster?.players || [], staff: roster?.staff || [] });
