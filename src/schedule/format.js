@@ -23,13 +23,13 @@ const KO = {
     { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: S(1), b: S(2) },
   ],
   5: () => [
-    { id: "pi",  stage: "qf", idx: 0, round: "Play-off",  a: S(4), b: S(5) },
-    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal", a: S(1), b: W("pi", "Winner 4th-5th") },
+    { id: "pi",  stage: "qf", idx: 0, round: "Quarterfinal", a: S(4), b: S(5) },
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal", a: S(1), b: W("pi", "Winner QF") },
     { id: "sf2", stage: "sf", idx: 1, round: "Semifinal", a: S(2), b: S(3) },
     { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: W("sf1"), b: W("sf2") },
     { id: "p35a", stage: "bronze", idx: 0, round: "Placement 3-5", a: L("sf1"), b: L("sf2") },
-    { id: "p35b", stage: "bronze", idx: 1, round: "Placement 3-5", a: L("sf1"), b: L("pi", "Loser 4th-5th") },
-    { id: "p35c", stage: "bronze", idx: 2, round: "Placement 3-5", a: L("sf2"), b: L("pi", "Loser 4th-5th") },
+    { id: "p35b", stage: "bronze", idx: 1, round: "Placement 3-5", a: L("sf1"), b: L("pi", "Loser QF") },
+    { id: "p35c", stage: "bronze", idx: 2, round: "Placement 3-5", a: L("sf2"), b: L("pi", "Loser QF") },
   ],
   8: () => [
     { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal", a: S(3), b: S(6) },
@@ -44,7 +44,7 @@ const KO = {
 
 export function hasFormat(teamCount) { return !!KO[teamCount]; }
 
-const SHORT = { pi: "PO", qf1: "QF1", qf2: "QF2", p7: "P7", sf1: "SF1", sf2: "SF2", final: "F", bronze: "B", p35a: "P3a", p35b: "P3b", p35c: "P3c" };
+const SHORT = { pi: "QF", qf1: "QF1", qf2: "QF2", p7: "P7", sf1: "SF1", sf2: "SF2", final: "F", bronze: "B", p35a: "P3a", p35b: "P3b", p35c: "P3c" };
 const shortOf = (dep) => SHORT[String(dep).replace("ko:", "")] || String(dep).replace("ko:", "").toUpperCase();
 function labelOf(src) {
   if (!src) return "?";
