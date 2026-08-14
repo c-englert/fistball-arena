@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
 import {
   ensureReport, subscribeReport, acquireLock, releaseLock, heartbeat,
-  adminUnlock, saveReport, submitReport, fetchTeamRosters,
+  adminUnlock, saveReport, submitReport, fetchTeamRosters, buildReportSeed,
 } from "../cloud.js";
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
 import { flagFor } from "../flags.js";
@@ -35,14 +35,25 @@ export default function Sumula({ me }) {
   const readOnly = !iHold || submitted || !canScore;
 
   useEffect(() => {
-    let unsub;
+    let unsub, cancelled = false;
     (async () => {
       if (canScore) {
         await ensureReport(id);
         await acquireLock(id, me);
       }
       unsub = subscribeReport(id, (data) => {
-        if (!data) return;
+        if (!data) {
+          // No report doc (archived / imported past event): render read-only from the game itself.
+          if (!draftRef.current) {
+            buildReportSeed(id).then((seed) => {
+              if (cancelled || draftRef.current || !seed) return;
+              const d = extractDraft(seed);
+              draftRef.current = d;
+              setDraft(d);
+            });
+          }
+          return;
+        }
         setLockedBy(data.lockedBy || null);
         const done = data.status === "submitted";
         setSubmitted(done);
@@ -58,6 +69,7 @@ export default function Sumula({ me }) {
     })();
     const hb = setInterval(() => { if (holdRef.current) heartbeat(id, me); }, 20000);
     return () => {
+      cancelled = true;
       clearInterval(hb);
       if (unsub) unsub();
       if (holdRef.current) releaseLock(id, me);

@@ -447,6 +447,20 @@ function blankReport(game) {
   };
 }
 
+// Build a report-shaped object from the game (+ rosters) WITHOUT writing it —
+// used to render a read-only súmula when no report doc exists yet (e.g. an
+// archived / imported past event where report writes are blocked).
+export async function buildReportSeed(gameId) {
+  const gsnap = await getDoc(edoc("games", gameId));
+  if (!gsnap.exists()) return null;
+  const game = { id: gameId, ...gsnap.data() };
+  for (const side of ["teamA", "teamB"]) {
+    const r = await getRoster(game[side]?.name, game.category);
+    if (r) game[side] = { ...game[side], players: r.players, staff: r.staff };
+  }
+  return blankReport(game);
+}
+
 export async function ensureReport(gameId) {
   const ref = edoc("reports", gameId);
   const snap = await getDoc(ref);
