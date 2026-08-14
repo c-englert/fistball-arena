@@ -10,6 +10,7 @@ import SlotsEditor from "../schedule/SlotsEditor.jsx";
 import { generateSchedule } from "../schedule/generator.js";
 import { eventToConfig } from "../schedule/eventToConfig.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
+import ScheduleGrid from "../schedule/ScheduleGrid.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
 import { flagFor } from "../flags.js";
@@ -210,8 +211,9 @@ export default function Settings({ me }) {
     !!(branding?.eventLogo || (branding?.promoters || []).length),
     thisIsLive,
     published,
+    published,
   ];
-  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3], !done[3], !done[4]];
+  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3], !done[3], !done[4], !done[7]];
 
   return (
     <div className="app">
@@ -462,6 +464,12 @@ export default function Settings({ me }) {
               {done[7] && <p className="muted-sm">✅ Published. Open the games list or Fistball Live to see them.</p>}
             </>
           )}
+        </Step>
+
+        {/* ---- 9. Arrange schedule (drag-drop day/court/time) ---- */}
+        <Step n={9} title="Arrange schedule" sub={done[7] ? "drag day · court · time" : "publish first"} done={false} locked={locked[8]} open={openStep === 9} onToggle={() => openOrToggle(9)}>
+          <p className="muted-sm">Fine-tune where each published game sits — drag a game onto a day, court and time. Saves straight to the games (and Fistball Live follows).</p>
+          <ScheduleGrid />
         </Step>
 
         <div className="tools-divider">Tools (optional)</div>
