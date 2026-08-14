@@ -13,22 +13,28 @@ const dayLabel = (d) => {
   return new Date(2000 + (yy || 0), (mm || 1) - 1, dd).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 };
 
-// Drag-and-drop grid to place each game on a day / court / time. Reused by the
-// standalone Arrange page and as a step in the event-setup wizard.
-export default function ScheduleGrid() {
+// Drag-and-drop grid to place each game on a day / court / time.
+//  - Controlled/preview mode (pass `games` + `onChange`): edits the given games
+//    in memory — used BEFORE publishing, inside the generate step.
+//  - Standalone mode (no props): subscribes to published games and Saves changes
+//    to Firestore — used by the Arrange page for post-publish tweaks.
+export default function ScheduleGrid({ games: controlledGames, onChange }) {
+  const controlled = typeof onChange === "function";
   const { event, archived } = useEvent();
-  const [games, setGames] = useState(null);
-  const [local, setLocal] = useState({}); // nr -> { date, time, court }
+  const [fetched, setFetched] = useState(controlled ? [] : null);
+  const [local, setLocal] = useState({}); // nr -> { date, time, court } (standalone only)
   const [drag, setDrag] = useState(null);
   const [over, setOver] = useState("");
   const [status, setStatus] = useState("");
 
-  useEffect(() => subscribeGames(setGames), []);
+  useEffect(() => { if (!controlled) return subscribeGames(setFetched); }, [controlled]);
+
+  const games = controlled ? (controlledGames || []) : fetched;
 
   const slots = useMemo(() => normalizeSlots(event?.slots || {}), [event]);
   const cats = useMemo(() => [...new Set((games || []).map((g) => g.category))], [games]);
   const catColor = (c) => PALETTE[Math.max(0, cats.indexOf(c)) % PALETTE.length];
-  const eff = (g) => ({ ...g, ...(local[g.nr] || {}) });
+  const eff = (g) => (controlled ? g : { ...g, ...(local[g.nr] || {}) });
 
   const courts = slots.courts.length ? slots.courts : [...new Set((games || []).map((g) => g.court).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
   const days = useMemo(() => {
@@ -48,9 +54,12 @@ export default function ScheduleGrid() {
   const cardsAt = (date, court, time) => (games || []).map(eff).filter((g) => g.date === date && String(g.court) === String(court) && g.time === time);
   const unscheduled = (games || []).map(eff).filter((g) => !g.date || !g.time || !g.court);
 
-  const setSlot = (nr, patch) => setLocal((l) => ({ ...l, [nr]: { ...(l[nr] || {}), ...patch } }));
-  const drop = (date, court, time) => { if (drag != null) setSlot(drag, { date, court: String(court), time }); setDrag(null); setOver(""); };
-  const dropUnscheduled = () => { if (drag != null) setSlot(drag, { date: "", court: "", time: "" }); setDrag(null); setOver(""); };
+  const applyMove = (nr, patch) => {
+    if (controlled) onChange((controlledGames || []).map((g) => (String(g.nr) === String(nr) ? { ...g, ...patch } : g)));
+    else setLocal((l) => ({ ...l, [nr]: { ...(l[nr] || {}), ...patch } }));
+  };
+  const drop = (date, court, time) => { if (drag != null) applyMove(drag, { date, court: String(court), time }); setDrag(null); setOver(""); };
+  const dropUnscheduled = () => { if (drag != null) applyMove(drag, { date: "", court: "", time: "" }); setDrag(null); setOver(""); };
 
   const changed = Object.keys(local);
   const save = async () => {
@@ -78,12 +87,14 @@ export default function ScheduleGrid() {
 
   return (
     <>
-      <div className="ag-bar">
-        <span className="muted-sm">{changed.length ? `${changed.length} unsaved change${changed.length === 1 ? "" : "s"}` : "No changes"}</span>
-        <span style={{ flex: 1 }} />
-        {changed.length > 0 && <button className="btn sm" onClick={() => setLocal({})}>Reset</button>}
-        <button className="btn primary sm" disabled={!changed.length || archived} onClick={save}>Save</button>
-      </div>
+      {!controlled && (
+        <div className="ag-bar">
+          <span className="muted-sm">{changed.length ? `${changed.length} unsaved change${changed.length === 1 ? "" : "s"}` : "No changes"}</span>
+          <span style={{ flex: 1 }} />
+          {changed.length > 0 && <button className="btn sm" onClick={() => setLocal({})}>Reset</button>}
+          <button className="btn primary sm" disabled={!changed.length || archived} onClick={save}>Save</button>
+        </div>
+      )}
 
       <div className={`ag-tray ${over === "unsched" ? "ag-over" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setOver("unsched"); }} onDragLeave={() => setOver("")} onDrop={dropUnscheduled}>

@@ -211,9 +211,8 @@ export default function Settings({ me }) {
     !!(branding?.eventLogo || (branding?.promoters || []).length),
     thisIsLive,
     published,
-    published,
   ];
-  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3], !done[3], !done[4], !done[7]];
+  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3], !done[3], !done[4]];
 
   return (
     <div className="app">
@@ -449,27 +448,20 @@ export default function Settings({ me }) {
             : <button className="btn primary" onClick={publishLive}>{live?.eventId ? "Show this instead" : "Publish to Live"}</button>}
         </Step>
 
-        {/* ---- 8. Generate & publish schedule ---- */}
+        {/* ---- 8. Generate, arrange & publish schedule ---- */}
         <Step n={8} title="Generate & publish schedule" sub={done[7] ? "published" : ""} done={done[7]} locked={locked[7]} open={openStep === 8} onToggle={() => openOrToggle(8)}>
-          <p className="muted-sm">Builds all games from your categories, teams, format and courts — then publishes them (they appear on the games list and Fistball Live).</p>
+          <p className="muted-sm">Builds all games from your categories, teams, format and courts. Auto-places them on days/courts/times — drag to adjust — then publish (they appear on the games list and Fistball Live).</p>
           {!archived && <button className="btn" onClick={doGenerate}>{genResult ? "Regenerate" : "Generate schedule"}</button>}
           {genResult && (
             <>
               {genResult.warnings?.length > 0 && <div className="warn-box" style={{ marginTop: 10 }}>{genResult.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
               <p className="muted-sm" style={{ marginTop: 8 }}>Ready: <b>{genResult.games.length}</b> games{genResult.unplaced.length ? ` · ${genResult.unplaced.length} unplaced` : ""}.</p>
-              {Object.entries(genResult.games.reduce((a, g) => { a[g.category] = (a[g.category] || 0) + 1; return a; }, {})).map(([c, cnt]) => (
-                <div className="fmt-line" key={c}><span className="fmt-round">{c}</span> {cnt} games</div>
-              ))}
+              <div className="subhead">Arrange — drag any game onto a day · court · time</div>
+              <ScheduleGrid games={genResult.games} onChange={(gs) => setGenResult((r) => ({ ...r, games: gs }))} />
               {!archived && <button className="btn primary" style={{ marginTop: 12, width: "100%" }} onClick={doPublish} disabled={!genResult.games.length}>Publish {genResult.games.length} games (replace all)</button>}
-              {done[7] && <p className="muted-sm">✅ Published. Open the games list or Fistball Live to see them.</p>}
+              {done[7] && <p className="muted-sm">✅ Published. You can keep dragging above and publish again, or fine-tune later via Manage → Arrange schedule.</p>}
             </>
           )}
-        </Step>
-
-        {/* ---- 9. Arrange schedule (drag-drop day/court/time) ---- */}
-        <Step n={9} title="Arrange schedule" sub={done[7] ? "drag day · court · time" : "publish first"} done={false} locked={locked[8]} open={openStep === 9} onToggle={() => openOrToggle(9)}>
-          <p className="muted-sm">Fine-tune where each published game sits — drag a game onto a day, court and time. Saves straight to the games (and Fistball Live follows).</p>
-          <ScheduleGrid />
         </Step>
 
         <div className="tools-divider">Tools (optional)</div>
