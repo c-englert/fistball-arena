@@ -295,6 +295,21 @@ export async function publishGames(games, { replaceAll } = {}) {
   }
 }
 
+// Reassign day/time/court for individual games (manual drag-drop scheduling).
+// Updates BOTH the game doc and its public results row so Fistball Live follows.
+export async function updateGameSlots(updates) {
+  for (let i = 0; i < updates.length; i += 200) {
+    const batch = writeBatch(db);
+    updates.slice(i, i + 200).forEach((u) => {
+      const id = `g${u.nr}`;
+      const patch = { date: u.date || "", time: u.time || "", court: u.court || "" };
+      batch.set(edoc("games", id), patch, { merge: true });
+      batch.set(edoc("results", id), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
+    });
+    await batch.commit();
+  }
+}
+
 // Import a whole past event: games + real results (scores) + rosters.
 export async function publishEventImport({ games, results, rosters, cautions }, { replaceAll } = {}) {
   if (replaceAll) {

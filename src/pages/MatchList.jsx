@@ -9,6 +9,7 @@ function ManageMenu({ base }) {
   const [open, setOpen] = useState(false);
   const items = [
     ["Schedule", `${base}/schedule`],
+    ["Arrange schedule", `${base}/arrange`],
     ["Players & staff", `${base}/roster`],
     ["Access", `${base}/members`],
     ["Settings", `${base}/settings`],

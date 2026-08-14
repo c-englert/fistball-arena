@@ -98,6 +98,26 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .import-file-name { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat-select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; max-width: 220px; }
 .cat-select.cat-missing { border-color: #d0454f; background: #fbeaec; }
+
+/* Arrange schedule (drag-drop grid) */
+.ag-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 6px 0; }
+.ag-tray { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 16px; }
+.ag-tray.ag-over { border-color: var(--brand); background: #f4f1fc; }
+.ag-tray-cards { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ag-day { margin-bottom: 20px; }
+.ag-grid-wrap { overflow-x: auto; }
+.ag-grid { border-collapse: separate; border-spacing: 4px; }
+.ag-th-court { font-size: 12px; font-weight: 700; color: var(--muted); padding: 4px 8px; white-space: nowrap; }
+.ag-th-time { width: 52px; }
+.ag-time { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; vertical-align: top; padding-top: 10px; }
+.ag-cell { min-width: 150px; height: 100%; vertical-align: top; background: var(--bg-elev); border: 1px solid var(--line); border-radius: 8px; padding: 4px; }
+.ag-cell.ag-over { border-color: var(--brand); background: #f4f1fc; }
+.ag-cell.ag-conflict { border-color: #d0454f; background: #fbeaec; }
+.ag-card { background: #fff; border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: 7px; padding: 6px 8px; margin-bottom: 4px; cursor: grab; box-shadow: 0 1px 3px rgba(20,20,60,.06); }
+.ag-card:active { cursor: grabbing; }
+.ag-card-cat { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+.ag-card-teams { font-size: 13px; font-weight: 600; margin: 1px 0; }
+.ag-card-round { font-size: 11px; }
 .roster-row.row-warn { border-left: 3px solid #e0a63a; padding-left: 7px; background: #fdf6e9; border-radius: 6px; }
 .roster-row.row-dup { border-left: 3px solid #d0454f; padding-left: 7px; background: #fbeaec; border-radius: 6px; }
 .import-history > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 13px; }

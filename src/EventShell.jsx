@@ -5,6 +5,7 @@ import { EventContext } from "./eventContext.js";
 import MatchList from "./pages/MatchList.jsx";
 import Sumula from "./pages/Sumula.jsx";
 import Schedule from "./pages/Schedule.jsx";
+import ArrangeSchedule from "./pages/ArrangeSchedule.jsx";
 import Roster from "./pages/Roster.jsx";
 import Members from "./pages/Members.jsx";
 import Settings from "./pages/Settings.jsx";
@@ -44,6 +45,7 @@ export default function EventShell({ me, onSignOut }) {
           <Route path="game/:id" element={<Sumula me={me} />} />
           <Route path="standings" element={<Standings />} />
           <Route path="schedule" element={isAdmin ? <Schedule me={me} /> : <Navigate to=".." replace />} />
+          <Route path="arrange" element={isAdmin ? <ArrangeSchedule me={me} /> : <Navigate to=".." replace />} />
           <Route path="roster" element={isAdmin ? <Roster me={me} /> : <Navigate to=".." replace />} />
           <Route path="members" element={isAdmin ? <Members me={me} /> : <Navigate to=".." replace />} />
           <Route path="settings" element={isAdmin ? <Settings me={me} /> : <Navigate to=".." replace />} />
