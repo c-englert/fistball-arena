@@ -118,6 +118,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .ag-card-cat { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
 .ag-card-teams { font-size: 13px; font-weight: 600; margin: 1px 0; }
 .ag-card-round { font-size: 11px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg-btn { padding: 5px 12px; font-size: 13px; font-weight: 700; background: #fff; color: var(--muted); border: none; cursor: pointer; }
+.seg-btn.on { background: var(--brand); color: #fff; }
+.ag-lrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--bg-elev); border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.ag-lcat { font-size: 12px; font-weight: 700; flex: 0 0 auto; }
+.ag-lmid { flex: 1 1 160px; min-width: 0; }
+.ag-lteams { font-size: 14px; font-weight: 600; }
+.ag-lsub { font-size: 11px; }
+.ag-lday, .ag-lcourt { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; background: #fff; }
+.ag-ltime { width: 68px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; text-align: center; }
 .roster-row.row-warn { border-left: 3px solid #e0a63a; padding-left: 7px; background: #fdf6e9; border-radius: 6px; }
 .roster-row.row-dup { border-left: 3px solid #d0454f; padding-left: 7px; background: #fbeaec; border-radius: 6px; }
 .import-history > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 13px; }
