@@ -456,7 +456,7 @@ export default function Settings({ me }) {
             <>
               {genResult.warnings?.length > 0 && <div className="warn-box" style={{ marginTop: 10 }}>{genResult.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
               <p className="muted-sm" style={{ marginTop: 8 }}>Ready: <b>{genResult.games.length}</b> games{genResult.unplaced.length ? ` · ${genResult.unplaced.length} unplaced` : ""}.</p>
-              <div className="subhead">Arrange — drag any game onto a day · court · time</div>
+              <div className="subhead">Arrange — drag any game into a day · court · time</div>
               <ScheduleGrid games={genResult.games} onChange={(gs) => setGenResult((r) => ({ ...r, games: gs }))} />
               {!archived && <button className="btn primary" style={{ marginTop: 12, width: "100%" }} onClick={doPublish} disabled={!genResult.games.length}>Publish {genResult.games.length} games (replace all)</button>}
               {done[7] && <p className="muted-sm">✅ Published. You can keep dragging above and publish again, or fine-tune later via Manage → Arrange schedule.</p>}

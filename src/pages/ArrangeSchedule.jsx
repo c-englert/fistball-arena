@@ -18,7 +18,7 @@ export default function ArrangeSchedule() {
         <div className="spacer" />
         <div style={{ textAlign: "right" }}>
           <div className="title">Arrange schedule</div>
-          <div className="sub">Drag games onto a day · court · time</div>
+          <div className="sub">Drag games into a day · court · time</div>
         </div>
       </header>
       <div className="content">
