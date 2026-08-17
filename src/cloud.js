@@ -118,6 +118,14 @@ export async function updateEventFields(patch, eventId) {
   await updateDoc(doc(db, "events", eventId || reqEid()), patch);
 }
 
+// Non-game schedule entries (ceremonies, breaks). Stored on the event doc AND
+// mirrored to the public doc so Fistball Live can show them without login.
+export async function saveScheduleBlocks(blocks) {
+  const eid = reqEid();
+  await updateDoc(doc(db, "events", eid), { scheduleBlocks: blocks });
+  await writeEventPublic(eid, { scheduleBlocks: blocks });
+}
+
 export async function updateEventDetails(patch, eventId) {
   const eid = eventId || reqEid();
   await updateDoc(doc(db, "events", eid), patch);

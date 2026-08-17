@@ -128,6 +128,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .ag-lsub { font-size: 11px; }
 .ag-lday, .ag-lcourt { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; background: #fff; }
 .ag-ltime { width: 68px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; text-align: center; }
+.ag-warns { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; background: #fffaf2; }
+.ag-warns > summary { cursor: pointer; font-weight: 700; font-size: 13px; color: var(--muted); }
+.ag-warns ul { margin: 8px 0 0; padding-left: 4px; list-style: none; }
+.ag-warns li { font-size: 13px; padding: 2px 0; }
+.ag-w-bad { color: #c0392b; }
+.ag-w-note { color: #8a6d1c; }
+.ag-blocks { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 16px; }
+.ag-lname { flex: 1 1 160px; min-width: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font-size: 14px; }
 .roster-row.row-warn { border-left: 3px solid #e0a63a; padding-left: 7px; background: #fdf6e9; border-radius: 6px; }
 .roster-row.row-dup { border-left: 3px solid #d0454f; padding-left: 7px; background: #fbeaec; border-radius: 6px; }
 .import-history > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 13px; }

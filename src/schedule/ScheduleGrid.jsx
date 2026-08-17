@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { subscribeGames, updateGameSlots } from "../cloud.js";
+import { subscribeGames, updateGameSlots, saveScheduleBlocks } from "../cloud.js";
 import { normalizeSlots } from "./scheduler.js";
 import { useEvent } from "../eventContext.js";
 
@@ -27,8 +27,11 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
   const [over, setOver] = useState("");
   const [status, setStatus] = useState("");
   const [view, setView] = useState("list"); // "list" (type day/time/court) | "grid" (drag)
+  const [blocks, setBlocks] = useState(() => event?.scheduleBlocks || []);
+  const [blocksDirty, setBlocksDirty] = useState(false);
 
   useEffect(() => { if (!controlled) return subscribeGames(setFetched); }, [controlled]);
+  useEffect(() => { if (!blocksDirty) setBlocks(event?.scheduleBlocks || []); }, [event, blocksDirty]);
 
   const games = controlled ? (controlledGames || []) : fetched;
 
@@ -73,6 +76,15 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
     } catch (e) { setStatus("Save failed: " + (e?.message || e)); }
   };
 
+  const addBlock = () => { setBlocksDirty(true); setBlocks((b) => [...b, { id: `b${Date.now()}${Math.floor(Math.random() * 1000)}`, label: "", date: days[0] || "", time: "", court: "" }]); };
+  const editBlock = (id, patch) => { setBlocksDirty(true); setBlocks((b) => b.map((x) => (x.id === id ? { ...x, ...patch } : x))); };
+  const delBlock = (id) => { setBlocksDirty(true); setBlocks((b) => b.filter((x) => x.id !== id)); };
+  const saveBlocks = async () => {
+    setStatus("Saving entries…");
+    try { await saveScheduleBlocks(blocks); setBlocksDirty(false); setStatus(`Saved ${blocks.length} extra entr${blocks.length === 1 ? "y" : "ies"}.`); }
+    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+  };
+
   const card = (g) => (
     <div key={g.nr} className="ag-card" draggable={!archived} style={{ borderLeftColor: catColor(g.category) }}
       onDragStart={() => setDrag(g.nr)} onDragEnd={() => { setDrag(null); setOver(""); }}
@@ -82,6 +94,31 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
       <div className="ag-card-round muted-sm">{g.round}</div>
     </div>
   );
+
+  // Advisory checks (court clashes, team double-booking, court fairness).
+  const isPh = (n) => /\d/.test(String(n)) || /winner|loser|group/i.test(String(n));
+  const teamsOf = (g) => [g.teamA?.name || g.teamA, g.teamB?.name || g.teamB];
+  const warnings = useMemo(() => {
+    const sched = (games || []).map(eff).filter((g) => g.date && g.time && g.court);
+    const out = [];
+    const cell = {};
+    sched.forEach((g) => { const k = `${g.date}|${g.court}|${g.time}`; (cell[k] = cell[k] || []).push(g); });
+    Object.entries(cell).forEach(([k, gs]) => { if (gs.length > 1) { const [d, c, t] = k.split("|"); out.push({ bad: true, msg: `Court clash — ${dayLabel(d)} ${t} · Court ${c}: ${gs.map((g) => "#" + g.nr).join(", ")}` }); } });
+    const ts = {};
+    sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { const k = `${t}|${g.date}|${g.time}`; (ts[k] = ts[k] || []).push(g.nr); } }));
+    Object.entries(ts).forEach(([k, ns]) => { if (ns.length > 1) { const [t, d, tm] = k.split("|"); out.push({ bad: true, msg: `${t} has ${ns.length} games at ${dayLabel(d)} ${tm}` }); } });
+    if (courts.length > 1) {
+      const tc = {};
+      sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { tc[t] = tc[t] || {}; tc[t][g.court] = (tc[t][g.court] || 0) + 1; } }));
+      Object.entries(tc).forEach(([t, m]) => {
+        const total = Object.values(m).reduce((a, b) => a + b, 0);
+        const [topCourt, top] = Object.entries(m).sort((a, b) => b[1] - a[1])[0];
+        if (total >= 3 && Object.keys(m).length === 1) out.push({ bad: false, msg: `${t} plays all ${total} games on Court ${topCourt}` });
+        else if (total >= 4 && top / total >= 0.75) out.push({ bad: false, msg: `${t} plays ${top}/${total} games on Court ${topCourt}` });
+      });
+    }
+    return out;
+  }, [games, local, courts]);
 
   if (games === null) return <div className="empty">Loading games…</div>;
   if (games.length === 0) return <div className="empty">No games yet — generate the schedule first.</div>;
@@ -125,6 +162,38 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
       </div>
 
       {courts.length === 0 && <div className="warn-box">No courts defined — set them in “Courts &amp; schedule”.</div>}
+
+      {warnings.length > 0 && (
+        <details className="ag-warns">
+          <summary>{warnings.filter((w) => w.bad).length} conflict{warnings.filter((w) => w.bad).length === 1 ? "" : "s"} · {warnings.filter((w) => !w.bad).length} court-fairness note{warnings.filter((w) => !w.bad).length === 1 ? "" : "s"}</summary>
+          <ul>{warnings.map((w, i) => <li key={i} className={w.bad ? "ag-w-bad" : "ag-w-note"}>{w.bad ? "⚠️" : "ℹ️"} {w.msg}</li>)}</ul>
+        </details>
+      )}
+
+      {view === "list" && (
+        <div className="ag-blocks">
+          <div className="row-between" style={{ alignItems: "center" }}>
+            <div className="subhead" style={{ margin: 0 }}>Ceremonies &amp; breaks ({blocks.length})</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {blocksDirty && <button className="btn primary sm" disabled={archived} onClick={saveBlocks}>Save entries</button>}
+              <button className="btn sm" disabled={archived} onClick={addBlock}>+ Add entry</button>
+            </div>
+          </div>
+          {blocks.map((b) => (
+            <div className="ag-lrow" key={b.id} style={{ borderLeftColor: "#8a6d1c" }}>
+              <input className="ag-lname" value={b.label || ""} placeholder="e.g. NT Awards ceremony" disabled={archived} onChange={(e) => editBlock(b.id, { label: e.target.value })} />
+              <select className="ag-lday" value={b.date || ""} disabled={archived} onChange={(e) => editBlock(b.id, { date: e.target.value })}>
+                <option value="">— day —</option>{days.map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
+              </select>
+              <input className="ag-ltime" value={b.time || ""} placeholder="hh:mm" disabled={archived} onChange={(e) => editBlock(b.id, { time: e.target.value })} />
+              <select className="ag-lcourt" value={b.court || ""} disabled={archived} onChange={(e) => editBlock(b.id, { court: e.target.value })}>
+                <option value="">— court —</option>{courts.map((c) => <option key={c} value={String(c)}>Court {c}</option>)}
+              </select>
+              <button className="btn danger sm" disabled={archived} onClick={() => delBlock(b.id)}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {view === "list" ? (
         [...days, ""].map((date) => {
