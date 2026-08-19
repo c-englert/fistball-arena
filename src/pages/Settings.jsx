@@ -173,7 +173,7 @@ export default function Settings({ me }) {
 
   const saveLogos = async () => {
     setStatus("Saving branding…");
-    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus("Branding saved."); setOpenStep(7); }
+    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus("Branding saved."); setOpenStep(8); }
     catch (e) { setStatus("Save failed: " + (e?.message || e)); }
   };
   const setSlots = (next) => edit((d) => ({ ...d, slots: next }));
@@ -195,7 +195,7 @@ export default function Settings({ me }) {
     if (!genResult?.games.length) return;
     if (!window.confirm(`Publish ${genResult.games.length} games? This replaces ALL current games, reports and results for this event.`)) return;
     setStatus("Publishing…");
-    try { await publishGames(genResult.games, { replaceAll: true }); setPublished(true); setStatus(`Published ${genResult.games.length} games. See the games list / Fistball Live.`); }
+    try { await publishGames(genResult.games, { replaceAll: true }); setPublished(true); setStatus(`Published ${genResult.games.length} games. See the games list / Fistball Live.`); setOpenStep(7); }
     catch (e) { setStatus("Publish failed: " + (e?.message || e)); }
   };
 
@@ -208,11 +208,12 @@ export default function Settings({ me }) {
     nTeams > 0,
     nTeams > 0,
     courtsDone,
+    published,
     !!(branding?.eventLogo || (branding?.promoters || []).length),
     thisIsLive,
-    published,
   ];
-  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[3], !done[3], !done[4]];
+  // 1 details · 2 categories · 3 teams · 4 format · 5 courts · 6 schedule · 7 logos · 8 live
+  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[4], !done[4], !done[5]];
 
   return (
     <div className="app">
@@ -402,8 +403,24 @@ export default function Settings({ me }) {
           {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveSlots} disabled={!courtsDone}>Save courts &amp; continue</button>}
         </Step>
 
-        {/* ---- 6. Event logos ---- */}
-        <Step n={6} title="Event logos" sub={done[5] ? "set" : "optional"} done={done[5]} locked={locked[5]} open={openStep === 6} onToggle={() => openOrToggle(6)}>
+        {/* ---- 6. Generate, arrange & publish schedule ---- */}
+        <Step n={6} title="Generate & publish schedule" sub={done[5] ? "published" : ""} done={done[5]} locked={locked[5]} open={openStep === 6} onToggle={() => openOrToggle(6)}>
+          <p className="muted-sm">Builds all games from your categories, teams, format and courts. Auto-places them on days/courts/times — drag or type to adjust — then publish (they appear on the games list and Fistball Live).</p>
+          {!archived && <button className="btn" onClick={doGenerate}>{genResult ? "Regenerate" : "Generate schedule"}</button>}
+          {genResult && (
+            <>
+              {genResult.warnings?.length > 0 && <div className="warn-box" style={{ marginTop: 10 }}>{genResult.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
+              <p className="muted-sm" style={{ marginTop: 8 }}>Ready: <b>{genResult.games.length}</b> games{genResult.unplaced.length ? ` · ${genResult.unplaced.length} unplaced` : ""}.</p>
+              <div className="subhead">Arrange — set each game’s day · court · time</div>
+              <ScheduleGrid games={genResult.games} onChange={(gs) => setGenResult((r) => ({ ...r, games: gs }))} />
+              {!archived && <button className="btn primary" style={{ marginTop: 12, width: "100%" }} onClick={doPublish} disabled={!genResult.games.length}>Publish {genResult.games.length} games (replace all)</button>}
+              {done[5] && <p className="muted-sm">✅ Published. You can keep adjusting above and publish again, or fine-tune later via Manage → Arrange schedule.</p>}
+            </>
+          )}
+        </Step>
+
+        {/* ---- 7. Event logos ---- */}
+        <Step n={7} title="Event logos" sub={done[6] ? "set" : "optional"} done={done[6]} locked={locked[6]} open={openStep === 7} onToggle={() => openOrToggle(7)}>
           <div className="row-between">
             <span className="muted-sm">Shown on the game report (PDF), the app topbar and Fistball Live.</span>
             <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>+ Upload logo</button>
@@ -435,8 +452,8 @@ export default function Settings({ me }) {
           </button>
         </Step>
 
-        {/* ---- 7. Publish to Fistball Live ---- */}
-        <Step n={7} title="Publish to Fistball Live" sub={done[6] ? "On air" : ""} done={done[6]} locked={locked[6]} open={openStep === 7} onToggle={() => openOrToggle(7)}>
+        {/* ---- 8. Publish to Fistball Live ---- */}
+        <Step n={8} title="Publish to Fistball Live" sub={done[7] ? "On air" : ""} done={done[7]} locked={locked[7]} open={openStep === 8} onToggle={() => openOrToggle(8)}>
           <p className="muted-sm">
             {live === undefined ? "Checking…"
               : thisIsLive ? "✅ This event is showing on the public scoreboard."
@@ -446,22 +463,6 @@ export default function Settings({ me }) {
           {thisIsLive
             ? <button className="btn danger" onClick={stopLive}>Stop showing</button>
             : <button className="btn primary" onClick={publishLive}>{live?.eventId ? "Show this instead" : "Publish to Live"}</button>}
-        </Step>
-
-        {/* ---- 8. Generate, arrange & publish schedule ---- */}
-        <Step n={8} title="Generate & publish schedule" sub={done[7] ? "published" : ""} done={done[7]} locked={locked[7]} open={openStep === 8} onToggle={() => openOrToggle(8)}>
-          <p className="muted-sm">Builds all games from your categories, teams, format and courts. Auto-places them on days/courts/times — drag to adjust — then publish (they appear on the games list and Fistball Live).</p>
-          {!archived && <button className="btn" onClick={doGenerate}>{genResult ? "Regenerate" : "Generate schedule"}</button>}
-          {genResult && (
-            <>
-              {genResult.warnings?.length > 0 && <div className="warn-box" style={{ marginTop: 10 }}>{genResult.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
-              <p className="muted-sm" style={{ marginTop: 8 }}>Ready: <b>{genResult.games.length}</b> games{genResult.unplaced.length ? ` · ${genResult.unplaced.length} unplaced` : ""}.</p>
-              <div className="subhead">Arrange — drag any game into a day · court · time</div>
-              <ScheduleGrid games={genResult.games} onChange={(gs) => setGenResult((r) => ({ ...r, games: gs }))} />
-              {!archived && <button className="btn primary" style={{ marginTop: 12, width: "100%" }} onClick={doPublish} disabled={!genResult.games.length}>Publish {genResult.games.length} games (replace all)</button>}
-              {done[7] && <p className="muted-sm">✅ Published. You can keep dragging above and publish again, or fine-tune later via Manage → Arrange schedule.</p>}
-            </>
-          )}
         </Step>
 
         <div className="tools-divider">Tools (optional)</div>
