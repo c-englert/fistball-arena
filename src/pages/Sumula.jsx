@@ -36,22 +36,28 @@ export default function Sumula({ me }) {
 
   useEffect(() => {
     let unsub, cancelled = false;
+    const seedReadOnly = () => {
+      if (draftRef.current) return;
+      buildReportSeed(id).then((seed) => {
+        if (cancelled || draftRef.current || !seed) return;
+        const d = extractDraft(seed);
+        draftRef.current = d;
+        setDraft(d);
+      }).catch((e) => console.warn("Could not build a read-only view:", e?.code || e));
+    };
     (async () => {
+      // Creating/locking a report is a WRITE — never let it block viewing. If it
+      // fails (event not active, no permission…), fall through to a read-only view.
       if (canScore) {
-        await ensureReport(id);
-        await acquireLock(id, me);
+        try {
+          await ensureReport(id);
+          await acquireLock(id, me);
+        } catch (e) { console.warn("Scoring lock unavailable — opening read-only:", e?.code || e); }
       }
       unsub = subscribeReport(id, (data) => {
         if (!data) {
           // No report doc (archived / imported past event): render read-only from the game itself.
-          if (!draftRef.current) {
-            buildReportSeed(id).then((seed) => {
-              if (cancelled || draftRef.current || !seed) return;
-              const d = extractDraft(seed);
-              draftRef.current = d;
-              setDraft(d);
-            });
-          }
+          seedReadOnly();
           return;
         }
         setLockedBy(data.lockedBy || null);
