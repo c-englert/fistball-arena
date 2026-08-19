@@ -17,7 +17,8 @@ export const seed = (n) => ORD[n] || `${n}th`;
 // Full, unambiguous names for each match id (used in slot labels so it's clear
 // which semifinal/quarterfinal a winner/loser comes from).
 const NAME = {
-  pi: "Quarterfinal", qf1: "Quarterfinal 1", qf2: "Quarterfinal 2", p7: "Placement 7-8",
+  pi: "Quarterfinal", qf1: "Quarterfinal 1", qf2: "Quarterfinal 2", qf3: "Quarterfinal 3",
+  p7: "Placement 7-8", p56: "Placement 5-6",
   sf1: "Semifinal 1", sf2: "Semifinal 2", final: "Final", bronze: "Bronze",
   p35a: "Placement 3-5", p35b: "Placement 3-5", p35c: "Placement 3-5",
 };
@@ -28,8 +29,17 @@ const W = (ref, label) => ({ label: label || `Winner ${nameOf(ref)}`, src: { typ
 const L = (ref, label) => ({ label: label || `Loser ${nameOf(ref)}`, src: { type: "loser", dep: `ko:${ref}` } });
 
 const KO = {
+  2: () => [
+    { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: S(1), b: S(2) },
+  ],
   3: () => [
     { id: "final", stage: "final", idx: 0, round: "Gold medal match", a: S(1), b: S(2) },
+  ],
+  4: () => [
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal 1", a: S(1), b: S(4) },
+    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal 2", a: S(2), b: S(3) },
+    { id: "final",  stage: "final",  idx: 0, round: "Gold medal match",   a: W("sf1"), b: W("sf2") },
+    { id: "bronze", stage: "bronze", idx: 0, round: "Bronze medal match", a: L("sf1"), b: L("sf2") },
   ],
   5: () => [
     { id: "pi",  stage: "qf", idx: 0, round: "Quarterfinal", a: S(4), b: S(5) },
@@ -39,6 +49,26 @@ const KO = {
     { id: "p35a", stage: "bronze", idx: 0, round: "Placement 3-5", a: L("sf1"), b: L("sf2") },
     { id: "p35b", stage: "bronze", idx: 1, round: "Placement 3-5", a: L("sf1"), b: L("pi") },
     { id: "p35c", stage: "bronze", idx: 2, round: "Placement 3-5", a: L("sf2"), b: L("pi") },
+  ],
+  6: () => [
+    // Top two seeds get a bye; 3rd–6th cross in the quarterfinals.
+    { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal 1", a: S(4), b: S(5) },
+    { id: "qf2", stage: "qf", idx: 1, round: "Quarterfinal 2", a: S(3), b: S(6) },
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal 1", a: S(1), b: W("qf1") },
+    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal 2", a: S(2), b: W("qf2") },
+    { id: "final",  stage: "final",  idx: 0, round: "Gold medal match",   a: W("sf1"), b: W("sf2") },
+    { id: "bronze", stage: "bronze", idx: 0, round: "Bronze medal match", a: L("sf1"), b: L("sf2") },
+    { id: "p56", stage: "bronze", idx: 1, round: "Placement 5-6", a: L("qf1"), b: L("qf2") },
+  ],
+  7: () => [
+    // Top seed gets a bye; 2nd–7th cross in the quarterfinals.
+    { id: "qf1", stage: "qf", idx: 0, round: "Quarterfinal 1", a: S(4), b: S(5) },
+    { id: "qf2", stage: "qf", idx: 1, round: "Quarterfinal 2", a: S(3), b: S(6) },
+    { id: "qf3", stage: "qf", idx: 2, round: "Quarterfinal 3", a: S(2), b: S(7) },
+    { id: "sf1", stage: "sf", idx: 0, round: "Semifinal 1", a: S(1), b: W("qf1") },
+    { id: "sf2", stage: "sf", idx: 1, round: "Semifinal 2", a: W("qf2"), b: W("qf3") },
+    { id: "final",  stage: "final",  idx: 0, round: "Gold medal match",   a: W("sf1"), b: W("sf2") },
+    { id: "bronze", stage: "bronze", idx: 0, round: "Bronze medal match", a: L("sf1"), b: L("sf2") },
   ],
   8: () => [
     // QF1 feeds SF1 and QF2 feeds SF2, drawn top→top / bottom→bottom so the
