@@ -104,13 +104,17 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
     const cell = {};
     sched.forEach((g) => { const k = `${g.date}|${g.court}|${g.time}`; (cell[k] = cell[k] || []).push(g); });
     Object.entries(cell).forEach(([k, gs]) => { if (gs.length > 1) { const [d, c, t] = k.split("|"); out.push({ bad: true, msg: `Court clash — ${dayLabel(d)} ${t} · Court ${c}: ${gs.map((g) => "#" + g.nr).join(", ")}` }); } });
+    // A team is unique WITHIN its category (Argentina Men ≠ Argentina Women),
+    // so identity = category + name — otherwise same-named squads look clashy.
+    const SEP = "";
     const ts = {};
-    sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { const k = `${t}|${g.date}|${g.time}`; (ts[k] = ts[k] || []).push(g.nr); } }));
-    Object.entries(ts).forEach(([k, ns]) => { if (ns.length > 1) { const [t, d, tm] = k.split("|"); out.push({ bad: true, msg: `${t} has ${ns.length} games at ${dayLabel(d)} ${tm}` }); } });
+    sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { const k = `${g.category}${SEP}${t}${SEP}${g.date}${SEP}${g.time}`; (ts[k] = ts[k] || []).push(g.nr); } }));
+    Object.entries(ts).forEach(([k, ns]) => { if (ns.length > 1) { const [, t, d, tm] = k.split(SEP); out.push({ bad: true, msg: `${t} has ${ns.length} games at ${dayLabel(d)} ${tm}` }); } });
     if (courts.length > 1) {
       const tc = {};
-      sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { tc[t] = tc[t] || {}; tc[t][g.court] = (tc[t][g.court] || 0) + 1; } }));
-      Object.entries(tc).forEach(([t, m]) => {
+      sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { const id = `${g.category}${SEP}${t}`; tc[id] = tc[id] || {}; tc[id][g.court] = (tc[id][g.court] || 0) + 1; } }));
+      Object.entries(tc).forEach(([id, m]) => {
+        const t = id.split(SEP)[1];
         const total = Object.values(m).reduce((a, b) => a + b, 0);
         const [topCourt, top] = Object.entries(m).sort((a, b) => b[1] - a[1])[0];
         if (total >= 3 && Object.keys(m).length === 1) out.push({ bad: false, msg: `${t} plays all ${total} games on Court ${topCourt}` });
