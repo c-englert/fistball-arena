@@ -8,9 +8,14 @@ export function eventToConfig(event, startNr = 1) {
   const names = eventCategoryNames(event);
   const entries = event?.entries || [];
   const overrides = event?.formatOverrides || {};
-  const categories = names.map((name) => ({
-    name, bestOf: 3, override: overrides[name] || null,
-    groups: [{ label: "A", teams: entries.filter((t) => (t.cats || []).includes(name)).map((t) => t.name) }],
-  }));
+  const variants = event?.formatVariants || {};
+  const categories = names.map((name) => {
+    const v = variants[name] || {};
+    return {
+      name, bestOf: 3, override: overrides[name] || null,
+      double: !!v.double, knockout: v.knockout !== false, qualifiersPerGroup: 2,
+      groups: [{ label: "A", teams: entries.filter((t) => (t.cats || []).includes(name)).map((t) => t.name) }],
+    };
+  });
   return { categories, slots: event?.slots || { courts: [], days: [], gameMinutes: 45, breakMinutes: 0 }, startNr };
 }

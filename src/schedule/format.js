@@ -154,17 +154,19 @@ export function slotValue(src) {
 }
 
 // Human-readable summary of the format for a team count (respecting override).
-export function describeFormat(teamCount, override) {
-  if (!KO[teamCount]) return null;
-  const qrGames = (teamCount * (teamCount - 1)) / 2;
-  const ko = koFor(teamCount, override);
+export function describeFormat(teamCount, override, opts = {}) {
+  const { double = false, knockout = true } = opts;
+  if (teamCount < 2) return null;
+  if (knockout && !KO[teamCount]) return null; // KO variant needs a preset for this count
+  const qrGames = ((teamCount * (teamCount - 1)) / 2) * (double ? 2 : 1);
+  const ko = knockout ? koFor(teamCount, override) : [];
   const rounds = [];
   for (const m of ko) {
     let r = rounds.find((x) => x.round === m.round);
     if (!r) { r = { round: m.round, matches: [] }; rounds.push(r); }
     r.matches.push(`${m.a.label} × ${m.b.label}`);
   }
-  return { teamCount, qrGames, rounds, total: qrGames + ko.length };
+  return { teamCount, qrGames, rounds, total: qrGames + ko.length, double, knockout };
 }
 
 // The editable knockout matches (id/round + current a/b) for the modal editor.
@@ -184,16 +186,19 @@ export function formatWarnings(teamCount, override) {
   return out;
 }
 
-// buildFormat: QR (single group round-robin) + seeded knockout, as fixtures.
-export function buildFormat(teams, { category, bestOf = 3, override } = {}) {
+// buildFormat: QR (single group round-robin, single or double) + optional seeded
+// knockout, as fixtures. `double` plays every pair twice; `knockout:false` is a
+// league (final standings from the round-robin, no playoffs).
+export function buildFormat(teams, { category, bestOf = 3, override, double = false, knockout = true } = {}) {
   const real = (teams || []).filter(Boolean);
   const n = real.length;
-  if (!KO[n]) return null;
+  if (knockout && !KO[n]) return null;
+  if (n < 2) return null;
 
   const fixtures = [];
   let seq = 0;
 
-  roundRobin(real, false).forEach((round, ri) => {
+  roundRobin(real, double).forEach((round, ri) => {
     round.forEach(([a, b], i) => {
       fixtures.push({
         id: `qr:${ri}:${i}`, category, bestOf, group: "", round: "Qualification round",
@@ -202,12 +207,14 @@ export function buildFormat(teams, { category, bestOf = 3, override } = {}) {
     });
   });
 
-  for (const m of koFor(n, override)) {
-    fixtures.push({
-      id: `ko:${m.id}`, category, bestOf,
-      round: m.round, phase: "ko", koStage: m.stage, koIndex: m.idx, seq: seq++,
-      teamA: m.a.label, teamB: m.b.label, srcA: m.a.src, srcB: m.b.src, deps: m.deps,
-    });
+  if (knockout) {
+    for (const m of koFor(n, override)) {
+      fixtures.push({
+        id: `ko:${m.id}`, category, bestOf,
+        round: m.round, phase: "ko", koStage: m.stage, koIndex: m.idx, seq: seq++,
+        teamA: m.a.label, teamB: m.b.label, srcA: m.a.src, srcB: m.b.src, deps: m.deps,
+      });
+    }
   }
 
   return { fixtures, warnings: [] };

@@ -16,11 +16,21 @@ import { formatRange } from "../dates.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 
+// Format variants offered per category in phase 4. The editable bracket (View
+// bracket) still fine-tunes individual knockout matchups on top of these.
+const FORMAT_VARIANTS = [
+  { id: "rr_ko", label: "Round-robin + playoffs", flags: { double: false, knockout: true } },
+  { id: "rr", label: "Round-robin only (no playoffs)", flags: { double: false, knockout: false } },
+  { id: "drr_ko", label: "Double round-robin + playoffs", flags: { double: true, knockout: true } },
+  { id: "drr", label: "Double round-robin only", flags: { double: true, knockout: false } },
+];
+
 const fromEvent = (ev) => ({
   name: ev?.name || "", place: ev?.place || "", startDate: ev?.startDate || "", endDate: ev?.endDate || "",
   categoryBuilder: ev?.categoryBuilder || { types: [], sexes: [], ages: [] },
   entries: ev?.entries || [], // [{ name, cats: [categoryName…] }]
   formatOverrides: ev?.formatOverrides || {}, // { [category]: { [matchId]: { a?, b? } } }
+  formatVariants: ev?.formatVariants || {}, // { [category]: { double?, knockout? } }
   slots: ev?.slots || { courts: [], days: [], gameMinutes: 45, breakMinutes: 0 },
 });
 
@@ -82,6 +92,16 @@ export default function Settings({ me }) {
   const [ageInput, setAgeInput] = useState("");
   const [teamInput, setTeamInput] = useState("");
   const edit = (updater) => { setDirty(true); setDetails(updater); };
+
+  // Per-category format variants (phase 4). Editable brackets layer on top via formatOverrides.
+  const variantId = (v) => (v?.double ? (v.knockout === false ? "drr" : "drr_ko") : (v?.knockout === false ? "rr" : "rr_ko"));
+  const applyVariant = (cat, id) => {
+    const flags = FORMAT_VARIANTS.find((x) => x.id === id)?.flags || { double: false, knockout: true };
+    const fv = { ...(details.formatVariants || {}), [cat]: flags };
+    edit((d) => ({ ...d, formatVariants: fv }));
+    updateEventFields({ formatVariants: fv }).catch((e) => setStatus("Save failed: " + (e?.message || e)));
+  };
+
   const cb = details.categoryBuilder;
   const setBuilder = (patch) => edit((d) => ({ ...d, categoryBuilder: { ...d.categoryBuilder, ...patch } }));
   const toggleIn = (key, val) => setBuilder({ [key]: (cb[key] || []).includes(val) ? cb[key].filter((x) => x !== val) : [...(cb[key] || []), val] });
@@ -186,7 +206,7 @@ export default function Settings({ me }) {
     // Use the current (possibly unsaved) setup so the preview is WYSIWYG.
     const r = generateSchedule(eventToConfig({
       categoryBuilder: details.categoryBuilder, entries: details.entries,
-      formatOverrides: details.formatOverrides, slots: details.slots,
+      formatOverrides: details.formatOverrides, formatVariants: details.formatVariants, slots: details.slots,
     }));
     setGenResult(r);
     setStatus(`${r.games.length} games generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
@@ -363,31 +383,39 @@ export default function Settings({ me }) {
         {/* ---- 4. Format per category (auto by team count) ---- */}
         <Step n={4} title="Format" sub={done[3] ? `${previewCats.length} categories` : ""} done={done[3]} locked={locked[3]} open={openStep === 4} onToggle={() => openOrToggle(4)}>
           <div>
-            <p className="muted-sm">Auto-selected for each category by the number of teams (from the matrix). This is what the schedule will use.</p>
+            <p className="muted-sm">Pick a format for each category. The number of teams comes from the matrix; “View bracket” fine-tunes the knockout matchups.</p>
             {previewCats.length > 0 && (
               <button className="btn" style={{ marginBottom: 10 }} onClick={() => setBracketIdx(0)}>👁 Review each bracket →</button>
             )}
             {previewCats.map((cat, ci) => {
               const count = (details.entries || []).filter((t) => (t.cats || []).includes(cat)).length;
-              const d = describeFormat(count, details.formatOverrides?.[cat]);
+              const v = details.formatVariants?.[cat];
+              const flags = { double: !!v?.double, knockout: v?.knockout !== false };
+              const d = describeFormat(count, details.formatOverrides?.[cat], flags);
               return (
                 <div className="fmt-cat" key={cat}>
                   <div className="fmt-head"><b>{cat}</b><span className="tag">{count} team{count === 1 ? "" : "s"}</span>
-                    {count > 0 && d && formatWarnings(count, details.formatOverrides?.[cat]).length > 0 && <span className="tag" style={{ background: "#fff4e5", color: "#8a5a00" }}>⚠️ check</span>}
-                    {count > 0 && d && <button className="btn sm" style={{ marginLeft: "auto" }} onClick={() => setBracketIdx(ci)}>View bracket</button>}
+                    {count > 0 && d && flags.knockout && formatWarnings(count, details.formatOverrides?.[cat]).length > 0 && <span className="tag" style={{ background: "#fff4e5", color: "#8a5a00" }}>⚠️ check</span>}
+                    {count > 0 && d && flags.knockout && <button className="btn sm" style={{ marginLeft: "auto" }} onClick={() => setBracketIdx(ci)}>View bracket</button>}
                   </div>
+                  {count > 0 && (
+                    <select className="fmt-variant" value={variantId(v)} disabled={archived} onChange={(e) => applyVariant(cat, e.target.value)}>
+                      {FORMAT_VARIANTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                    </select>
+                  )}
                   {!count ? (
                     <p className="muted-sm" style={{ margin: "2px 0 0" }}>No teams ticked yet.</p>
                   ) : d ? (
                     <>
-                      <div className="fmt-line"><span className="fmt-round">Qualification Round</span> one group · round-robin · {d.qrGames} games</div>
+                      <div className="fmt-line"><span className="fmt-round">Qualification Round</span> one group · {flags.double ? "double round-robin" : "round-robin"} · {d.qrGames} games</div>
                       {d.rounds.map((r, i) => (
                         <div className="fmt-line" key={i}><span className="fmt-round">{r.round}</span> {r.matches.join(" · ")}</div>
                       ))}
+                      {!flags.knockout && <div className="fmt-line muted-sm">No playoffs — final standings from the round-robin.</div>}
                       <div className="muted-sm" style={{ marginTop: 4 }}>Total <b>{d.total}</b> games · best of 3</div>
                     </>
                   ) : (
-                    <p className="muted-sm" style={{ margin: "2px 0 0" }}>No preset for {count} teams yet — a manual format will be needed.</p>
+                    <p className="muted-sm" style={{ margin: "2px 0 0" }}>No knockout preset for {count} teams yet — pick a “round-robin only” variant, or a manual bracket will be needed.</p>
                   )}
                 </div>
               );
