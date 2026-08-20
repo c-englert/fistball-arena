@@ -58,7 +58,8 @@ service cloud.firestore {
       allow create: if isOrgAdmin()
                     && request.resource.data.status in ['active', 'archived']
                     && request.resource.data.createdBy == request.auth.uid;
-      allow update: if isOrgAdmin() || (isEventAdmin(eventId) && resource.data.status == 'active');
+      // Event admins can edit AND re-activate/archive their own event; org-admins anything.
+      allow update: if isOrgAdmin() || isEventAdmin(eventId);
       allow delete: if isOrgAdmin();
 
       match /members/{memberEmail} {

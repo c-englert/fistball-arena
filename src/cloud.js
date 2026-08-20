@@ -109,8 +109,12 @@ export function subscribeEvent(cb) {
     (d) => cb(d.exists() ? { id: d.id, ...d.data() } : null),
     (err) => { console.warn("event unavailable:", err?.code || err); cb(null); });
 }
-export async function setEventStatus(status) {
-  await updateDoc(doc(db, "events", reqEid()), { status });
+export async function setEventStatus(status, me) {
+  const ref = doc(db, "events", reqEid());
+  const entry = { at: new Date().toISOString(), by: me?.name || me?.email || "—", action: status === "active" ? "re-activated" : "archived" };
+  const snap = await getDoc(ref);
+  const log = [entry, ...((snap.exists() && snap.data().statusLog) || [])].slice(0, 30);
+  await updateDoc(ref, { status, statusLog: log });
 }
 // Write specific fields to the event doc without touching the public projection
 // (used for collaborative fields like categoryBuilder / entries).

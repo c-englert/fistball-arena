@@ -265,6 +265,14 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly }) {
           {!readOnly && <button className="btn sm" onClick={loadRoster} title="Fill both line-ups from the Teams registry">↻ Load roster</button>}
         </div>
         <div style={{ height: 12 }} />
+        {t.players.length === 0 && (
+          <div className="warn-box" style={{ marginBottom: 10 }}>
+            ⚠️ No line-up loaded for {short(t.name)}.{" "}
+            {readOnly
+              ? "Read-only access — the roster couldn't be loaded (event archived or you're not a member of this event)."
+              : "Import the squads (Players & staff → Excel), make sure the team names match, then tap ↻ Load roster."}
+          </div>
+        )}
         {t.players.map((p, i) => (
           <div className="player" key={i}>
             <div className="player-id">

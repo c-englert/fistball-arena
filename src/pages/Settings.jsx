@@ -25,6 +25,12 @@ const FORMAT_VARIANTS = [
   { id: "drr", label: "Double round-robin only", flags: { double: true, knockout: false } },
 ];
 
+function fmtStamp(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return iso || "—";
+  return d.toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
 const fromEvent = (ev) => ({
   name: ev?.name || "", place: ev?.place || "", startDate: ev?.startDate || "", endDate: ev?.endDate || "",
   categoryBuilder: ev?.categoryBuilder || { types: [], sexes: [], ages: [] },
@@ -173,7 +179,7 @@ export default function Settings({ me }) {
   const toggleArchive = async () => {
     const next = archived ? "active" : "archived";
     if (!window.confirm(archived ? "Re-activate this event?" : "Archive this event? It becomes read-only for everyone.")) return;
-    try { await setEventStatus(next); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+    try { await setEventStatus(next, me); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
   };
 
   const onUpload = async (e) => {
@@ -505,6 +511,20 @@ export default function Settings({ me }) {
               <p className="muted-sm">{archived ? "Archived — read-only for everyone." : "Active — members can score."}</p></div>
             <button className={`btn ${archived ? "primary" : "danger"}`} onClick={toggleArchive}>{archived ? "Re-activate" : "Archive"}</button>
           </div>
+          {(event?.statusLog || []).length > 0 && (
+            <details className="import-history" style={{ marginTop: 10 }}>
+              <summary>Status history ({event.statusLog.length})</summary>
+              <ul className="import-log">
+                {event.statusLog.map((h, i) => (
+                  <li key={i}>
+                    <span className="il-when">{fmtStamp(h.at)}</span>
+                    <span className="il-what">{h.action}</span>
+                    <span className="il-by muted-sm">{h.by}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
 
         {status && <p className="muted-sm">{status}</p>}
