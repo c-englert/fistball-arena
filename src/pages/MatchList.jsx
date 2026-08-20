@@ -68,9 +68,10 @@ export default function MatchList({ me, onSignOut }) {
   );
 
   const nq = q.trim().toLowerCase();
+  const num = nq.replace(/^#/, ""); // allow "#6" as well as "6"
   const matchesQuery = (m) => {
     if (!nq) return true;
-    return String(m.nr).includes(nq)
+    return (num && String(m.nr).includes(num))
       || (m.teamA?.name || "").toLowerCase().includes(nq)
       || (m.teamB?.name || "").toLowerCase().includes(nq)
       || (m.category || "").toLowerCase().includes(nq);
