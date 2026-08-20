@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { subscribeMembers, addMember, removeMember, subscribePeople } from "../cloud.js";
+import { subscribeMembers, addMember, removeMember, subscribePeople, subscribeOrgAdmins, addOrgAdmin, removeOrgAdmin, BOOTSTRAP_ORG_ADMINS } from "../cloud.js";
 import { useEvent } from "../eventContext.js";
 
 const ROLES = ["admin", "official", "viewer"];
@@ -10,11 +10,29 @@ export default function Members({ me }) {
   const { eventId, event, archived, isAdmin } = useEvent();
   const [members, setMembers] = useState([]);
   const [people, setPeople] = useState([]);
+  const [orgAdmins, setOrgAdmins] = useState([]);
+  const [oaForm, setOaForm] = useState({ email: "", name: "" });
   const [form, setForm] = useState({ email: "", name: "", role: "official" });
   const [status, setStatus] = useState("");
 
   useEffect(() => subscribeMembers(setMembers), [eventId]);
   useEffect(() => subscribePeople(setPeople), []);
+  useEffect(() => (me?.admin ? subscribeOrgAdmins(setOrgAdmins) : undefined), [me]);
+
+  const orgAdminEmails = useMemo(
+    () => [...new Set([...BOOTSTRAP_ORG_ADMINS, ...orgAdmins.map((o) => o.email)])].sort(),
+    [orgAdmins]
+  );
+  const addOrgA = async () => {
+    if (!oaForm.email.trim()) return;
+    setStatus("Adding org-admin…");
+    try { await addOrgAdmin(oaForm, me); setOaForm({ email: "", name: "" }); setStatus("Org-admin added."); }
+    catch (e) { setStatus("Failed: " + (e?.message || e)); }
+  };
+  const removeOrgA = async (emailAddr) => {
+    if (!window.confirm(`Remove org-admin ${emailAddr}? They lose full access to all events.`)) return;
+    try { await removeOrgAdmin(emailAddr); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+  };
 
   if (!isAdmin) return <div className="empty">Admins only.</div>;
 
@@ -95,6 +113,34 @@ export default function Members({ me }) {
             </div>
           ))}
         </div>
+
+        {me?.admin && (
+          <div className="card">
+            <h2>Org-admins <span className="muted-sm" style={{ fontWeight: 400 }}>· full access to ALL events</span></h2>
+            <p className="muted-sm">Org-admins manage and create any event. Add someone here to give them that level (beyond a single event).</p>
+            <div className="add-row" style={{ marginTop: 8 }}>
+              <input style={{ flex: "2 1 200px" }} value={oaForm.email} onChange={(e) => setOaForm({ ...oaForm, email: e.target.value })} placeholder="email@example.com" />
+              <input style={{ flex: "1 1 120px" }} value={oaForm.name} onChange={(e) => setOaForm({ ...oaForm, name: e.target.value })} placeholder="Name (optional)" />
+              <button className="btn primary" onClick={addOrgA}>Add org-admin</button>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              {orgAdminEmails.map((emailAddr) => {
+                const isBootstrap = BOOTSTRAP_ORG_ADMINS.includes(emailAddr);
+                const rec = orgAdmins.find((o) => o.email === emailAddr);
+                return (
+                  <div className="roster-row" key={emailAddr}>
+                    <span className="roster-nr role">A</span>
+                    <span className="roster-name">{rec?.name || emailAddr} {rec?.name && <span className="muted-sm">{emailAddr}</span>}</span>
+                    {isBootstrap
+                      ? <span className="tag">built-in</span>
+                      : <button className="btn danger sm" style={{ marginLeft: 8 }} onClick={() => removeOrgA(emailAddr)}>Remove</button>}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="muted-sm" style={{ marginTop: 6 }}>“built-in” org-admins are set in code and can’t be removed here. Others take effect after the person signs in again.</p>
+          </div>
+        )}
       </div>
     </div>
   );

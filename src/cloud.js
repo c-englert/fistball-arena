@@ -27,7 +27,21 @@ function toMe(user) {
 }
 
 export function onMe(cb) {
-  return onAuthStateChanged(auth, (user) => cb(toMe(user)));
+  return onAuthStateChanged(auth, async (user) => {
+    const me = toMe(user);
+    cb(me);
+    if (!me) return;
+    // Everyone who signs in is remembered in the global directory (so they can be
+    // authorized on other events with one click later).
+    try { await upsertPerson(me.email, me.name); } catch (_) { /* best-effort */ }
+    // Org-admins beyond the hardcoded bootstrap list are stored in `orgAdmins`.
+    if (!me.admin) {
+      try {
+        const snap = await getDoc(doc(db, "orgAdmins", me.email));
+        if (snap.exists()) cb({ ...me, admin: true });
+      } catch (_) { /* orgAdmins unreadable — stay non-admin */ }
+    }
+  });
 }
 export async function signInWithGoogle() {
   const cred = await signInWithPopup(auth, googleProvider);
@@ -166,6 +180,24 @@ async function upsertPerson(email, name) {
   const patch = { email: e };
   if (name && name.trim()) patch.name = name.trim();
   await setDoc(doc(db, "people", e), patch, { merge: true });
+}
+
+/* ----------------- org admins (global, manageable — beyond the bootstrap list) ----------------- */
+export const BOOTSTRAP_ORG_ADMINS = ORG_ADMINS;
+export function subscribeOrgAdmins(cb) {
+  return onSnapshot(collection(db, "orgAdmins"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => { console.warn("orgAdmins unavailable:", err?.code || err); cb([]); });
+}
+export async function addOrgAdmin({ email, name }, me) {
+  const e = (email || "").toLowerCase().trim();
+  if (!e) return;
+  await setDoc(doc(db, "orgAdmins", e), { email: e, name: (name || "").trim(), addedBy: me?.email || "", addedAt: serverTimestamp() }, { merge: true });
+  await upsertPerson(e, name);
+}
+export async function removeOrgAdmin(email) {
+  const e = (email || "").toLowerCase().trim();
+  if (e) await deleteDoc(doc(db, "orgAdmins", e));
 }
 export async function removeMember(email) {
   await deleteDoc(edoc("members", (email || "").toLowerCase().trim()));

@@ -5,13 +5,17 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function email() { return request.auth.token.email; }
 
-    // Org-admins (mirror of ORG_ADMINS in src/cloud.js).
+    // Org-admins: a hardcoded bootstrap list (mirror of ORG_ADMINS in src/cloud.js)
+    // PLUS anyone listed in the /orgAdmins collection (manageable in-app).
     function isOrgAdmin() {
-      return signedIn() && email() in [
-        'claudio.englert@gmail.com',
-        'claudio@qualitin.com',
-        'gastaoenglert@gmail.com'
-      ];
+      return signedIn() && (
+        email() in [
+          'claudio.englert@gmail.com',
+          'claudio@qualitin.com',
+          'gastaoenglert@gmail.com'
+        ]
+        || exists(/databases/$(database)/documents/orgAdmins/$(email()))
+      );
     }
 
     function memberPath(eventId) {
@@ -45,6 +49,14 @@ service cloud.firestore {
     match /people/{personEmail} {
       allow read: if signedIn();
       allow write: if signedIn();
+    }
+
+    // Global org-admins directory (grant full access without a code change).
+    // Any signed-in user can read (so the client knows if they're an org-admin);
+    // only existing org-admins can add/remove.
+    match /orgAdmins/{adminEmail} {
+      allow read: if signedIn();
+      allow write: if isOrgAdmin();
     }
 
     // Global logo library (name + small data-URL), reusable across events.
