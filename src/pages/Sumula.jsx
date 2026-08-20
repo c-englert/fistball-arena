@@ -20,7 +20,7 @@ const SECTIONS = [
 export default function Sumula({ me }) {
   const { id } = useParams();
   const nav = useNavigate();
-  const { eventId, canScore, branding } = useEvent();
+  const { eventId, canScore, branding, archived } = useEvent();
   const [draft, setDraft] = useState(null);
   const [lockedBy, setLockedBy] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -153,10 +153,17 @@ export default function Sumula({ me }) {
           <span>
             {submitted
               ? "✓ This report was submitted — read only."
-              : `🔒 Being scored by ${lockedBy?.name || "another official"} — read only.`}
+              : archived
+                ? "📦 This event is archived — read only. Re-activate it in Settings → Event status to score."
+                : lockedBy && lockedBy.uid !== me.uid
+                  ? `🔒 Being scored by ${lockedBy?.name || "another official"} — read only.`
+                  : "👁 Read only — you don’t have scoring access for this event."}
           </span>
-          {me.admin && !submitted && lockedBy && lockedBy.uid !== me.uid && (
+          {me.admin && !submitted && !archived && lockedBy && lockedBy.uid !== me.uid && (
             <button className="btn danger sm" onClick={() => adminUnlock(id)}>Admin unlock</button>
+          )}
+          {archived && me.admin && (
+            <button className="btn sm" onClick={() => nav(`/e/${eventId}/settings`)}>Open Settings</button>
           )}
         </div>
       )}

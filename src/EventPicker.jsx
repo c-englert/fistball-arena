@@ -58,7 +58,7 @@ export default function EventPicker({ me, onSignOut }) {
     if (!impPreview?.gameCount || !imp.name.trim()) return;
     setImpBusy(true); setImpStatus("Creating event & importing…");
     try {
-      const id = await createEvent({ name: imp.name, place: imp.place, startDate: imp.startDate, endDate: imp.endDate, dates: formatRange(imp.startDate, imp.endDate), status: "archived" }, me);
+      const id = await createEvent({ name: imp.name, place: imp.place, startDate: imp.startDate, endDate: imp.endDate, dates: formatRange(imp.startDate, imp.endDate), status: imp.active ? "active" : "archived" }, me);
       setEvent(id);
       await publishEventImport(impPreview, { replaceAll: true });
       nav(`/e/${id}`);
@@ -152,7 +152,7 @@ export default function EventPicker({ me, onSignOut }) {
           <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <button className="modal-x" onClick={() => setImp(null)} aria-label="Close">✕</button>
             <h3 className="modal-title" style={{ marginBottom: 2 }}>Import a past event (Google Sheet)</h3>
-            <p className="muted-sm" style={{ marginTop: 0 }}>Creates a new <b>archived</b> event from a results sheet — schedule + final scores (Results tab) and rosters (DB tab), so Fistball Live shows the full standings. You can re-activate it later from its settings.</p>
+            <p className="muted-sm" style={{ marginTop: 0 }}>Creates a new event from a results sheet — schedule + final scores (Results tab) and rosters (DB tab), so Fistball Live shows the full standings.</p>
 
             <div className="field"><span>Name</span>
               <input value={imp.name} onChange={(e) => setImp({ ...imp, name: e.target.value })} placeholder="e.g. 2025 South American Championship" autoFocus /></div>
@@ -176,6 +176,11 @@ export default function EventPicker({ me, onSignOut }) {
               <p className="muted-sm">Ready: <b>{impPreview.gameCount}</b> games ({impPreview.finished} finished) · <b>{impPreview.teamCount}</b> rosters · <b>{impPreview.cautionCount}</b> carded.</p>
             )}
             {impStatus && <p className="muted-sm">{impStatus}</p>}
+
+            <label className="imp-active">
+              <input type="checkbox" checked={!!imp.active} onChange={(e) => setImp({ ...imp, active: e.target.checked })} />
+              <span>Create as an <b>active</b> event (editable &amp; scorable). Leave off to archive it as past history.</span>
+            </label>
 
             <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
               <button className="btn" onClick={() => setImp(null)} disabled={impBusy}>Cancel</button>
