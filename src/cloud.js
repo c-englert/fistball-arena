@@ -465,6 +465,7 @@ function blankReport(game) {
     teamA: cloneTeam(game.teamA),
     teamB: cloneTeam(game.teamB),
     sets: Array.from({ length: game.bestOf }, () => ({ rallies: [] })),
+    timeouts: { teamA: [], teamB: [] },
     ballChoice: { set1: "", set5: "" },
     referees: { r1: "", r2: "", clerk: "", a1: "", a2: "" },
     remarks: "", responsible: "",

@@ -206,6 +206,22 @@ export default function SumulaPDF({ draft, branding }) {
           })}
         </View>
 
+        {/* time-outs */}
+        <View style={s.section}>
+          <Text style={s.secTitle}>Time-outs  (set · score at the moment)</Text>
+          <View style={s.twoCol}>
+            {["teamA", "teamB"].map((side) => (
+              <View key={side} style={{ flex: 1 }}>
+                <Text style={s.small}>
+                  {short(d[side].name)}: {(d.timeouts?.[side] || []).length
+                    ? d.timeouts[side].map((t) => `S${(t.set ?? 0) + 1} ${t.a}:${t.b}`).join("    ")
+                    : "—"}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
         {/* team registration */}
         <View style={s.section}>
           <Text style={s.secTitle}>Team registration  (C = captain · blue dot = on court · Y / YR / R = cautions)</Text>

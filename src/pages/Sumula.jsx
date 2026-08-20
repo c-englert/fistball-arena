@@ -185,7 +185,7 @@ export default function Sumula({ me }) {
         {section === "lineup" && (
           <LineupSection d={draft} team={team} setTeam={setTeam} update={update} loadRoster={loadRoster} readOnly={readOnly} />
         )}
-        {section === "score" && <ScoreSection d={draft} scoring={scoring} update={update} />}
+        {section === "score" && <ScoreSection d={draft} scoring={scoring} update={update} readOnly={readOnly} />}
         {section === "refs" && <RefsSection d={draft} update={update} />}
         {section === "finish" && <FinishSection d={draft} scoring={scoring} update={update} onPdf={downloadPDF} />}
       </div>
@@ -328,7 +328,7 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly }) {
   );
 }
 
-function ScoreSection({ d, scoring, update }) {
+function ScoreSection({ d, scoring, update, readOnly }) {
   const [cur, setCur] = useState(() => {
     const i = d.sets.findIndex((s) => !(s.rallies && s.rallies.length));
     return i === -1 ? d.sets.length - 1 : i;
@@ -353,6 +353,11 @@ function ScoreSection({ d, scoring, update }) {
   const setRally = (i, w) => { update((n) => { n.sets[cur].rallies[i] = w; }); setSelCol(null); };
   const removeRally = (i) => { update((n) => { n.sets[cur].rallies.splice(i, 1); }); setSelCol(null); };
   const setBall = (which, val) => update((n) => (n.ballChoice[which] = val));
+  const addTimeout = (side) => update((n) => {
+    if (!n.timeouts) n.timeouts = { teamA: [], teamB: [] };
+    (n.timeouts[side] = n.timeouts[side] || []).push({ set: cur, a, b });
+  });
+  const removeTimeout = (side, i) => update((n) => n.timeouts[side].splice(i, 1));
 
   // Build the two paper rows: the scorer's running number, "/" on the other side.
   const rowA = [], rowB = [];
@@ -440,6 +445,24 @@ function ScoreSection({ d, scoring, update }) {
           Winner: {short(scoring.winner === "A" ? d.teamA.name : d.teamB.name)}
         </p>
       )}
+
+      <div className="subhead">Time-outs <span className="muted-sm" style={{ fontWeight: 400 }}>(records the set &amp; score at the moment)</span></div>
+      <div className="to-panel">
+        {["teamA", "teamB"].map((side) => (
+          <div className="to-team" key={side}>
+            <div className="to-head">
+              <span className="to-name">{short(d[side].name)}</span>
+              {!readOnly && <button className="btn sm" onClick={() => addTimeout(side)}>+ Time-out</button>}
+            </div>
+            <div className="to-chips">
+              {(d.timeouts?.[side] || []).map((t, i) => (
+                <span className="to-chip" key={i}>S{(t.set ?? 0) + 1} · {t.a}:{t.b}{!readOnly && <button className="to-x" onClick={() => removeTimeout(side, i)}>✕</button>}</span>
+              ))}
+              {!(d.timeouts?.[side] || []).length && <span className="muted-sm">none</span>}
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div className="subhead">Choice of ball / serve</div>
       {["set1", "set5"].map((w) => (
@@ -542,6 +565,7 @@ function extractDraft(data) {
     teamA: data.teamA,
     teamB: data.teamB,
     sets: data.sets,
+    timeouts: data.timeouts || { teamA: [], teamB: [] },
     ballChoice: data.ballChoice || { set1: "", set5: "" },
     referees: data.referees || { r1: "", r2: "", clerk: "", a1: "", a2: "" },
     remarks: data.remarks || "",
@@ -553,6 +577,7 @@ function extractDraft(data) {
 function pickSumula(d) {
   return {
     info: d.info, teamA: d.teamA, teamB: d.teamB, sets: d.sets,
+    timeouts: d.timeouts || { teamA: [], teamB: [] },
     ballChoice: d.ballChoice, referees: d.referees,
     remarks: d.remarks, responsible: d.responsible, signatures: d.signatures,
   };
