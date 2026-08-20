@@ -80,7 +80,9 @@ export default function Sumula({ me }) {
       if (unsub) unsub();
       if (holdRef.current) releaseLock(id, me);
     };
-  }, [id]);
+    // Re-run when canScore flips (e.g. the event was just re-activated) so the
+    // scoring lock is acquired without needing a manual page reload.
+  }, [id, canScore]);
 
   function update(mutator) {
     if (readOnly) return;
@@ -155,9 +157,11 @@ export default function Sumula({ me }) {
               ? "✓ This report was submitted — read only."
               : archived
                 ? "📦 This event is archived — read only. Re-activate it in Settings → Event status to score."
-                : lockedBy && lockedBy.uid !== me.uid
-                  ? `🔒 Being scored by ${lockedBy?.name || "another official"} — read only.`
-                  : "👁 Read only — you don’t have scoring access for this event."}
+                : !canScore
+                  ? "👁 Read only — you don’t have scoring access for this event."
+                  : lockedBy && lockedBy.uid !== me.uid
+                    ? `🔒 Being scored by ${lockedBy?.name || "another official"} — read only.`
+                    : "🔓 Read only — reload the page to start scoring (the lock wasn’t acquired)."}
           </span>
           {me.admin && !submitted && !archived && lockedBy && lockedBy.uid !== me.uid && (
             <button className="btn danger sm" onClick={() => adminUnlock(id)}>Admin unlock</button>
