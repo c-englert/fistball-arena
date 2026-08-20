@@ -127,7 +127,7 @@ export default function Sumula({ me }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `sumula-${draft.info.nr}-${short(draft.teamA.name)}-vs-${short(draft.teamB.name)}.pdf`;
+    a.download = `Game-Report-${draft.info.nr}-${short(draft.teamA.name)}-vs-${short(draft.teamB.name)}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
