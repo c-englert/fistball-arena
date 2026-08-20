@@ -470,16 +470,40 @@ function blankReport(game) {
   };
 }
 
-// Build a report-shaped object from the game (+ rosters) WITHOUT writing it —
-// used to render a read-only súmula when no report doc exists yet (e.g. an
-// archived / imported past event where report writes are blocked).
+// Build a report-shaped object WITHOUT writing it — used to render a read-only
+// súmula when no report doc exists (archived/imported events) OR when the viewer
+// lacks member read access. Prefers the members-only game doc, but falls back to
+// the PUBLIC results doc so any signed-in user can at least open the game.
 export async function buildReportSeed(gameId) {
-  const gsnap = await getDoc(edoc("games", gameId));
-  if (!gsnap.exists()) return null;
-  const game = { id: gameId, ...gsnap.data() };
+  let game = null;
+  try {
+    const gsnap = await getDoc(edoc("games", gameId));
+    if (gsnap.exists()) game = { id: gameId, ...gsnap.data() };
+  } catch (_) { /* members-only read denied — fall back to public results */ }
+  if (!game) {
+    try {
+      const rsnap = await getDoc(edoc("results", gameId)); // public read
+      if (rsnap.exists()) {
+        const r = rsnap.data();
+        game = {
+          id: gameId, nr: r.nr, date: r.date, time: r.time, court: r.court,
+          bestOf: r.bestOf || 3, round: r.round, category: r.category, group: r.group || "",
+          teamA: r.teamA, teamB: r.teamB,
+        };
+      }
+    } catch (_) { /* even the public read failed */ }
+  }
+  if (!game) return null;
+  // results stores team names as strings; normalise to the {name,players,staff} shape.
   for (const side of ["teamA", "teamB"]) {
-    const r = await getRoster(game[side]?.name, game.category);
-    if (r) game[side] = { ...game[side], players: r.players, staff: r.staff };
+    if (typeof game[side] === "string") game[side] = { name: game[side], players: [], staff: [] };
+  }
+  // Enrich with rosters when the viewer can read them (members only) — best effort.
+  for (const side of ["teamA", "teamB"]) {
+    try {
+      const r = await getRoster(game[side]?.name, game.category);
+      if (r) game[side] = { ...game[side], players: r.players, staff: r.staff };
+    } catch (_) { /* rosters are members-only */ }
   }
   return blankReport(game);
 }
