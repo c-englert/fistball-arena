@@ -67,6 +67,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .filter-bar + .filter-bar { padding-top: 0; }
 .filter-bar:last-of-type { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
 .filter-bar::-webkit-scrollbar { display: none; }
+.game-search { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: #fff; }
 .filter-label { width: 48px; flex: none; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
 .filter-pill {
   flex: none; min-height: 46px; padding: 0 16px; border-radius: 999px;

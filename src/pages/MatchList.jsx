@@ -50,6 +50,7 @@ export default function MatchList({ me, onSignOut }) {
   const [reports, setReports] = useState({});
   const [court, setCourt] = useState(() => localStorage.getItem("fb_court") || "all");
   const [day, setDay] = useState(() => localStorage.getItem("fb_day") || "all");
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     const u1 = subscribeGames(setGames);
@@ -66,8 +67,16 @@ export default function MatchList({ me, onSignOut }) {
     [games]
   );
 
+  const nq = q.trim().toLowerCase();
+  const matchesQuery = (m) => {
+    if (!nq) return true;
+    return String(m.nr).includes(nq)
+      || (m.teamA?.name || "").toLowerCase().includes(nq)
+      || (m.teamB?.name || "").toLowerCase().includes(nq)
+      || (m.category || "").toLowerCase().includes(nq);
+  };
   const shown = games
-    .filter((m) => (court === "all" || String(m.court) === String(court)) && (day === "all" || m.date === day))
+    .filter((m) => (court === "all" || String(m.court) === String(court)) && (day === "all" || m.date === day) && matchesQuery(m))
     .sort((a, b) => parseDate(a.date) - parseDate(b.date) || String(a.time).localeCompare(b.time) || a.nr - b.nr);
 
   const pickCourt = (c) => { setCourt(c); localStorage.setItem("fb_court", c); };
@@ -89,6 +98,12 @@ export default function MatchList({ me, onSignOut }) {
         {isAdmin && <ManageMenu base={base} />}
         <AccountMenu me={me} onSignOut={onSignOut} />
       </header>
+
+      <div className="filter-bar">
+        <input className="game-search" value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by game # or team…" aria-label="Search games" />
+        {q && <button className="filter-pill" onClick={() => setQ("")}>Clear</button>}
+      </div>
 
       <div className="filter-bar">
         <span className="filter-label">Day</span>
