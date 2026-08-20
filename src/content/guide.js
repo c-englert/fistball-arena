@@ -84,6 +84,15 @@ export const GUIDE = {
           'Ao fim, em <b>Settings</b> você pode <b>arquivar</b> o evento (vira somente-leitura).',
         ] },
       ] },
+      { h: "Acesso — cadastrar usuários (quem pontua)", blocks: [
+        { t: "p", text: 'O app <b>não cria contas com senha</b>: cada pessoa entra com a <b>própria conta Google</b> (“Sign in with Google”). Você apenas <b>autoriza o e-mail</b> dela num evento.' },
+        { t: "ol", start: 1, items: [
+          'Abra o evento → <b>Manage ▾ → Access</b>.',
+          'Digite o <b>e-mail exato da conta Google</b> da pessoa, o <b>nome</b> (opcional) e escolha o <b>papel</b>: <b>admin</b> (gerencia o evento) · <b>official</b> (preenche as súmulas) · <b>viewer</b> (só leitura). Clique em <b>Add</b>.',
+          'Quando a pessoa fizer <b>Sign in with Google</b> com aquele e-mail, ela já entra no evento com esse papel.',
+        ] },
+        { t: "note", text: 'É <b>por evento</b> — repita em cada evento, ou use <b>“From the directory”</b> para reautorizar quem já foi adicionado antes. O <b>e-mail tem que ser exatamente</b> o da conta Google usada. <b>Org-admins</b> têm acesso a tudo sem serem adicionados. O evento precisa estar <b>ativo</b> para adicionar/remover membros.' },
+      ] },
     ],
     summary: "<b>Resumo do fluxo:</b> New event → Players &amp; staff (importar) → Access → Schedule (Groups → Format → Slots → Generate → Publish) → Settings (publicar no Live) → pontuar as súmulas.",
   },
@@ -148,6 +157,15 @@ export const GUIDE = {
           'On every save/submit the score and cards go to the Live automatically (standings, bracket and the <b>Cards</b> tab).',
           'At the end, in <b>Settings</b> you can <b>archive</b> the event (it becomes read-only).',
         ] },
+      ] },
+      { h: "Access — add users (who scores)", blocks: [
+        { t: "p", text: 'The app <b>does not create password accounts</b>: each person signs in with their <b>own Google account</b> (“Sign in with Google”). You only <b>authorize their email</b> in an event.' },
+        { t: "ol", start: 1, items: [
+          'Open the event → <b>Manage ▾ → Access</b>.',
+          'Type the person’s <b>exact Google-account email</b>, a <b>name</b> (optional), and pick a <b>role</b>: <b>admin</b> (manage the event) · <b>official</b> (fill the match reports) · <b>viewer</b> (read only). Click <b>Add</b>.',
+          'When they <b>Sign in with Google</b> using that email, they’re in the event with that role.',
+        ] },
+        { t: "note", text: 'It’s <b>per event</b> — repeat in each event, or use <b>“From the directory”</b> to re-authorize people you added before. The <b>email must exactly match</b> the Google account used. <b>Org-admins</b> have access to everything without being added. The event must be <b>active</b> to add/remove members.' },
       ] },
     ],
     summary: "<b>Flow summary:</b> New event → Players &amp; staff (import) → Access → Schedule (Groups → Format → Slots → Generate → Publish) → Settings (publish to Live) → score the reports.",
@@ -214,6 +232,15 @@ export const GUIDE = {
           'Al final, en <b>Settings</b> puedes <b>archivar</b> el evento (queda de solo lectura).',
         ] },
       ] },
+      { h: "Acceso — dar de alta usuarios (quién carga)", blocks: [
+        { t: "p", text: 'El app <b>no crea cuentas con contraseña</b>: cada persona entra con su <b>propia cuenta de Google</b> (“Sign in with Google”). Vos solo <b>autorizás su correo</b> en un evento.' },
+        { t: "ol", start: 1, items: [
+          'Abrí el evento → <b>Manage ▾ → Access</b>.',
+          'Escribí el <b>correo exacto de la cuenta de Google</b> de la persona, un <b>nombre</b> (opcional) y elegí el <b>rol</b>: <b>admin</b> (gestiona el evento) · <b>official</b> (carga las planillas) · <b>viewer</b> (solo lectura). Hacé clic en <b>Add</b>.',
+          'Cuando entre con <b>Sign in with Google</b> usando ese correo, ya queda en el evento con ese rol.',
+        ] },
+        { t: "note", text: 'Es <b>por evento</b> — repetí en cada evento, o usá <b>“From the directory”</b> para reautorizar a conocidos. El <b>correo debe ser exactamente</b> el de la cuenta de Google usada. Los <b>org-admins</b> acceden a todo sin ser agregados. El evento debe estar <b>activo</b> para agregar/quitar miembros.' },
+      ] },
     ],
     summary: "<b>Resumen del flujo:</b> New event → Players &amp; staff (importar) → Access → Schedule (Groups → Format → Slots → Generate → Publish) → Settings (publicar en el Live) → puntuar las planillas.",
   },
@@ -278,6 +305,15 @@ export const GUIDE = {
           'Bei jedem Speichern/Einreichen gehen Ergebnis und Karten automatisch ins Live (Tabelle, Baum und der <b>Cards</b>-Reiter).',
           'Am Ende kann man das Event unter <b>Settings</b> <b>archivieren</b> (es wird schreibgeschützt).',
         ] },
+      ] },
+      { h: "Zugang — Benutzer hinzufügen (wer erfasst)", blocks: [
+        { t: "p", text: 'Die App <b>erstellt keine Passwort-Konten</b>: jede Person meldet sich mit ihrem <b>eigenen Google-Konto</b> an („Sign in with Google“). Du <b>autorisierst nur ihre E-Mail</b> in einem Event.' },
+        { t: "ol", start: 1, items: [
+          'Event öffnen → <b>Manage ▾ → Access</b>.',
+          'Die <b>genaue Google-Konto-E-Mail</b> der Person eingeben, einen <b>Namen</b> (optional), und die <b>Rolle</b> wählen: <b>admin</b> (Event verwalten) · <b>official</b> (Spielberichte erfassen) · <b>viewer</b> (nur lesen). Auf <b>Add</b> klicken.',
+          'Sobald sie sich mit diesem Google-Konto anmeldet, ist sie mit dieser Rolle im Event.',
+        ] },
+        { t: "note", text: 'Das gilt <b>pro Event</b> — in jedem Event wiederholen, oder <b>„From the directory“</b> nutzen, um bekannte Personen erneut zu autorisieren. Die <b>E-Mail muss exakt</b> dem verwendeten Google-Konto entsprechen. <b>Org-Admins</b> haben ohne Hinzufügen Zugriff auf alles. Das Event muss <b>aktiv</b> sein, um Mitglieder hinzuzufügen/zu entfernen.' },
       ] },
     ],
     summary: "<b>Ablauf in Kürze:</b> New event → Players &amp; staff (Import) → Access → Schedule (Groups → Format → Slots → Generate → Publish) → Settings (im Live veröffentlichen) → Berichte werten.",
