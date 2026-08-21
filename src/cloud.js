@@ -272,6 +272,23 @@ export async function clearLiveEvent() {
   await deleteDoc(doc(db, "public", "live"));
 }
 
+// Reset all match reports (súmulas) — deletes every report and sets each public
+// results row back to "Not Started" (keeps games, schedule, teams and rosters).
+// Use after a scoring rehearsal to start the tournament clean.
+export async function resetScores() {
+  await clearCollection("reports");
+  const snap = await getDocs(ecol("results"));
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += 300) {
+    const batch = writeBatch(db);
+    docs.slice(i, i + 300).forEach((d) => {
+      batch.set(d.ref, { setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], cards: [], status: "Not Started", updatedAt: serverTimestamp() }, { merge: true });
+    });
+    await batch.commit();
+  }
+  return docs.length;
+}
+
 /* ----------------- schedule generator config ----------------- */
 export function subscribeScheduleConfig(cb) {
   return onSnapshot(edoc("meta", "schedule"),

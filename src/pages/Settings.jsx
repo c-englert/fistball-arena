@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishGames,
+  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishGames, resetScores,
 } from "../cloud.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
 import { describeFormat, formatMatches, formatWarnings, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
@@ -181,6 +181,12 @@ export default function Settings({ me }) {
     const next = archived ? "active" : "archived";
     if (!window.confirm(archived ? "Re-activate this event?" : "Archive this event? It becomes read-only for everyone.")) return;
     try { await setEventStatus(next, me); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+  };
+  const resetAllScores = async () => {
+    if (!window.confirm("Reset ALL súmulas? This deletes every game report and sets all scores back to “Not Started”. Games, schedule, teams and rosters are kept. This cannot be undone.")) return;
+    setStatus("Resetting súmulas…");
+    try { const n = await resetScores(); setStatus(`Reset done — ${n} games back to Not Started.`); }
+    catch (e) { setStatus("Reset failed: " + (e?.message || e)); }
   };
 
   const onUpload = async (e) => {
@@ -520,6 +526,12 @@ export default function Settings({ me }) {
               <p className="muted-sm">{archived ? "Archived — read-only for everyone." : "Active — members can score."}</p></div>
             <button className={`btn ${archived ? "primary" : "danger"}`} onClick={toggleArchive}>{archived ? "Re-activate" : "Archive"}</button>
           </div>
+          {!archived && (
+            <div className="row-between" style={{ marginTop: 12, alignItems: "center" }}>
+              <span className="muted-sm">Rehearsed scoring? Clear all súmulas to start the tournament clean (keeps games &amp; rosters).</span>
+              <button className="btn danger sm" onClick={resetAllScores}>Reset all súmulas</button>
+            </div>
+          )}
           {(event?.statusLog || []).length > 0 && (
             <details className="import-history" style={{ marginTop: 10 }}>
               <summary>Status history ({event.statusLog.length})</summary>
