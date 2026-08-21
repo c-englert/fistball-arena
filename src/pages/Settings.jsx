@@ -50,6 +50,14 @@ const IFA_TABLE = [
   { bestOf: 5, winSets: 3, loseSets: 1, winPts: 2, losePts: 0 },
   { bestOf: 5, winSets: 3, loseSets: 0, winPts: 2, losePts: 0 },
 ];
+// PAFA: clean wins worth more, and the loser earns points for sets taken.
+const PAFA_TABLE = [
+  { bestOf: 3, winSets: 2, loseSets: 1, winPts: 2, losePts: 1 },
+  { bestOf: 3, winSets: 2, loseSets: 0, winPts: 3, losePts: 0 },
+  { bestOf: 5, winSets: 3, loseSets: 2, winPts: 3, losePts: 2 },
+  { bestOf: 5, winSets: 3, loseSets: 1, winPts: 3, losePts: 1 },
+  { bestOf: 5, winSets: 3, loseSets: 0, winPts: 3, losePts: 0 },
+];
 
 export default function Settings({ me }) {
   const nav = useNavigate();
@@ -572,6 +580,7 @@ export default function Settings({ me }) {
           {!archived && (
             <div style={{ display: "flex", gap: 8, margin: "6px 0" }}>
               <button className="btn sm" onClick={() => usePreset(IFA_TABLE)}>Use IFA (2 / 0)</button>
+              <button className="btn sm" onClick={() => usePreset(PAFA_TABLE)}>Use PAFA</button>
               <button className="btn sm" onClick={() => usePreset([])}>Clear</button>
               <span style={{ flex: 1 }} />
               <label className="muted-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>Draw pts
