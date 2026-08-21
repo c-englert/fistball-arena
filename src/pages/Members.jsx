@@ -87,7 +87,7 @@ export default function Members({ me }) {
               <button className="btn primary" onClick={() => add(null)}>Add</button>
             </div>
             <datalist id="people-dl">{people.map((p) => <option key={p.email} value={p.email}>{p.name}</option>)}</datalist>
-            <p className="muted-sm">admin = manage event · official = fill súmulas · viewer = read only. {status}</p>
+            <p className="muted-sm">admin = manage event · official = fill game reports · viewer = read only. {status}</p>
           </div>
         )}
 

@@ -183,8 +183,8 @@ export default function Settings({ me }) {
     try { await setEventStatus(next, me); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
   };
   const resetAllScores = async () => {
-    if (!window.confirm("Reset ALL súmulas? This deletes every game report and sets all scores back to “Not Started”. Games, schedule, teams and rosters are kept. This cannot be undone.")) return;
-    setStatus("Resetting súmulas…");
+    if (!window.confirm("Reset ALL game reports? This deletes every game report and sets all scores back to “Not Started”. Games, schedule, teams and rosters are kept. This cannot be undone.")) return;
+    setStatus("Resetting game reports…");
     try { const n = await resetScores(); setStatus(`Reset done — ${n} games back to Not Started.`); }
     catch (e) { setStatus("Reset failed: " + (e?.message || e)); }
   };
@@ -528,8 +528,8 @@ export default function Settings({ me }) {
           </div>
           {!archived && (
             <div className="row-between" style={{ marginTop: 12, alignItems: "center" }}>
-              <span className="muted-sm">Rehearsed scoring? Clear all súmulas to start the tournament clean (keeps games &amp; rosters).</span>
-              <button className="btn danger sm" onClick={resetAllScores}>Reset all súmulas</button>
+              <span className="muted-sm">Rehearsed scoring? Clear all game reports to start the tournament clean (keeps games &amp; rosters).</span>
+              <button className="btn danger sm" onClick={resetAllScores}>Reset all game reports</button>
             </div>
           )}
           {(event?.statusLog || []).length > 0 && (

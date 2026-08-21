@@ -138,7 +138,7 @@ export default function Schedule({ me }) {
     setConfirm({
       title: replaceAll ? "Replace the whole schedule?" : "Publish games?",
       message: replaceAll
-        ? `This replaces ALL current games, reports and results with the ${result.games.length} matches below. Existing súmulas and scores will be deleted. This cannot be undone.`
+        ? `This replaces ALL current games, reports and results with the ${result.games.length} matches below. Existing game reports and scores will be deleted. This cannot be undone.`
         : `Add ${result.games.length} games to the database.`,
       danger: replaceAll,
       okLabel: replaceAll ? "Replace all" : "Publish",

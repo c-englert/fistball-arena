@@ -86,7 +86,7 @@ export default function Roster({ me }) {
         {/* ---- Google Sheet import (alternative) ---- */}
         <div className="card">
           <h2>Import players &amp; staff from the DB sheet</h2>
-          <p className="muted-sm">Reads the “DB” tab and stores one roster per team. Súmula line-ups then pre-fill automatically.</p>
+          <p className="muted-sm">Reads the “DB” tab and stores one roster per team. Game-report line-ups then pre-fill automatically.</p>
           <div className="add-row" style={{ marginTop: 8 }}>
             <input value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder="Sheet URL or ID" />
             <input value={tab} onChange={(e) => setTab(e.target.value)} placeholder="Tab" style={{ maxWidth: 90, flex: "none" }} />
