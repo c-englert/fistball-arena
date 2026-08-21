@@ -131,6 +131,7 @@ export default function Settings({ me }) {
   };
   const removeTeam = (i) => edit((d) => ({ ...d, entries: (d.entries || []).filter((_, j) => j !== i) }));
   const renameTeam = (i, name) => edit((d) => { const e = [...(d.entries || [])]; e[i] = { ...e[i], name }; return { ...d, entries: e }; });
+  const setShort = (i, short) => edit((d) => { const e = [...(d.entries || [])]; e[i] = { ...e[i], short }; return { ...d, entries: e }; });
   const toggleEntry = (i, cat) => edit((d) => {
     const e = [...(d.entries || [])]; const cur = e[i].cats || [];
     e[i] = { ...e[i], cats: cur.includes(cat) ? cur.filter((c) => c !== cat) : [...cur, cat] };
@@ -213,6 +214,14 @@ export default function Settings({ me }) {
     const r = generateSchedule(eventToConfig({
       categoryBuilder: details.categoryBuilder, entries: details.entries,
       formatOverrides: details.formatOverrides, formatVariants: details.formatVariants, slots: details.slots,
+    }));
+    // Attach each team's optional short/display name (used on the schedule & Live).
+    const shortOf = {};
+    (details.entries || []).forEach((e) => { if (e.short && e.short.trim()) shortOf[e.name] = e.short.trim(); });
+    r.games = r.games.map((g) => ({
+      ...g,
+      teamA: { ...g.teamA, short: shortOf[g.teamA?.name] || "" },
+      teamB: { ...g.teamB, short: shortOf[g.teamB?.name] || "" },
     }));
     setGenResult(r);
     setStatus(`${r.games.length} games generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
@@ -360,7 +369,7 @@ export default function Settings({ me }) {
                       <tbody>
                         {(details.entries || []).map((t, i) => (
                           <tr key={i}>
-                            <td className="mx-team"><span className="mx-team-cell"><span className="flag">{flagFor(t.name)}</span><input className="mx-team-input" value={t.name} disabled={archived} onChange={(e) => renameTeam(i, e.target.value)} aria-label="Team name" /></span></td>
+                            <td className="mx-team"><span className="mx-team-cell"><span className="flag">{flagFor(t.name)}</span><span className="mx-team-inputs"><input className="mx-team-input" value={t.name} disabled={archived} onChange={(e) => renameTeam(i, e.target.value)} aria-label="Team name" /><input className="mx-team-short" value={t.short || ""} disabled={archived} onChange={(e) => setShort(i, e.target.value)} placeholder="short name for schedule (optional)" aria-label="Short name" /></span></span></td>
                             {cols.leaves.map((lf) => (
                               <td key={lf.name} className="mx-cell">
                                 <input type="checkbox" checked={(t.cats || []).includes(lf.name)} disabled={archived} onChange={() => toggleEntry(i, lf.name)} title={lf.name} />

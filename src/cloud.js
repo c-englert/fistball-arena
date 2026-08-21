@@ -331,6 +331,7 @@ export async function publishGames(games, { replaceAll } = {}) {
         nr: g.nr, date: g.date, time: g.time, court: g.court,
         round: g.round, category: g.category, group: g.group || "", bestOf: g.bestOf,
         teamA: g.teamA.name, teamB: g.teamB.name,
+        teamAShort: g.teamA.short || "", teamBShort: g.teamB.short || "",
         setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], status: "Not Started",
         updatedAt: serverTimestamp(),
       });

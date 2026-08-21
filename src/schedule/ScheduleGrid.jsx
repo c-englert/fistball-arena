@@ -90,7 +90,7 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
       onDragStart={() => setDrag(g.nr)} onDragEnd={() => { setDrag(null); setOver(""); }}
       title={`#${g.nr} · ${g.category} · ${g.round}`}>
       <div className="ag-card-cat" style={{ color: catColor(g.category) }}>#{g.nr} · {g.category}</div>
-      <div className="ag-card-teams">{short(g.teamA?.name || g.teamA)} <span className="muted-sm">v</span> {short(g.teamB?.name || g.teamB)}</div>
+      <div className="ag-card-teams">{short(g.teamA?.short || g.teamA?.name || g.teamA)} <span className="muted-sm">v</span> {short(g.teamB?.short || g.teamB?.name || g.teamB)}</div>
       <div className="ag-card-round muted-sm">{g.round}</div>
     </div>
   );
@@ -133,7 +133,7 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
     <div className="ag-lrow" key={g.nr} style={{ borderLeftColor: catColor(g.category) }}>
       <span className="ag-lcat" style={{ color: catColor(g.category) }}>#{g.nr}</span>
       <div className="ag-lmid">
-        <div className="ag-lteams">{short(g.teamA?.name || g.teamA)} <span className="muted-sm">v</span> {short(g.teamB?.name || g.teamB)}</div>
+        <div className="ag-lteams">{short(g.teamA?.short || g.teamA?.name || g.teamA)} <span className="muted-sm">v</span> {short(g.teamB?.short || g.teamB?.name || g.teamB)}</div>
         <div className="ag-lsub muted-sm">{g.category} · {g.round}</div>
       </div>
       <select className="ag-lday" value={g.date || ""} disabled={archived} onChange={(e) => applyMove(g.nr, { date: e.target.value })}>
