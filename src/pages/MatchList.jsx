@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { pdf } from "@react-pdf/renderer";
 import { subscribeGames, subscribeReports, adminUnlock } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 import AccountMenu from "../AccountMenu.jsx";
+import SchedulePDF from "../pdf/SchedulePDF.jsx";
 
 function ManageMenu({ base }) {
   const [open, setOpen] = useState(false);
@@ -83,6 +85,17 @@ export default function MatchList({ me, onSignOut }) {
   const pickCourt = (c) => { setCourt(c); localStorage.setItem("fb_court", c); };
   const pickDay = (d) => { setDay(d); localStorage.setItem("fb_day", d); };
 
+  // Print / save the schedule (respects the current day/court/search filters).
+  const downloadSchedule = async () => {
+    const blob = await pdf(<SchedulePDF games={shown} event={event} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Schedule-${(event?.name || "event").replace(/[^\w]+/g, "-")}.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
   return (
     <div className="app">
       <header className="topbar">
@@ -104,6 +117,7 @@ export default function MatchList({ me, onSignOut }) {
         <input className="game-search" value={q} onChange={(e) => setQ(e.target.value)}
           placeholder="Search by game # or team…" aria-label="Search games" />
         {q && <button className="filter-pill" onClick={() => setQ("")}>Clear</button>}
+        <button className="filter-pill" onClick={downloadSchedule} title="Print / save the schedule as PDF">🖨 PDF</button>
       </div>
 
       <div className="filter-bar">
