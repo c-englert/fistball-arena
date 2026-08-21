@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishGames, resetScores,
+  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishGames, resetScores, saveScoringRules,
 } from "../cloud.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
 import { describeFormat, formatMatches, formatWarnings, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
@@ -37,8 +37,19 @@ const fromEvent = (ev) => ({
   entries: ev?.entries || [], // [{ name, cats: [categoryName…] }]
   formatOverrides: ev?.formatOverrides || {}, // { [category]: { [matchId]: { a?, b? } } }
   formatVariants: ev?.formatVariants || {}, // { [category]: { double?, knockout? } }
+  pointTable: ev?.pointTable || [], // [{ bestOf, winSets, loseSets, winPts, losePts }]
+  drawPoints: ev?.drawPoints ?? 1,
   slots: ev?.slots || { courts: [], days: [], gameMinutes: 45, breakMinutes: 0 },
 });
+
+// Classification presets. IFA = win 2 / loss 0 (an empty table also means this).
+const IFA_TABLE = [
+  { bestOf: 3, winSets: 2, loseSets: 1, winPts: 2, losePts: 0 },
+  { bestOf: 3, winSets: 2, loseSets: 0, winPts: 2, losePts: 0 },
+  { bestOf: 5, winSets: 3, loseSets: 2, winPts: 2, losePts: 0 },
+  { bestOf: 5, winSets: 3, loseSets: 1, winPts: 2, losePts: 0 },
+  { bestOf: 5, winSets: 3, loseSets: 0, winPts: 2, losePts: 0 },
+];
 
 export default function Settings({ me }) {
   const nav = useNavigate();
@@ -182,6 +193,17 @@ export default function Settings({ me }) {
     if (!window.confirm(archived ? "Re-activate this event?" : "Archive this event? It becomes read-only for everyone.")) return;
     try { await setEventStatus(next, me); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
   };
+  const pt = details.pointTable || [];
+  const addPtRow = () => edit((d) => ({ ...d, pointTable: [...(d.pointTable || []), { bestOf: 3, winSets: 2, loseSets: 1, winPts: 2, losePts: 0 }] }));
+  const editPtRow = (i, k, v) => edit((d) => { const rows = [...(d.pointTable || [])]; rows[i] = { ...rows[i], [k]: v === "" ? "" : Number(v) }; return { ...d, pointTable: rows }; });
+  const delPtRow = (i) => edit((d) => ({ ...d, pointTable: (d.pointTable || []).filter((_, j) => j !== i) }));
+  const usePreset = (rows) => edit((d) => ({ ...d, pointTable: rows.map((r) => ({ ...r })) }));
+  const savePoints = async () => {
+    setStatus("Saving points…");
+    try { await saveScoringRules({ pointTable: details.pointTable || [], drawPoints: details.drawPoints ?? 1 }); afterSave("Classification points saved."); }
+    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+  };
+
   const resetAllScores = async () => {
     if (!window.confirm("Reset ALL game reports? This deletes every game report and sets all scores back to “Not Started”. Games, schedule, teams and rosters are kept. This cannot be undone.")) return;
     setStatus("Resetting game reports…");
@@ -518,6 +540,38 @@ export default function Settings({ me }) {
 
         {/* ---- Import players & staff from Excel ---- */}
         {!archived && <ExcelImport me={me} teamNames={(details.entries || []).map((e) => e.name)} categories={previewCats} />}
+
+        {/* ---- Classification points (point table) ---- */}
+        <div className="card">
+          <div className="row-between">
+            <h2 style={{ margin: 0 }}>Classification points</h2>
+            {!archived && <button className="btn primary sm" onClick={savePoints}>Save points</button>}
+          </div>
+          <p className="muted-sm">How many standings points each result is worth. Empty = <b>IFA</b> (win 2 · loss 0). Set your own rows for other federations (e.g. PAFA).</p>
+          {!archived && (
+            <div style={{ display: "flex", gap: 8, margin: "6px 0" }}>
+              <button className="btn sm" onClick={() => usePreset(IFA_TABLE)}>Use IFA (2 / 0)</button>
+              <button className="btn sm" onClick={() => usePreset([])}>Clear</button>
+              <span style={{ flex: 1 }} />
+              <label className="muted-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>Draw pts
+                <input style={{ width: 46 }} type="number" value={details.drawPoints ?? 1} disabled={archived} onChange={(e) => edit((d) => ({ ...d, drawPoints: Number(e.target.value) }))} />
+              </label>
+            </div>
+          )}
+          <div className="pt-table">
+            <div className="pt-row pt-head"><span>Best of</span><span>Win sets</span><span>Lose sets</span><span>Win pts</span><span>Lose pts</span><span /></div>
+            {pt.length === 0 && <p className="muted-sm" style={{ margin: "6px 0" }}>No rows — using IFA default (win 2 · loss 0).</p>}
+            {pt.map((r, i) => (
+              <div className="pt-row" key={i}>
+                {["bestOf", "winSets", "loseSets", "winPts", "losePts"].map((k) => (
+                  <input key={k} type="number" value={r[k]} disabled={archived} onChange={(e) => editPtRow(i, k, e.target.value)} />
+                ))}
+                {!archived && <button className="btn danger sm" onClick={() => delPtRow(i)}>✕</button>}
+              </div>
+            ))}
+            {!archived && <button className="btn sm" style={{ marginTop: 6 }} onClick={addPtRow}>+ Add row</button>}
+          </div>
+        </div>
 
         {/* ---- Status ---- */}
         <div className="card">

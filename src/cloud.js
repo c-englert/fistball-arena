@@ -136,6 +136,16 @@ export async function updateEventFields(patch, eventId) {
   await updateDoc(doc(db, "events", eventId || reqEid()), patch);
 }
 
+// Classification point table (how many standings points a result is worth).
+// Stored on the event AND mirrored to the public doc so Fistball Live uses it.
+// Empty table → Live falls back to IFA (win 2 / loss 0).
+export async function saveScoringRules({ pointTable, drawPoints }) {
+  const eid = reqEid();
+  const patch = { pointTable: pointTable || [], drawPoints: Number.isFinite(drawPoints) ? drawPoints : 1 };
+  await updateDoc(doc(db, "events", eid), patch);
+  await writeEventPublic(eid, patch);
+}
+
 // Non-game schedule entries (ceremonies, breaks). Stored on the event doc AND
 // mirrored to the public doc so Fistball Live can show them without login.
 export async function saveScheduleBlocks(blocks) {
