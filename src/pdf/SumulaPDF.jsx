@@ -237,7 +237,7 @@ export default function SumulaPDF({ draft, branding }) {
           <View style={s.refGrid}>
             {[["Referee 1", d.referees.r1], ["Referee 2", d.referees.r2], ["Recording Clerk", d.referees.clerk],
               ["Assistant 1", d.referees.a1], ["Assistant 2", d.referees.a2],
-              ["Ball / serve", `1st: ${sideName(d, d.ballChoice.set1)}  ·  5th: ${sideName(d, d.ballChoice.set5)}`]]
+              ["Ball / serve", `1st: ${sideName(d, d.ballChoice.set1)}  ·  Deciding: ${sideName(d, d.ballChoice.set5)}`]]
               .map(([k, v]) => (
                 <View style={s.refCell} key={k}>
                   <Text style={s.label}>{k}</Text>

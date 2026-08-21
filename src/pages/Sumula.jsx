@@ -467,7 +467,7 @@ function ScoreSection({ d, scoring, update, readOnly }) {
       <div className="subhead">Choice of ball / serve</div>
       {["set1", "set5"].map((w) => (
         <div className="field" key={w}>
-          <label>{w === "set1" ? "1st set" : "5th set"}</label>
+          <label>{w === "set1" ? "1st set" : "Deciding set"}</label>
           <div className="seg">
             <button className={d.ballChoice[w] === "A" ? "on" : ""} onClick={() => setBall(w, "A")}>{short(d.teamA.name)}</button>
             <button className={d.ballChoice[w] === "B" ? "on" : ""} onClick={() => setBall(w, "B")}>{short(d.teamB.name)}</button>

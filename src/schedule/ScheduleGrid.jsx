@@ -109,16 +109,16 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
     const SEP = "";
     const ts = {};
     sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { const k = `${g.category}${SEP}${t}${SEP}${g.date}${SEP}${g.time}`; (ts[k] = ts[k] || []).push(g.nr); } }));
-    Object.entries(ts).forEach(([k, ns]) => { if (ns.length > 1) { const [, t, d, tm] = k.split(SEP); out.push({ bad: true, msg: `${t} has ${ns.length} games at ${dayLabel(d)} ${tm}` }); } });
+    Object.entries(ts).forEach(([k, ns]) => { if (ns.length > 1) { const [cat, t, d, tm] = k.split(SEP); out.push({ bad: true, msg: `${t} (${cat}) has ${ns.length} games at ${dayLabel(d)} ${tm}` }); } });
     if (courts.length > 1) {
       const tc = {};
       sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { const id = `${g.category}${SEP}${t}`; tc[id] = tc[id] || {}; tc[id][g.court] = (tc[id][g.court] || 0) + 1; } }));
       Object.entries(tc).forEach(([id, m]) => {
-        const t = id.split(SEP)[1];
+        const [cat, t] = id.split(SEP);
         const total = Object.values(m).reduce((a, b) => a + b, 0);
         const [topCourt, top] = Object.entries(m).sort((a, b) => b[1] - a[1])[0];
-        if (total >= 3 && Object.keys(m).length === 1) out.push({ bad: false, msg: `${t} plays all ${total} games on Court ${topCourt}` });
-        else if (total >= 4 && top / total >= 0.75) out.push({ bad: false, msg: `${t} plays ${top}/${total} games on Court ${topCourt}` });
+        if (total >= 3 && Object.keys(m).length === 1) out.push({ bad: false, msg: `${t} (${cat}) plays all ${total} games on Court ${topCourt}` });
+        else if (total >= 4 && top / total >= 0.75) out.push({ bad: false, msg: `${t} (${cat}) plays ${top}/${total} games on Court ${topCourt}` });
       });
     }
     return out;
