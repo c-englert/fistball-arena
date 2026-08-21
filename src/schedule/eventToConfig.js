@@ -11,8 +11,9 @@ export function eventToConfig(event, startNr = 1) {
   const variants = event?.formatVariants || {};
   const categories = names.map((name) => {
     const v = variants[name] || {};
+    const bestOf = Number(v.bestOf) || 3;
     return {
-      name, bestOf: 3, override: overrides[name] || null,
+      name, bestOf, bestOfKo: Number(v.bestOfKo) || bestOf, override: overrides[name] || null,
       double: !!v.double, knockout: v.knockout !== false, qualifiersPerGroup: 2,
       groups: [{ label: "A", teams: entries.filter((t) => (t.cats || []).includes(name)).map((t) => t.name) }],
     };

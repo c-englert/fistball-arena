@@ -189,11 +189,12 @@ export function formatWarnings(teamCount, override) {
 // buildFormat: QR (single group round-robin, single or double) + optional seeded
 // knockout, as fixtures. `double` plays every pair twice; `knockout:false` is a
 // league (final standings from the round-robin, no playoffs).
-export function buildFormat(teams, { category, bestOf = 3, override, double = false, knockout = true } = {}) {
+export function buildFormat(teams, { category, bestOf = 3, bestOfKo, override, double = false, knockout = true } = {}) {
   const real = (teams || []).filter(Boolean);
   const n = real.length;
   if (knockout && !KO[n]) return null;
   if (n < 2) return null;
+  const koBestOf = bestOfKo || bestOf; // finals default to the group best-of
 
   const fixtures = [];
   let seq = 0;
@@ -210,7 +211,7 @@ export function buildFormat(teams, { category, bestOf = 3, override, double = fa
   if (knockout) {
     for (const m of koFor(n, override)) {
       fixtures.push({
-        id: `ko:${m.id}`, category, bestOf,
+        id: `ko:${m.id}`, category, bestOf: koBestOf,
         round: m.round, phase: "ko", koStage: m.stage, koIndex: m.idx, seq: seq++,
         teamA: m.a.label, teamB: m.b.label, srcA: m.a.src, srcB: m.b.src, deps: m.deps,
       });

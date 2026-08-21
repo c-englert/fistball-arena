@@ -37,7 +37,7 @@ export function generateSchedule(config) {
     // Championship preset by team count (single group + rank-seeded knockout).
     const allTeams = (cat.groups || []).flatMap((g) => g.teams || []);
     if (hasFormat(allTeams.length)) {
-      const built = buildFormat(allTeams, { category: catName, bestOf: cat.bestOf || 3, override: cat.override, double: !!cat.double, knockout: cat.knockout !== false });
+      const built = buildFormat(allTeams, { category: catName, bestOf: cat.bestOf || 3, bestOfKo: cat.bestOfKo, override: cat.override, double: !!cat.double, knockout: cat.knockout !== false });
       const nsSrc = (s) => (s && s.dep ? { ...s, dep: `${catKey}:${s.dep}` } : s);
       for (const f of built.fixtures) {
         fixtures.push({
@@ -72,7 +72,7 @@ export function generateSchedule(config) {
 
     // Knockout bracket (placeholder teams). Namespace ids + deps per category.
     const { fixtures: ko, warnings: kw } = buildBracket(groups, cat.qualifiersPerGroup || 2, {
-      category: catName, bestOf: cat.bestOf, knockout: !!cat.knockout,
+      category: catName, bestOf: cat.bestOfKo || cat.bestOf, knockout: !!cat.knockout,
     });
     warnings.push(...kw);
     for (const f of ko) {

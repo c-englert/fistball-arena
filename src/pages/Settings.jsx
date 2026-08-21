@@ -114,7 +114,12 @@ export default function Settings({ me }) {
   const variantId = (v) => (v?.double ? (v.knockout === false ? "drr" : "drr_ko") : (v?.knockout === false ? "rr" : "rr_ko"));
   const applyVariant = (cat, id) => {
     const flags = FORMAT_VARIANTS.find((x) => x.id === id)?.flags || { double: false, knockout: true };
-    const fv = { ...(details.formatVariants || {}), [cat]: flags };
+    const fv = { ...(details.formatVariants || {}), [cat]: { ...(details.formatVariants?.[cat] || {}), ...flags } };
+    edit((d) => ({ ...d, formatVariants: fv }));
+    updateEventFields({ formatVariants: fv }).catch((e) => setStatus("Save failed: " + (e?.message || e)));
+  };
+  const setVariantField = (cat, patch) => {
+    const fv = { ...(details.formatVariants || {}), [cat]: { ...(details.formatVariants?.[cat] || {}), ...patch } };
     edit((d) => ({ ...d, formatVariants: fv }));
     updateEventFields({ formatVariants: fv }).catch((e) => setStatus("Save failed: " + (e?.message || e)));
   };
@@ -442,9 +447,25 @@ export default function Settings({ me }) {
                     {count > 0 && d && flags.knockout && <button className="btn sm" style={{ marginLeft: "auto" }} onClick={() => setBracketIdx(ci)}>View bracket</button>}
                   </div>
                   {count > 0 && (
-                    <select className="fmt-variant" value={variantId(v)} disabled={archived} onChange={(e) => applyVariant(cat, e.target.value)}>
-                      {FORMAT_VARIANTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                    </select>
+                    <>
+                      <select className="fmt-variant" value={variantId(v)} disabled={archived} onChange={(e) => applyVariant(cat, e.target.value)}>
+                        {FORMAT_VARIANTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                      </select>
+                      <div className="fmt-bestof">
+                        <label>Group best of
+                          <select value={Number(v?.bestOf) || 3} disabled={archived} onChange={(e) => setVariantField(cat, { bestOf: Number(e.target.value) })}>
+                            {[1, 3, 5, 7].map((n) => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                        </label>
+                        {flags.knockout && (
+                          <label>Finals best of
+                            <select value={Number(v?.bestOfKo) || Number(v?.bestOf) || 3} disabled={archived} onChange={(e) => setVariantField(cat, { bestOfKo: Number(e.target.value) })}>
+                              {[1, 3, 5, 7].map((n) => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                          </label>
+                        )}
+                      </div>
+                    </>
                   )}
                   {!count ? (
                     <p className="muted-sm" style={{ margin: "2px 0 0" }}>No teams ticked yet.</p>
@@ -455,7 +476,7 @@ export default function Settings({ me }) {
                         <div className="fmt-line" key={i}><span className="fmt-round">{r.round}</span> {r.matches.join(" · ")}</div>
                       ))}
                       {!flags.knockout && <div className="fmt-line muted-sm">No playoffs — final standings from the round-robin.</div>}
-                      <div className="muted-sm" style={{ marginTop: 4 }}>Total <b>{d.total}</b> games · best of 3</div>
+                      <div className="muted-sm" style={{ marginTop: 4 }}>Total <b>{d.total}</b> games · group best of {Number(v?.bestOf) || 3}{flags.knockout ? ` · finals best of ${Number(v?.bestOfKo) || Number(v?.bestOf) || 3}` : ""}</div>
                     </>
                   ) : (
                     <p className="muted-sm" style={{ margin: "2px 0 0" }}>No knockout preset for {count} teams yet — pick a “round-robin only” variant, or a manual bracket will be needed.</p>
