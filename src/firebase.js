@@ -16,3 +16,6 @@ export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+// Always show Google's account chooser instead of silently reusing the one
+// signed-in account — organizers/officials often have several accounts.
+googleProvider.setCustomParameters({ prompt: "select_account" });
