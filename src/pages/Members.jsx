@@ -5,6 +5,18 @@ import { useEvent } from "../eventContext.js";
 
 const ROLES = ["admin", "official", "viewer"];
 
+// Canonical form for spotting the same Gmail account written differently
+// (gmail ⇄ googlemail, dots, +tags). Used only to WARN — access still needs the
+// exact login email, because Firestore rules match the raw token string.
+function canonEmail(e) {
+  const s = String(e || "").trim().toLowerCase();
+  const at = s.indexOf("@");
+  if (at < 0) return s;
+  const local = s.slice(0, at), domain = s.slice(at + 1);
+  if (domain === "gmail.com" || domain === "googlemail.com") return `${local.split("+")[0].replace(/\./g, "")}@gmail.com`;
+  return s;
+}
+
 export default function Members({ me }) {
   const nav = useNavigate();
   const { eventId, event, archived, isAdmin } = useEvent();
@@ -61,6 +73,16 @@ export default function Members({ me }) {
     const hit = people.find((p) => p.email === v.toLowerCase().trim());
     setForm((f) => ({ ...f, email: v, name: hit ? hit.name || f.name : f.name }));
   };
+  // A directory person whose login email is the same account written differently.
+  const suggestFor = (email) => {
+    const t = String(email || "").trim().toLowerCase();
+    if (!t.includes("@")) return null;
+    const c = canonEmail(t);
+    const hit = people.find((p) => canonEmail(p.email) === c && (p.email || "").toLowerCase() !== t);
+    return hit ? hit.email : null;
+  };
+  const memberSuggest = suggestFor(form.email);
+  const oaSuggest = suggestFor(oaForm.email);
 
   return (
     <div className="app">
@@ -87,6 +109,12 @@ export default function Members({ me }) {
               <button className="btn primary" onClick={() => add(null)}>Add</button>
             </div>
             <datalist id="people-dl">{people.map((p) => <option key={p.email} value={p.email}>{p.name}</option>)}</datalist>
+            {memberSuggest && (
+              <div className="warn-box" style={{ marginTop: 8 }}>
+                ⚠️ This looks like the same account as <b>{memberSuggest}</b>, which already signed in. Access needs the <b>exact login email</b> (gmail ≠ googlemail, and dots matter).{" "}
+                <button className="btn sm" style={{ marginLeft: 4 }} onClick={() => onEmail(memberSuggest)}>Use {memberSuggest}</button>
+              </div>
+            )}
             <p className="muted-sm">admin = manage event · official = fill game reports · viewer = read only. {status}</p>
           </div>
         )}
@@ -123,6 +151,12 @@ export default function Members({ me }) {
               <input style={{ flex: "1 1 120px" }} value={oaForm.name} onChange={(e) => setOaForm({ ...oaForm, name: e.target.value })} placeholder="Name (optional)" />
               <button className="btn primary" onClick={addOrgA}>Add org-admin</button>
             </div>
+            {oaSuggest && (
+              <div className="warn-box" style={{ marginTop: 8 }}>
+                ⚠️ This looks like the same account as <b>{oaSuggest}</b>, which already signed in. Use the <b>exact login email</b>.{" "}
+                <button className="btn sm" style={{ marginLeft: 4 }} onClick={() => setOaForm({ ...oaForm, email: oaSuggest })}>Use {oaSuggest}</button>
+              </div>
+            )}
             <div style={{ marginTop: 10 }}>
               {orgAdminEmails.map((emailAddr) => {
                 const isBootstrap = BOOTSTRAP_ORG_ADMINS.includes(emailAddr);
