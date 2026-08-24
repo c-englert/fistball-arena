@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
 import {
   ensureReport, subscribeReport, acquireLock, releaseLock, heartbeat,
-  adminUnlock, saveReport, submitReport, fetchTeamRosters, buildReportSeed,
+  adminUnlock, reopenReport, saveReport, submitReport, fetchTeamRosters, buildReportSeed,
 } from "../cloud.js";
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
 import { flagFor } from "../flags.js";
@@ -165,6 +165,9 @@ export default function Sumula({ me }) {
           </span>
           {me.admin && !submitted && !archived && lockedBy && lockedBy.uid !== me.uid && (
             <button className="btn danger sm" onClick={() => adminUnlock(id)}>Admin unlock</button>
+          )}
+          {canScore && submitted && (
+            <button className="btn sm" onClick={async () => { await reopenReport(id); await acquireLock(id, me); }}>Reopen</button>
           )}
           {archived && me.admin && (
             <button className="btn sm" onClick={() => nav(`/e/${eventId}/settings`)}>Open Settings</button>

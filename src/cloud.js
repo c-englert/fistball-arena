@@ -646,6 +646,10 @@ export async function releaseLock(gameId, me) {
 export async function adminUnlock(gameId) {
   await updateDoc(edoc("reports", gameId), { lockedBy: null });
 }
+// Reopen a submitted report for editing (keeps the scores). Admin/official only.
+export async function reopenReport(gameId) {
+  await updateDoc(edoc("reports", gameId), { status: "draft", lockedBy: null });
+}
 
 /* ----------------- saving ----------------- */
 export async function saveReport(gameId, me, patch) {
