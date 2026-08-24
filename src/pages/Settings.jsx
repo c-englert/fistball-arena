@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishGames, resetScores, saveScoringRules,
+  subscribeLogos, addLogo, deleteLogo, saveBranding, updateEventDetails, updateEventFields, publishGames, resetScores, saveScoringRules, subscribeGames,
 } from "../cloud.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
 import { describeFormat, formatMatches, formatWarnings, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
@@ -250,13 +250,21 @@ export default function Settings({ me }) {
   // Step 8 — generate & publish the schedule from the saved setup.
   const [genResult, setGenResult] = useState(null);
   const [published, setPublished] = useState(false);
-  const doGenerate = () => {
-    // Use the current (possibly unsaved) setup so the preview is WYSIWYG.
-    const r = generateSchedule(eventToConfig({
+  const [existingGames, setExistingGames] = useState([]);
+  useEffect(() => subscribeGames(setExistingGames), []);
+  const existingCats = new Set(existingGames.map((g) => g.category));
+  const maxNr = existingGames.reduce((mx, g) => Math.max(mx, Number(g.nr) || 0), 0);
+  // append: only build categories that don't have published games yet, numbering
+  // after the existing games — so an already-built part (e.g. national teams) is
+  // kept and a new part (e.g. clubs) is added without disturbing it.
+  const runGenerate = (append) => {
+    const cfg = eventToConfig({
       categoryBuilder: details.categoryBuilder, entries: details.entries,
       formatOverrides: details.formatOverrides, formatVariants: details.formatVariants, slots: details.slots,
-    }));
-    // Attach each team's optional short/display name (used on the schedule & Live).
+    }, append ? maxNr + 1 : 1);
+    if (append) cfg.categories = cfg.categories.filter((c) => !existingCats.has(c.name));
+    if (append && !cfg.categories.length) { setStatus("All categories already have published games — nothing new to add."); setGenResult(null); return; }
+    const r = generateSchedule(cfg);
     const shortOf = {};
     (details.entries || []).forEach((e) => { if (e.short && e.short.trim()) shortOf[e.name] = e.short.trim(); });
     r.games = r.games.map((g) => ({
@@ -264,15 +272,26 @@ export default function Settings({ me }) {
       teamA: { ...g.teamA, short: shortOf[g.teamA?.name] || "" },
       teamB: { ...g.teamB, short: shortOf[g.teamB?.name] || "" },
     }));
+    r.append = append;
     setGenResult(r);
-    setStatus(`${r.games.length} games generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
+    setStatus(`${r.games.length} ${append ? "new " : ""}games generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
   };
+  const doGenerate = () => runGenerate(false);
+  const doGenerateAppend = () => runGenerate(true);
   const doPublish = async () => {
     if (!genResult?.games.length) return;
-    if (!window.confirm(`Publish ${genResult.games.length} games? This replaces ALL current games, reports and results for this event.`)) return;
+    const append = !!genResult.append;
+    const msg = append
+      ? `Add ${genResult.games.length} new games to the schedule? Existing games, reports and results are kept.`
+      : `Publish ${genResult.games.length} games? This replaces ALL current games, reports and results for this event.`;
+    if (!window.confirm(msg)) return;
     setStatus("Publishing…");
-    try { await publishGames(genResult.games, { replaceAll: true }); setPublished(true); setStatus(`Published ${genResult.games.length} games. See the games list / Fistball Live.`); setOpenStep(7); }
-    catch (e) { setStatus("Publish failed: " + (e?.message || e)); }
+    try {
+      await publishGames(genResult.games, { replaceAll: !append });
+      setPublished(true);
+      setStatus(`${append ? "Added" : "Published"} ${genResult.games.length} games. See the games list / Fistball Live.`);
+      setOpenStep(7);
+    } catch (e) { setStatus("Publish failed: " + (e?.message || e)); }
   };
 
   // Guided-setup step state: which are done, and which are still locked.
@@ -506,14 +525,27 @@ export default function Settings({ me }) {
         {/* ---- 6. Generate, arrange & publish schedule ---- */}
         <Step n={6} title="Generate & publish schedule" sub={done[5] ? "published" : ""} done={done[5]} locked={locked[5]} open={openStep === 6} onToggle={() => openOrToggle(6)}>
           <p className="muted-sm">Builds all games from your categories, teams, format and courts. Auto-places them on days/courts/times — drag or type to adjust — then publish (they appear on the games list and Fistball Live).</p>
-          {!archived && <button className="btn" onClick={doGenerate}>{genResult ? "Regenerate" : "Generate schedule"}</button>}
+          {!archived && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button className="btn" onClick={doGenerate}>{genResult && !genResult.append ? "Regenerate (replace all)" : "Generate schedule"}</button>
+              {existingGames.length > 0 && <button className="btn" onClick={doGenerateAppend}>+ Add new categories (keep current)</button>}
+            </div>
+          )}
+          {existingGames.length > 0 && !genResult && (
+            <p className="muted-sm" style={{ marginTop: 8 }}>This event already has <b>{existingGames.length}</b> published games. “<b>Add new categories</b>” builds only the categories without games yet (e.g. clubs) and numbers them after the existing ones — the current part (e.g. national teams) is left untouched.</p>
+          )}
           {genResult && (
             <>
+              {genResult.append && <div className="warn-box" style={{ marginTop: 10, background: "#eaf6ee", color: "#1c6b3f" }}>➕ Add mode — these are NEW games (numbered from #{maxNr + 1}); publishing keeps the {existingGames.length} existing games.</div>}
               {genResult.warnings?.length > 0 && <div className="warn-box" style={{ marginTop: 10 }}>{genResult.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
-              <p className="muted-sm" style={{ marginTop: 8 }}>Ready: <b>{genResult.games.length}</b> games{genResult.unplaced.length ? ` · ${genResult.unplaced.length} unplaced` : ""}.</p>
+              <p className="muted-sm" style={{ marginTop: 8 }}>Ready: <b>{genResult.games.length}</b> {genResult.append ? "new " : ""}games{genResult.unplaced.length ? ` · ${genResult.unplaced.length} unplaced` : ""}.</p>
               <div className="subhead">Arrange — set each game’s day · court · time</div>
               <ScheduleGrid games={genResult.games} onChange={(gs) => setGenResult((r) => ({ ...r, games: gs }))} />
-              {!archived && <button className="btn primary" style={{ marginTop: 12, width: "100%" }} onClick={doPublish} disabled={!genResult.games.length}>Publish {genResult.games.length} games (replace all)</button>}
+              {!archived && (
+                <button className="btn primary" style={{ marginTop: 12, width: "100%" }} onClick={doPublish} disabled={!genResult.games.length}>
+                  {genResult.append ? `Add ${genResult.games.length} games (keep current)` : `Publish ${genResult.games.length} games (replace all)`}
+                </button>
+              )}
               {done[5] && <p className="muted-sm">✅ Published. You can keep adjusting above and publish again, or fine-tune later via Manage → Arrange schedule.</p>}
             </>
           )}
