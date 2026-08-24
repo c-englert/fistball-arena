@@ -407,7 +407,7 @@ export async function publishEventImport({ games, results, rosters, cautions }, 
   const entries = Object.entries(rosters || {});
   for (let i = 0; i < entries.length; i += 400) {
     const batch = writeBatch(db);
-    entries.slice(i, i + 400).forEach(([k, v]) => batch.set(edoc("rosters", k), v));
+    entries.slice(i, i + 400).forEach(([k, v]) => batch.set(edoc("rosters", rosterKey(k)), v));
     await batch.commit();
   }
   // Cards (from the sheet's Cautions DB) go on the public event doc so Fistball
@@ -429,7 +429,7 @@ export async function publishRosters(rosters) {
   const entries = Object.entries(rosters);
   for (let i = 0; i < entries.length; i += 400) {
     const batch = writeBatch(db);
-    entries.slice(i, i + 400).forEach(([key, v]) => batch.set(edoc("rosters", key), v));
+    entries.slice(i, i + 400).forEach(([key, v]) => batch.set(edoc("rosters", rosterKey(key)), v));
     await batch.commit();
   }
 }
@@ -453,15 +453,21 @@ export async function publishReferees(list, { replaceAll } = {}) {
   }
 }
 
+// "/" is illegal in a Firestore document id (it's a path separator), and some
+// team names contain it (e.g. "ASBP/CONDOR/FMD"). Sanitize it for the roster id.
+export const rosterKey = (k) => String(k || "").replace(/\//g, "∕");
+
 // Rosters are keyed by "<team> - <category>" (so the same club/country can field
 // a squad in more than one category), with a plain "<team>" fallback for older
-// imports and events whose team names already carry the category.
+// imports and events whose team names already carry the category. Never throws.
 async function getRoster(teamName, category) {
   if (!teamName) return null;
   const keys = category ? [`${teamName} - ${category}`, teamName] : [teamName];
   for (const k of keys) {
-    const s = await getDoc(edoc("rosters", k));
-    if (s.exists()) return s.data();
+    try {
+      const s = await getDoc(edoc("rosters", rosterKey(k)));
+      if (s.exists()) return s.data();
+    } catch (_) { /* bad id or read error — skip this key */ }
   }
   return null;
 }
