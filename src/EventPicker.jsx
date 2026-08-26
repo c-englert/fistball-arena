@@ -66,7 +66,7 @@ export default function EventPicker({ me, onSignOut }) {
 
   return (
     <>
-      <h2 className="page-h">Eventos</h2>
+      <h2 className="page-h">Events</h2>
       <div>
         {me.admin && !creating && (
           <button className="btn primary" style={{ width: "100%", marginBottom: 16 }} onClick={() => setCreating(true)}>+ New event</button>

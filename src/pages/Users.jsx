@@ -193,7 +193,7 @@ export default function Users({ me }) {
 
   return (
     <>
-      <h2 className="page-h">Usuários & acessos</h2>
+      <h2 className="page-h">Users & access</h2>
 
       {/* ---- Access grid (single container) ---- */}
       <div className="card wide">

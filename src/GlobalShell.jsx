@@ -18,9 +18,9 @@ export default function GlobalShell({ me, onSignOut }) {
 
   const sub = loc.pathname.replace(/^\//, "").split("/")[0]; // "", "users", "guide"
   const items = [
-    { key: "", label: "Eventos", Icon: IconEvents },
-    ...(me.admin ? [{ key: "users", label: "Usuários & acessos", Icon: IconUsers }] : []),
-    { key: "guide", label: "Guia", Icon: IconGuide },
+    { key: "", label: "Events", Icon: IconEvents },
+    ...(me.admin ? [{ key: "users", label: "Users & access", Icon: IconUsers }] : []),
+    { key: "guide", label: "Guide", Icon: IconGuide },
   ];
   const activeLabel = (items.find((i) => i.key === sub) || {}).label || "";
 
@@ -37,8 +37,8 @@ export default function GlobalShell({ me, onSignOut }) {
         </div>
         {live?.eventId && (
           <div className="sb-state global">
-            <span className="dot-live" /> {live.name || "Evento"} ao vivo
-            <a className="live-link" href={`${LIVE_URL}?event=${live.eventId}`} target="_blank" rel="noreferrer">Ver ↗</a>
+            <span className="dot-live" /> {live.name || "Event"} live
+            <a className="live-link" href={`${LIVE_URL}?event=${live.eventId}`} target="_blank" rel="noreferrer">View ↗</a>
           </div>
         )}
         <div className="sb-label">Global</div>
@@ -52,7 +52,7 @@ export default function GlobalShell({ me, onSignOut }) {
         </nav>
         <div className="sb-foot">
           <AccountMenu me={me} onSignOut={onSignOut} />
-          <div className="sb-who"><div className="who">{me.name}</div><div className="role">{me.admin ? "org-admin" : "membro"}</div></div>
+          <div className="sb-who"><div className="who">{me.name}</div><div className="role">{me.admin ? "org-admin" : "member"}</div></div>
         </div>
       </aside>
 
@@ -61,10 +61,10 @@ export default function GlobalShell({ me, onSignOut }) {
           <button className="sb-toggle" onClick={() => setOpen(true)} aria-label="Menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
-          <nav className="crumbs" aria-label="Caminho">
+          <nav className="crumbs" aria-label="Breadcrumb">
             <button className="crumb-link" onClick={() => go("/")}>Arena</button>
             {sub === "" ? (
-              <><span className="sep">›</span><span className="crumb-cur">Eventos</span></>
+              <><span className="sep">›</span><span className="crumb-cur">Events</span></>
             ) : (
               <><span className="sep">›</span><span className="crumb-cur">{activeLabel}</span></>
             )}
