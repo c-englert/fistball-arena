@@ -343,6 +343,9 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .ios-switch.locked { opacity: .5; cursor: default; }
 .ios-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ag-switchlbl { font-size: 11px; color: var(--muted); font-weight: 700; }
+.ag-searchrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.ag-searchrow .game-search { flex: 1; min-width: 180px; max-width: 360px; }
+.ag-searchrow .ag-switchlbl { font-size: 13px; }
 .ag-cell { text-align: center; }
 .ag-full { color: var(--brand); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
 .ag-role { border: 1px solid var(--line); border-radius: 8px; padding: 5px 6px; background: #fff; font-weight: 700; color: var(--muted); min-width: 82px; }

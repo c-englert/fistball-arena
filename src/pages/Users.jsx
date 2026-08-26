@@ -31,6 +31,7 @@ export default function Users({ me }) {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [showAll, setShowAll] = useState(true); // include users with no access (everyone) by default
+  const [onlyOrg, setOnlyOrg] = useState(false); // filter to org-admins only
   const [pending, setPending] = useState({}); // optimistic role overlay: `${email}||${eventId}` -> role
   const [saving, setSaving] = useState({});    // `${email}||${eventId}` -> true while writing
   const [errCell, setErrCell] = useState({});  // `${email}||${eventId}` -> error message
@@ -111,9 +112,10 @@ export default function Users({ me }) {
     if (showAll) people.forEach((p) => touch(p.email));
     const t = q.trim().toLowerCase();
     return [...byEmail.values()]
+      .filter((u) => !onlyOrg || orgAdminEmails.has(u.email))
       .filter((u) => !t || u.email.toLowerCase().includes(t) || (u.name || "").toLowerCase().includes(t))
       .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
-  }, [orgAdminEmails, members, people, showAll, q]);
+  }, [orgAdminEmails, members, people, showAll, onlyOrg, q]);
 
   // Possible duplicate identities: several e-mails that canonicalize to the same
   // Gmail account (gmail vs googlemail, dots, +tags). Only the exact login e-mail
@@ -220,7 +222,19 @@ export default function Users({ me }) {
 
         {status && status.startsWith("Falhou") && <div className="warn-box err" style={{ marginTop: 6 }}>❌ {status}</div>}
 
-        <input className="game-search" style={{ marginTop: 8, width: "100%", maxWidth: 360 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou e-mail…" />
+        <div className="ag-searchrow">
+          <input className="game-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou e-mail…" />
+          <button
+            type="button"
+            role="switch"
+            aria-checked={onlyOrg}
+            className={`ios-switch ${onlyOrg ? "on" : ""}`}
+            title="Mostrar apenas org-admins"
+            onClick={() => setOnlyOrg((v) => !v)}>
+            <span className="knob" />
+          </button>
+          <span className="ag-switchlbl">Só org-admins</span>
+        </div>
 
         {loading && <div className="empty">Carregando acessos…</div>}
         {!loading && cols.length === 0 && <div className="empty">Nenhum evento ainda.</div>}
