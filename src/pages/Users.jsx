@@ -31,6 +31,8 @@ export default function Users({ me }) {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [showAll, setShowAll] = useState(false); // include users with no access
+  const [pending, setPending] = useState({}); // optimistic role overlay: `${email}||${eventId}` -> role
+  const [saving, setSaving] = useState({});    // `${email}||${eventId}` -> true while writing
 
   useEffect(() => subscribeOrgAdmins(setOrgAdmins), []);
   useEffect(() => subscribePeople(setPeople), []);
@@ -56,12 +58,27 @@ export default function Users({ me }) {
     return list.sort((a, b) => rank(a) - rank(b) || String(a.dates || "").localeCompare(String(b.dates || "")) || String(a.name).localeCompare(String(b.name)));
   }, [events]);
 
-  // role lookup: `${email}||${eventId}` -> role
+  // role lookup: `${email}||${eventId}` -> role (from the server snapshot)
   const roleAt = useMemo(() => {
     const m = new Map();
     (members || []).forEach((x) => m.set(`${x.email}||${x.eventId}`, x.role));
     return m;
   }, [members]);
+
+  // Once the server snapshot catches up to an optimistic edit, drop the overlay.
+  useEffect(() => {
+    setPending((prev) => {
+      let changed = false; const next = { ...prev };
+      for (const k of Object.keys(prev)) {
+        if ((roleAt.get(k) || "") === prev[k]) { delete next[k]; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [roleAt]);
+  const shownRole = (email, eventId) => {
+    const k = `${email}||${eventId}`;
+    return k in pending ? pending[k] : (roleAt.get(k) || "");
+  };
 
   // one row per user: union of org-admins + everyone with a membership (+ directory when showAll)
   const rows = useMemo(() => {
@@ -95,10 +112,20 @@ export default function Users({ me }) {
     try { await removeOrgAdmin(emailAddr); } catch (e) { setStatus("Falhou: " + (e?.message || e)); }
   };
   const changeRole = async (user, eventId, role) => {
+    const k = `${user.email}||${eventId}`;
+    setPending((p) => ({ ...p, [k]: role }));       // show the choice immediately
+    setSaving((s) => ({ ...s, [k]: true }));
     try {
       if (!role) await removeMemberAt(eventId, user.email);
       else await setMemberRoleAt(eventId, { email: user.email, name: user.name, role }, me);
-    } catch (e) { setStatus("Falhou: " + (e?.message || e)); }
+      setStatus("");
+    } catch (e) {
+      setPending((p) => { const n = { ...p }; delete n[k]; return n; }); // revert overlay
+      setStatus("Falhou: " + (e?.message || e));
+      alert("Não foi possível salvar o acesso de " + user.email + ":\n" + (e?.message || e));
+    } finally {
+      setSaving((s) => { const n = { ...s }; delete n[k]; return n; });
+    }
   };
 
   const loading = events === null || members === null;
@@ -184,13 +211,16 @@ export default function Users({ me }) {
                       </td>
                       {cols.map((ev) => {
                         if (isOrg) return <td key={ev.id} className="ag-cell ag-full">total</td>;
-                        const role = roleAt.get(`${u.email}||${ev.id}`) || "";
+                        const k = `${u.email}||${ev.id}`;
+                        const role = shownRole(u.email, ev.id);
                         return (
                           <td key={ev.id} className="ag-cell">
                             <select className={`ag-role r-${role || "none"}`} value={role}
+                              disabled={!!saving[k]}
                               onChange={(e) => changeRole(u, ev.id, e.target.value)}>
                               {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                             </select>
+                            {saving[k] && <span className="ag-saving">…</span>}
                           </td>
                         );
                       })}
