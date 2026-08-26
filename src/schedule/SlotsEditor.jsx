@@ -11,6 +11,7 @@ export default function SlotsEditor({ value, onChange, disabled }) {
   const s = normalizeSlots(value);
   const set = (patch) => onChange({ ...s, ...patch });
   const [court, setCourt] = useState("");
+  const [newDay, setNewDay] = useState("");
 
   const addCourt = () => { const v = court.trim(); if (v && !s.courts.includes(v)) set({ courts: [...s.courts, v] }); setCourt(""); };
   const addDay = (iso) => { const date = fromISO(iso); if (date && !s.days.some((d) => d.date === date)) set({ days: [...s.days, { date, start: "09:00", end: "18:00" }].sort((a, b) => toISO(a.date).localeCompare(toISO(b.date))) }); };
@@ -50,7 +51,12 @@ export default function SlotsEditor({ value, onChange, disabled }) {
         </div>
       ))}
       {!s.days.length && <p className="muted-sm">No days yet — add one below.</p>}
-      {!disabled && <div className="add-row" style={{ marginTop: 8 }}><input type="date" onChange={(e) => { addDay(e.target.value); e.target.value = ""; }} /></div>}
+      {!disabled && (
+        <div className="add-row" style={{ marginTop: 8 }}>
+          <input type="date" value={newDay} onChange={(e) => setNewDay(e.target.value)} />
+          <button className="btn sm" disabled={!newDay} onClick={() => { addDay(newDay); setNewDay(""); }}>Add day</button>
+        </div>
+      )}
 
       <div className="grid2" style={{ marginTop: 16 }}>
         <label className="field"><span>Game duration (min)</span>
