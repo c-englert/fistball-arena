@@ -12,6 +12,14 @@ const parseISO = (s) => {
 };
 const roleIcon = (role) =>
   role === "org-admin" ? IconStar : role === "admin" ? IconShield : role === "official" ? IconWhistle : IconEye;
+const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function fmtRange(s, e) {
+  if (!s) return "";
+  if (!e || +e === +s) return `${s.getDate()} ${MO[s.getMonth()]}`;
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear())
+    return `${s.getDate()}–${e.getDate()} ${MO[e.getMonth()]}`;
+  return `${s.getDate()} ${MO[s.getMonth()]} – ${e.getDate()} ${MO[e.getMonth()]}`;
+}
 
 function Avatar({ src, name }) {
   const [err, setErr] = useState(false);
@@ -91,24 +99,26 @@ export default function EventsTimeline({ events, brandings, live, roleOf, onOpen
             {todayX != null && (
               <div className="tl-today" style={{ left: todayX }}><span className="tl-today-lbl">Today</span></div>
             )}
-            {placed.map(({ ev, left, lane, spanW }) => {
+            {placed.map(({ ev, left, lane, spanW, s, e2 }) => {
               const role = roleOf(ev);
               const RoleIcon = roleIcon(role);
               const isLive = live?.eventId === ev.id;
               const logo = brandings?.[ev.id]?.eventLogo?.dataUrl;
+              const dateLabel = fmtRange(s, e2);
               return (
                 <div key={ev.id} className="tl-item" style={{ left, top: lane * LANE_H + 6 }}>
-                  <div className="tl-bar" style={{ width: Math.min(spanW, PILLW) }} />
-                  <button className={`tl-pill ${isLive ? "live" : ""}`} onClick={() => onOpen(ev.id)} title={ev.name}>
+                  <button className={`tl-pill ${isLive ? "live" : ""}`} onClick={() => onOpen(ev.id)} title={`${ev.name} · ${dateLabel}`}>
                     <Avatar src={logo} name={ev.name} />
                     <span className="tl-txt">
                       <span className="tl-name">{ev.name}</span>
                       <span className="tl-meta">
                         <RoleIcon size={12} /> {role}
+                        <span className="tl-dates">· {dateLabel}</span>
                         {isLive && <span className="tl-liveflag"><span className="live-dot" /> Live</span>}
                       </span>
                     </span>
                   </button>
+                  <div className="tl-bar" style={{ width: Math.max(14, spanW) }} title={`${dateLabel} — actual dates`} />
                 </div>
               );
             })}

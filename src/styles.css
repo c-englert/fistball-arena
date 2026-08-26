@@ -831,8 +831,11 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .tl-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); opacity: .6; }
 .tl-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--r); z-index: 1; }
 .tl-today-lbl { position: absolute; top: 2px; left: 3px; font-size: 10px; font-weight: 800; color: var(--r); background: var(--surface); padding: 0 3px; border-radius: 4px; }
-.tl-item { position: absolute; }
-.tl-bar { height: 7px; border-radius: 4px; background: #d9d0f0; margin: 0 0 4px 16px; }
+.tl-item { position: absolute; display: flex; flex-direction: column; align-items: flex-start; }
+/* Real event duration (start→end). The pill above is only a label. */
+.tl-bar { height: 8px; border-radius: 5px; background: var(--brand); margin-top: 5px; min-width: 14px; box-shadow: 0 1px 2px rgba(20,28,48,.18); }
+.tl-pill.live + .tl-bar { background: var(--r); }
+.tl-dates { color: var(--muted); font-weight: 700; }
 .tl-pill {
   display: inline-flex; align-items: center; gap: 12px; max-width: 340px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
