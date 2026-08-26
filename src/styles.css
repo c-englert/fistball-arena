@@ -553,6 +553,7 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .muted-sm { color: var(--muted); font-size: 13px; }
 .btn.danger { background: #fde8e8; color: var(--r); border: 1px solid #f6cccc; }
 .warn-box { background: #fff5e6; border: 1px solid #f5d69a; border-radius: 10px; padding: 10px 12px; margin-top: 12px; color: #8a5a00; font-size: 14px; display: grid; gap: 4px; }
+.info-box { background: #eef4ff; border: 1px solid #cadcff; border-radius: 10px; padding: 10px 12px; color: #234; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sched-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .sched-table th { text-align: left; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .sched-table td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }

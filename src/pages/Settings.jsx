@@ -247,6 +247,26 @@ export default function Settings({ me }) {
   };
   const setSlots = (next) => edit((d) => ({ ...d, slots: next }));
   const saveSlots = () => { setStatus("Saving courts…"); updateEventFields({ slots: details.slots }).then(() => { afterSave("Courts & schedule saved."); setOpenStep(6); }).catch((e) => setStatus("Save failed: " + (e?.message || e))); };
+  // Derive courts & day windows from the games already scheduled (e.g. imported
+  // events) so the user doesn't have to re-enter what's plainly in the schedule.
+  const deriveSlotsFromGames = () => {
+    const courts = [...new Set(existingGames.map((g) => String(g.court)).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const byDate = {};
+    existingGames.forEach((g) => {
+      if (!g.date || !g.time) return;
+      (byDate[g.date] ||= []).push(g.time);
+    });
+    const dISO = (d) => { const [dd, mm, yy] = String(d).split("/"); return dd ? `20${yy}-${mm}-${dd}` : ""; };
+    const addMin = (t, n) => { const [h, m] = t.split(":").map(Number); const x = h * 60 + m + n; return `${String(Math.floor(x / 60) % 24).padStart(2, "0")}:${String(x % 60).padStart(2, "0")}`; };
+    const dur = details.slots?.gameMinutes || 45;
+    const days = Object.entries(byDate)
+      .map(([date, times]) => { const sorted = [...times].sort(); return { date, start: sorted[0], end: addMin(sorted[sorted.length - 1], dur) }; })
+      .sort((a, b) => dISO(a.date).localeCompare(dISO(b.date)));
+    setSlots({ ...details.slots, courts, days });
+    setStatus(`Loaded ${courts.length} courts and ${days.length} days from the schedule.`);
+  };
+  const slotsEmpty = !(details.slots?.courts || []).length || !(details.slots?.days || []).length;
 
   // Step 8 — generate & publish the schedule from the saved setup.
   const [genResult, setGenResult] = useState(null);
@@ -511,6 +531,12 @@ export default function Settings({ me }) {
         {/* ---- 5. Courts & schedule ---- */}
         <Step n={5} title="Courts & schedule" sub={done[4] ? `${(details.slots?.courts || []).length} courts · ${(details.slots?.days || []).length} days` : ""} done={done[4]} locked={locked[4]} open={openStep === 5} onToggle={() => openOrToggle(5)}>
           <p className="muted-sm">Define the courts and each day’s window. The schedule generator uses this to place the games.</p>
+          {!archived && slotsEmpty && existingGames.length > 0 && (
+            <div className="info-box" style={{ marginBottom: 10 }}>
+              This event already has a schedule with courts and days.{" "}
+              <button className="btn sm" onClick={deriveSlotsFromGames}>Load from existing schedule</button>
+            </div>
+          )}
           <SlotsEditor value={details.slots} onChange={setSlots} disabled={archived} />
           {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveSlots} disabled={!courtsDone}>Save courts &amp; continue</button>}
         </Step>
