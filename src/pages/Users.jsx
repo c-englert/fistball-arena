@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   subscribeOrgAdmins, addOrgAdmin, removeOrgAdmin, subscribePeople, BOOTSTRAP_ORG_ADMINS,
-  listMyEvents, subscribeAllMembers, removeMemberAt,
+  listMyEvents, subscribeAllMembers, setMemberRoleAt, removeMemberAt,
 } from "../cloud.js";
 
 // Same Gmail account written differently — used only to warn.
@@ -15,11 +15,12 @@ function canonEmail(e) {
   return s;
 }
 
-const ROLE_LABEL = { viewer: "Viewer", official: "Official", admin: "Admin" };
+const ROLES = ["", "viewer", "official", "admin"];
+const ROLE_LABEL = { "": "—", viewer: "Viewer", official: "Official", admin: "Admin" };
 
-// GLOBAL users & access area (org-admins only): audit every user's access across
-// every event and REVOKE it here. Granting/changing a role stays inside the
-// event's Settings → Access wizard, so it carries the "this event" context.
+// GLOBAL users & access area (org-admins only): see every user (with or without
+// access) and grant/change/revoke their role per event, inline. Per-event
+// Settings → Access still works too, with the extra "this event" context.
 export default function Users({ me }) {
   const nav = useNavigate();
   const [orgAdmins, setOrgAdmins] = useState([]);
@@ -29,7 +30,7 @@ export default function Users({ me }) {
   const [oaForm, setOaForm] = useState({ email: "", name: "" });
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
-  const [showAll, setShowAll] = useState(false); // include users with no access
+  const [showAll, setShowAll] = useState(true); // include users with no access (everyone) by default
   const [pending, setPending] = useState({}); // optimistic role overlay: `${email}||${eventId}` -> role
   const [saving, setSaving] = useState({});    // `${email}||${eventId}` -> true while writing
 
@@ -133,20 +134,19 @@ export default function Users({ me }) {
     if (!window.confirm(`Remover org-admin ${emailAddr}? Perde acesso total a todos os eventos.`)) return;
     try { await removeOrgAdmin(emailAddr); } catch (e) { setStatus("Falhou: " + (e?.message || e)); }
   };
-  // Revoke a user's access to one event (audit action). Granting/changing a role
-  // happens inside the event's Settings → Access wizard, not here.
-  const revoke = async (user, ev) => {
-    if (!window.confirm(`Revogar o acesso de ${user.name || user.email} ao evento “${ev.name}”?`)) return;
+  // Grant / change / revoke a user's role in one event, inline (optimistic).
+  const changeRole = async (user, ev, role) => {
     const k = `${user.email}||${ev.id}`;
-    setPending((p) => ({ ...p, [k]: "" }));         // reflect removal immediately
+    setPending((p) => ({ ...p, [k]: role }));       // show the choice immediately
     setSaving((s) => ({ ...s, [k]: true }));
     try {
-      await removeMemberAt(ev.id, user.email);
+      if (!role) await removeMemberAt(ev.id, user.email);
+      else await setMemberRoleAt(ev.id, { email: user.email, name: user.name, role }, me);
       setStatus("");
     } catch (e) {
       setPending((p) => { const n = { ...p }; delete n[k]; return n; }); // revert overlay
       setStatus("Falhou: " + (e?.message || e));
-      alert("Não foi possível revogar o acesso de " + user.email + ":\n" + (e?.message || e));
+      alert("Não foi possível salvar o acesso de " + user.email + ":\n" + (e?.message || e));
     } finally {
       setSaving((s) => { const n = { ...s }; delete n[k]; return n; });
     }
@@ -200,7 +200,7 @@ export default function Users({ me }) {
             <span>Mostrar quem ainda não tem acesso</span>
           </label>
         </div>
-        <p className="muted-sm">Auditoria de acessos. Org-admins têm acesso total (automático). Você pode <b>revogar</b> um acesso aqui; para <b>conceder ou trocar o papel</b>, clique no evento e use <b>Configurações → Acesso a este evento</b> (assim a concessão carrega o contexto do evento). Papéis: <b>Admin</b> gerencia · <b>Official</b> pontua · <b>Viewer</b> só vê.</p>
+        <p className="muted-sm">Conceda, troque ou remova o papel de cada usuário por evento aqui mesmo (escolha <b>—</b> para remover). Org-admins têm acesso total automático. Papéis: <b>Admin</b> gerencia o evento · <b>Official</b> pontua · <b>Viewer</b> só vê. O cabeçalho de cada evento também abre o acesso dentro do próprio evento.</p>
 
         {dupClusters.length > 0 && (
           <div className="warn-box" style={{ marginTop: 4 }}>
@@ -251,19 +251,14 @@ export default function Users({ me }) {
                         if (isOrg) return <td key={ev.id} className="ag-cell ag-full">total</td>;
                         const k = `${u.email}||${ev.id}`;
                         const role = shownRole(u.email, ev.id);
-                        if (!role) {
-                          return (
-                            <td key={ev.id} className="ag-cell">
-                              <button className="ag-grant" onClick={() => nav(`/e/${ev.id}/settings`)} title="Conceder acesso no assistente do evento">+ acesso ↗</button>
-                            </td>
-                          );
-                        }
                         return (
                           <td key={ev.id} className="ag-cell">
-                            <span className={`ag-chip r-${role}`}>{ROLE_LABEL[role] || role}</span>
-                            <button className="ag-revoke" disabled={!!saving[k]} onClick={() => revoke(u, ev)} title={`Revogar acesso de ${u.email}`}>
-                              {saving[k] ? "…" : "✕"}
-                            </button>
+                            <select className={`ag-role r-${role || "none"}`} value={role}
+                              disabled={!!saving[k]}
+                              onChange={(e) => changeRole(u, ev, e.target.value)}>
+                              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                            </select>
+                            {saving[k] && <span className="ag-saving">…</span>}
                           </td>
                         );
                       })}
