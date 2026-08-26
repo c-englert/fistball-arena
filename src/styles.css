@@ -348,7 +348,15 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .ios-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ag-switchlbl { font-size: 11px; color: var(--muted); font-weight: 700; }
 .ag-searchrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.ag-searchrow .game-search { flex: 1; min-width: 180px; max-width: 360px; }
+.ag-searchrow .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 360px; }
+.ag-searchrow .search-wrap .game-search { width: 100%; padding-right: 34px; }
+.search-clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px; border: none; border-radius: 50%; background: #e7eaf1;
+  color: var(--muted); font-size: 12px; font-weight: 800; line-height: 1;
+  display: grid; place-items: center; cursor: pointer;
+}
+.search-clear:hover { background: #d9dde8; color: var(--text); }
 .ag-searchrow .ag-switchlbl { font-size: 13px; }
 .ag-cell { text-align: center; }
 .ag-full { color: var(--brand); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }

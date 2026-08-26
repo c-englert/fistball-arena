@@ -223,7 +223,10 @@ export default function Users({ me }) {
         {status && status.startsWith("Falhou") && <div className="warn-box err" style={{ marginTop: 6 }}>❌ {status}</div>}
 
         <div className="ag-searchrow">
-          <input className="game-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou e-mail…" />
+          <div className="search-wrap">
+            <input className="game-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou e-mail…" />
+            {q && <button className="search-clear" aria-label="Limpar busca" onClick={() => setQ("")}>✕</button>}
+          </div>
           <button
             type="button"
             role="switch"
