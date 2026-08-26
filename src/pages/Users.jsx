@@ -33,6 +33,7 @@ export default function Users({ me }) {
   const [showAll, setShowAll] = useState(true); // include users with no access (everyone) by default
   const [pending, setPending] = useState({}); // optimistic role overlay: `${email}||${eventId}` -> role
   const [saving, setSaving] = useState({});    // `${email}||${eventId}` -> true while writing
+  const [errCell, setErrCell] = useState({});  // `${email}||${eventId}` -> error message
 
   useEffect(() => subscribeOrgAdmins(setOrgAdmins), []);
   useEffect(() => subscribePeople(setPeople), []);
@@ -139,14 +140,17 @@ export default function Users({ me }) {
     const k = `${user.email}||${ev.id}`;
     setPending((p) => ({ ...p, [k]: role }));       // show the choice immediately
     setSaving((s) => ({ ...s, [k]: true }));
+    setErrCell((x) => { const n = { ...x }; delete n[k]; return n; });
     try {
       if (!role) await removeMemberAt(ev.id, user.email);
       else await setMemberRoleAt(ev.id, { email: user.email, name: user.name, role }, me);
       setStatus("");
     } catch (e) {
+      const code = e?.code || e?.message || String(e);
+      console.error("[access-grid] save failed", { user: user.email, event: ev.id, role, error: e });
       setPending((p) => { const n = { ...p }; delete n[k]; return n; }); // revert overlay
-      setStatus("Falhou: " + (e?.message || e));
-      alert("Não foi possível salvar o acesso de " + user.email + ":\n" + (e?.message || e));
+      setErrCell((x) => ({ ...x, [k]: code }));
+      setStatus(`Falhou ao salvar ${user.email} em “${ev.name}”: ${code}`);
     } finally {
       setSaving((s) => { const n = { ...s }; delete n[k]; return n; });
     }
@@ -211,6 +215,8 @@ export default function Users({ me }) {
           </div>
         )}
 
+        {status && status.startsWith("Falhou") && <div className="warn-box err" style={{ marginTop: 6 }}>❌ {status}</div>}
+
         <input className="game-search" style={{ marginTop: 8, width: "100%", maxWidth: 360 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou e-mail…" />
 
         {loading && <div className="empty">Carregando acessos…</div>}
@@ -252,13 +258,14 @@ export default function Users({ me }) {
                         const k = `${u.email}||${ev.id}`;
                         const role = shownRole(u.email, ev.id);
                         return (
-                          <td key={ev.id} className="ag-cell">
+                          <td key={ev.id} className={`ag-cell ${errCell[k] ? "ag-err" : ""}`}>
                             <select className={`ag-role r-${role || "none"}`} value={role}
                               disabled={!!saving[k]}
                               onChange={(e) => changeRole(u, ev, e.target.value)}>
                               {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                             </select>
                             {saving[k] && <span className="ag-saving">…</span>}
+                            {errCell[k] && <span className="ag-cellerr" title={errCell[k]}>⚠</span>}
                           </td>
                         );
                       })}

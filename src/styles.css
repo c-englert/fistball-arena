@@ -97,7 +97,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .sb-who .who { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sb-who .role { font-size: 11px; color: rgba(255,255,255,.6); }
 
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-x: clip; }
 .appbar {
   position: sticky; top: 0; z-index: 15; background: var(--surface);
   border-bottom: 1px solid var(--line); padding: 10px 16px;
@@ -318,7 +318,10 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .access-panel > .subhead:first-of-type { margin-top: 14px; }
 
 /* ---------- Global access grid ---------- */
-.grid-scroll { overflow-x: auto; margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.grid-scroll { overflow-x: auto; max-width: 100%; margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.ag-cellerr { margin-left: 4px; color: var(--r); font-weight: 800; }
+.ag-cell.ag-err .ag-role { border-color: var(--r); }
+.warn-box.err { border-color: #f0b4b4; background: #fdeaea; color: #8a1f1f; }
 .access-grid { border-collapse: collapse; width: 100%; font-size: 13px; }
 .access-grid th, .access-grid td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: middle; }
 .access-grid thead th { background: #f6f7fb; font-weight: 800; color: var(--muted); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
