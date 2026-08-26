@@ -325,7 +325,8 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .warn-box.err { border-color: #f0b4b4; background: #fdeaea; color: #8a1f1f; }
 .access-grid { border-collapse: collapse; width: 100%; font-size: 13px; }
 .access-grid th, .access-grid td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: middle; }
-.access-grid thead th { background: #f6f7fb; font-weight: 800; color: var(--muted); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+.access-grid thead th { background: #f6f7fb; font-weight: 800; color: var(--muted); white-space: normal; min-width: 128px; max-width: 200px; position: sticky; top: 0; z-index: 1; }
+.access-grid thead th.ag-user { white-space: nowrap; }
 .access-grid th.ag-arch { opacity: .7; }
 .access-grid .ag-user { position: sticky; left: 0; background: var(--surface); min-width: 190px; z-index: 2; border-right: 1px solid var(--line); }
 .access-grid thead th.ag-user { z-index: 3; background: #f6f7fb; }
