@@ -100,13 +100,14 @@ export default function EventPicker({ me, onSignOut }) {
           <button className={`filter-pill ${tab === "active" ? "active" : ""}`} onClick={() => setTab("active")}>Active &amp; upcoming</button>
           <button className={`filter-pill ${tab === "archived" ? "active" : ""}`} onClick={() => setTab("archived")}>Archived</button>
           <span style={{ flex: 1 }} />
-          <div className="seg">
-            <button className={`seg-btn ${view === "cards" ? "active" : ""}`} onClick={() => pickView("cards")}>Cards</button>
-            <button className={`seg-btn ${view === "timeline" ? "active" : ""}`} onClick={() => pickView("timeline")}>Timeline</button>
-          </div>
           {me.admin && tab === "archived" && (
             <button className="btn sm" onClick={openImport} title="Create an archived event from a past Google Sheet">⬇ Import from Google Sheet</button>
           )}
+          <div className="seg">
+            <button className={`seg-btn ${view === "cards" ? "active" : ""}`} onClick={() => pickView("cards")}>Cards</button>
+            <button className={`seg-btn ${view === "timeline" ? "active" : ""}`} onClick={() => pickView("timeline")}>Timeline</button>
+            <button className={`seg-btn ${view === "table" ? "active" : ""}`} onClick={() => pickView("table")}>Table</button>
+          </div>
         </div>
 
         {events === null && <div className="empty">Loading events…</div>}
@@ -120,6 +121,39 @@ export default function EventPicker({ me, onSignOut }) {
             roleOf={(ev) => (me.admin ? "org-admin" : ev.myRole)}
             onOpen={(id) => nav(`/e/${id}`)}
           />
+        )}
+
+        {view === "table" && shown.length > 0 && (
+          <div className="grid-scroll">
+            <table className="ev-table">
+              <thead>
+                <tr>
+                  <th></th><th>Event</th><th>Place</th><th>Dates</th><th>Status</th><th>Your role</th><th>Live</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((ev) => {
+                  const isLive = live?.eventId === ev.id;
+                  const role = me.admin ? "org-admin" : ev.myRole;
+                  const RoleIcon = role === "org-admin" ? IconStar : role === "admin" ? IconShield : role === "official" ? IconWhistle : IconEye;
+                  const logo = brandings[ev.id]?.eventLogo?.dataUrl;
+                  const canEdit = me.admin || ev.myRole === "admin";
+                  return (
+                    <tr key={ev.id} className="ev-row" onClick={() => nav(`/e/${ev.id}`)}>
+                      <td className="et-logo">{logo ? <img src={logo} alt="" /> : <span className="et-logo-ph">{(ev.name || "?").trim()[0]}</span>}</td>
+                      <td className="et-name">{ev.name}</td>
+                      <td className="muted-sm">{ev.place || "—"}</td>
+                      <td className="muted-sm">{ev.dates || "—"}</td>
+                      <td><span className={`state ${ev.status === "archived" ? "none" : "submitted"}`}>{ev.status === "archived" ? "Archived" : "Active"}</span></td>
+                      <td><span className={`ev-role role-${role}`}><RoleIcon size={13} /> {role}</span></td>
+                      <td>{isLive ? <span className="live-ind"><span className="live-dot" /> Live</span> : <span className="muted-sm">—</span>}</td>
+                      <td className="et-actions">{canEdit && <button className="ev-edit sm" title="Edit event" onClick={(e) => { e.stopPropagation(); nav(`/e/${ev.id}/settings`); }}><IconEdit size={15} /></button>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {view === "cards" && (

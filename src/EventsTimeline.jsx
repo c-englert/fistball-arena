@@ -3,9 +3,9 @@ import { IconStar, IconShield, IconWhistle, IconEye } from "./icons.jsx";
 
 const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = 86400000;
-const COLW = 156;      // px per month column
-const PILLW = 236;     // assumed pill width for lane packing
-const LANE_H = 60;     // px per lane row
+const COLW = 200;      // px per month column
+const PILLW = 340;     // assumed pill width for lane packing (~+50%)
+const LANE_H = 84;     // px per lane row
 const parseISO = (s) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ""));
   return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
@@ -35,8 +35,16 @@ export default function EventsTimeline({ events, brandings, live, roleOf, onOpen
     if (!items.length) return null;
     const minD = new Date(Math.min(...items.map((x) => +x.s)));
     const maxD = new Date(Math.max(...items.map((x) => +x.e2)));
-    const start = new Date(minD.getFullYear(), minD.getMonth(), 1);
-    const end = new Date(maxD.getFullYear(), maxD.getMonth() + 1, 0);
+    // Anchor the window so TODAY sits at 30% (30% past · 70% future), while still
+    // fitting every event. total = max(pastNeeded/0.3, futureNeeded/0.7).
+    const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const pastNeeded = Math.max(0, (today - minD) / DAY);
+    const futureNeeded = Math.max(0, (maxD - today) / DAY);
+    const totalDaysWin = Math.max(pastNeeded / 0.3, futureNeeded / 0.7, 60);
+    const winStart = new Date(+today - totalDaysWin * 0.3 * DAY);
+    const winEnd = new Date(+today + totalDaysWin * 0.7 * DAY);
+    const start = new Date(winStart.getFullYear(), winStart.getMonth(), 1);
+    const end = new Date(winEnd.getFullYear(), winEnd.getMonth() + 1, 0);
     const months = [];
     for (let c = new Date(start); c <= end; c = new Date(c.getFullYear(), c.getMonth() + 1, 1)) months.push(new Date(c));
     const totalDays = Math.round((end - start) / DAY) + 1;

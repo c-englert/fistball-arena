@@ -831,22 +831,35 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .tl-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--r); z-index: 1; }
 .tl-today-lbl { position: absolute; top: 2px; left: 3px; font-size: 10px; font-weight: 800; color: var(--r); background: var(--surface); padding: 0 3px; border-radius: 4px; }
 .tl-item { position: absolute; }
-.tl-bar { height: 5px; border-radius: 3px; background: #d9d0f0; margin: 0 0 3px 12px; }
+.tl-bar { height: 7px; border-radius: 4px; background: #d9d0f0; margin: 0 0 4px 16px; }
 .tl-pill {
-  display: inline-flex; align-items: center; gap: 9px; max-width: 236px;
+  display: inline-flex; align-items: center; gap: 12px; max-width: 340px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
-  padding: 5px 14px 5px 5px; box-shadow: var(--shadow); cursor: pointer; text-align: left;
+  padding: 7px 20px 7px 7px; box-shadow: var(--shadow); cursor: pointer; text-align: left;
 }
 .tl-pill:hover { border-color: var(--brand-2); }
 .tl-pill.live { border-color: #f2b8b8; }
-.tl-logo { width: 34px; height: 34px; flex: none; border-radius: 50%; object-fit: contain; background: #fff; border: 1px solid var(--line); }
-.tl-logo-ph { display: grid; place-items: center; font-weight: 800; color: var(--brand); background: #efeaf9; }
-.tl-txt { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
-.tl-name { font-weight: 800; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
-.tl-meta { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: capitalize; }
-.tl-liveflag { display: inline-flex; align-items: center; gap: 3px; color: var(--win); margin-left: 2px; }
+.tl-logo { width: 50px; height: 50px; flex: none; border-radius: 50%; object-fit: contain; background: #fff; border: 1px solid var(--line); }
+.tl-logo-ph { display: grid; place-items: center; font-weight: 800; font-size: 20px; color: var(--brand); background: #efeaf9; }
+.tl-txt { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.tl-name { font-weight: 800; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
+.tl-meta { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 700; text-transform: capitalize; margin-top: 1px; }
+.tl-liveflag { display: inline-flex; align-items: center; gap: 4px; color: var(--win); margin-left: 3px; }
 .tl-liveflag .live-dot { background: var(--win); }
 .tl-undated { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+/* ---------- Events table view ---------- */
+.ev-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.ev-table th, .ev-table td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: middle; white-space: nowrap; }
+.ev-table thead th { background: #f6f7fb; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.ev-row { cursor: pointer; }
+.ev-row:hover td { background: #f7f8fc; }
+.et-logo { width: 44px; }
+.et-logo img { width: 34px; height: 34px; border-radius: 8px; object-fit: contain; background: #fff; border: 1px solid var(--line); display: block; }
+.et-logo-ph { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; color: var(--brand); background: #efeaf9; }
+.et-name { font-weight: 800; }
+.et-actions { text-align: right; }
+.ev-edit.sm { width: 30px; height: 30px; }
 
 /* ---------- Embedded Fistball Live (Standings) ---------- */
 .live-embed { width: 100%; height: calc(100dvh - 70px); border: 0; display: block; background: #0b1220; }
