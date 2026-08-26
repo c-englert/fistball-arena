@@ -94,6 +94,7 @@ export default function MatchList({ me }) {
       </div>
 
       {shown.length === 0 && <div className="empty">No games for this filter.</div>}
+      <div className="card-grid">
       {shown.map((m) => {
         const rep = reports[m.id] || {};
         const st = rep.status || "not_started";
@@ -127,6 +128,7 @@ export default function MatchList({ me }) {
           </div>
         );
       })}
+      </div>
     </>
   );
 }

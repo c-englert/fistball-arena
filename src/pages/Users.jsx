@@ -192,7 +192,7 @@ export default function Users({ me }) {
       </div>
 
       {/* ---- Access grid ---- */}
-      <div className="card">
+      <div className="card wide">
         <div className="row-between" style={{ alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <h2 style={{ margin: 0 }}>Acesso por evento <span className="muted-sm" style={{ fontWeight: 400 }}>· {rows.length} usuário(s) · {cols.length} evento(s)</span></h2>
           <label className="imp-active" style={{ margin: 0 }}>

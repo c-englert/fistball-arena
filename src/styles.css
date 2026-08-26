@@ -110,7 +110,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .crumbs .sep { color: var(--line); }
 .crumb-cur { color: var(--text); font-weight: 800; }
 .sb-toggle { display: none; background: var(--brand); color: #fff; border: none; border-radius: 10px; width: 40px; height: 40px; flex: none; align-items: center; justify-content: center; }
-.main .content { padding: 18px; padding-bottom: 120px; max-width: 1000px; width: 100%; }
+.main .content { padding: 18px; padding-bottom: 120px; max-width: 1320px; width: 100%; }
 .page-h { margin: 2px 0 16px; font-size: 22px; font-weight: 800; }
 .page-h .arch-badge { margin-left: 10px; }
 .game-h { display: flex; align-items: center; gap: 12px; }
@@ -261,7 +261,14 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .card {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px;
+  max-width: 900px; /* forms/text keep a comfortable reading width on wide screens */
 }
+.card.wide { max-width: none; } /* grids/tables opt out and fill the content area */
+
+/* Responsive card grid: list pages flow into multiple columns and use the width.
+   Items keep their own styles; the grid owns the spacing. */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+.card-grid > .card, .card-grid > .match-card { margin-bottom: 0; max-width: none; }
 .card h2 { margin: 0 0 14px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }

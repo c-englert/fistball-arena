@@ -105,6 +105,7 @@ export default function EventPicker({ me, onSignOut }) {
         {events !== null && shown.length === 0 && (
           <div className="empty">{tab === "archived" ? "No archived events." : me.admin ? "No active events — create one above." : "You're not a member of any active event yet."}</div>
         )}
+        <div className="card-grid">
         {shown.map((ev) => {
           const isLive = live?.eventId === ev.id;
           const canEdit = me.admin || ev.myRole === "admin";
@@ -135,6 +136,7 @@ export default function EventPicker({ me, onSignOut }) {
             </div>
           );
         })}
+        </div>
       </div>
 
       {imp && me.admin && (
