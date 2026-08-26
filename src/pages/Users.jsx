@@ -146,9 +146,17 @@ export default function Users({ me }) {
     try { await addOrgAdmin(oaForm, me); setOaForm({ email: "", name: "" }); setStatus("Org-admin adicionado."); }
     catch (e) { setStatus("Falhou: " + (e?.message || e)); }
   };
-  const removeOrgA = async (emailAddr) => {
-    if (!window.confirm(`Remover org-admin ${emailAddr}? Perde acesso total a todos os eventos.`)) return;
-    try { await removeOrgAdmin(emailAddr); } catch (e) { setStatus("Falhou: " + (e?.message || e)); }
+  // Toggle a user's org-admin status (iOS switch next to the name). Built-in
+  // org-admins are set in code and can't be changed here.
+  const toggleOrgAdmin = async (user) => {
+    if (BOOTSTRAP_ORG_ADMINS.includes(user.email)) return;
+    const on = orgAdminEmails.has(user.email);
+    if (on && !window.confirm(`Remover org-admin de ${user.name || user.email}? Perde acesso total a todos os eventos.`)) return;
+    try {
+      if (on) await removeOrgAdmin(user.email);
+      else await addOrgAdmin({ email: user.email, name: user.name }, me);
+      setStatus("");
+    } catch (e) { setStatus("Falhou: " + (e?.code || e?.message || e)); }
   };
   // Grant / change / revoke a user's role in one event, inline (optimistic).
   const changeRole = async (user, ev, role) => {
@@ -177,40 +185,7 @@ export default function Users({ me }) {
     <>
       <h2 className="page-h">Usuários & acessos</h2>
 
-      {/* ---- Org-admins ---- */}
-      <div className="card">
-        <h2>Org-admins <span className="muted-sm" style={{ fontWeight: 400 }}>· acesso total a TODOS os eventos</span></h2>
-        <p className="muted-sm">Org-admins criam e gerenciam qualquer evento. O acesso a <b>um único evento</b> é dado na grade abaixo ou no próprio evento → <b>Configurações → Acesso a este evento</b>.</p>
-        <div className="add-row" style={{ marginTop: 8 }}>
-          <input style={{ flex: "2 1 200px" }} value={oaForm.email} onChange={(e) => setOaForm({ ...oaForm, email: e.target.value })} placeholder="email@example.com" />
-          <input style={{ flex: "1 1 120px" }} value={oaForm.name} onChange={(e) => setOaForm({ ...oaForm, name: e.target.value })} placeholder="Nome (opcional)" />
-          <button className="btn primary" onClick={addOrgA}>Add org-admin</button>
-        </div>
-        {suggest && (
-          <div className="warn-box" style={{ marginTop: 8 }}>
-            ⚠️ Isto parece a mesma conta que <b>{suggest}</b>, que já entrou. Use o <b>e-mail exato de login</b>.{" "}
-            <button className="btn sm" style={{ marginLeft: 4 }} onClick={() => setOaForm({ ...oaForm, email: suggest })}>Usar {suggest}</button>
-          </div>
-        )}
-        <div style={{ marginTop: 10 }}>
-          {[...orgAdminEmails].sort().map((emailAddr) => {
-            const isBootstrap = BOOTSTRAP_ORG_ADMINS.includes(emailAddr);
-            const rec = orgAdmins.find((o) => o.email === emailAddr);
-            return (
-              <div className="roster-row" key={emailAddr}>
-                <span className="roster-nr role">A</span>
-                <span className="roster-name">{rec?.name || emailAddr} {rec?.name && <span className="muted-sm">{emailAddr}</span>}</span>
-                {isBootstrap
-                  ? <span className="tag">built-in</span>
-                  : <button className="btn danger sm" style={{ marginLeft: 8 }} onClick={() => removeOrgA(emailAddr)}>Remover</button>}
-              </div>
-            );
-          })}
-        </div>
-        <p className="muted-sm" style={{ marginTop: 6 }}>Org-admins “built-in” são definidos no código e não podem ser removidos aqui. Os demais passam a valer quando a pessoa entrar de novo. {status}</p>
-      </div>
-
-      {/* ---- Access grid ---- */}
+      {/* ---- Access grid (single container) ---- */}
       <div className="card wide">
         <div className="row-between" style={{ alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <h2 style={{ margin: 0 }}>Acesso por evento <span className="muted-sm" style={{ fontWeight: 400 }}>· {rows.length} usuário(s) · {cols.length} evento(s)</span></h2>
@@ -219,7 +194,20 @@ export default function Users({ me }) {
             <span>Mostrar quem ainda não tem acesso</span>
           </label>
         </div>
-        <p className="muted-sm">Conceda, troque ou remova o papel de cada usuário por evento aqui mesmo (escolha <b>—</b> para remover). Org-admins têm acesso total automático. Papéis: <b>Admin</b> gerencia o evento · <b>Official</b> pontua · <b>Viewer</b> só vê. O cabeçalho de cada evento também abre o acesso dentro do próprio evento.</p>
+        <p className="muted-sm">Ligue o <b>toggle org-admin</b> ao lado do nome para dar acesso total a todos os eventos. Para um único evento, escolha o papel na coluna do evento (<b>—</b> remove). Papéis: <b>Admin</b> gerencia · <b>Official</b> pontua · <b>Viewer</b> só vê.</p>
+
+        {/* pre-authorize someone who hasn't logged in yet */}
+        <div className="add-row" style={{ marginTop: 8 }}>
+          <input style={{ flex: "2 1 200px" }} value={oaForm.email} onChange={(e) => setOaForm({ ...oaForm, email: e.target.value })} placeholder="Adicionar org-admin por e-mail…" />
+          <input style={{ flex: "1 1 120px" }} value={oaForm.name} onChange={(e) => setOaForm({ ...oaForm, name: e.target.value })} placeholder="Nome (opcional)" />
+          <button className="btn" onClick={addOrgA}>+ Org-admin</button>
+        </div>
+        {suggest && (
+          <div className="warn-box" style={{ marginTop: 8 }}>
+            ⚠️ Isto parece a mesma conta que <b>{suggest}</b>, que já entrou. Use o <b>e-mail exato de login</b>.{" "}
+            <button className="btn sm" style={{ marginLeft: 4 }} onClick={() => setOaForm({ ...oaForm, email: suggest })}>Usar {suggest}</button>
+          </div>
+        )}
 
         {dupClusters.length > 0 && (
           <div className="warn-box" style={{ marginTop: 4 }}>
@@ -259,12 +247,25 @@ export default function Users({ me }) {
                 {rows.map((u) => {
                   const isOrg = orgAdminEmails.has(u.email);
                   const isDup = dupEmails.has(u.email);
+                  const isBuiltin = BOOTSTRAP_ORG_ADMINS.includes(u.email);
                   return (
                     <tr key={u.email}>
                       <td className="ag-user">
-                        <div className="ag-name">{u.name || "—"}
-                          {isOrg && <span className="tag tag-org">org-admin</span>}
+                        <div className="ag-name">
+                          <span className="ag-nm">{u.name || "—"}</span>
                           {isDup && <span className="tag tag-dup" title="Vários e-mails desta mesma conta Google aparecem na lista — confira qual é o de login.">⚠ duplicada?</span>}
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isOrg}
+                            aria-label="org-admin"
+                            className={`ios-switch ${isOrg ? "on" : ""} ${isBuiltin ? "locked" : ""}`}
+                            disabled={isBuiltin}
+                            title={isBuiltin ? "Org-admin definido no código (não removível)" : "org-admin — acesso total a todos os eventos"}
+                            onClick={() => toggleOrgAdmin(u)}>
+                            <span className="knob" />
+                          </button>
+                          <span className="ag-switchlbl">org-admin</span>
                         </div>
                         <div className="ag-email muted-sm">{u.email}</div>
                       </td>
