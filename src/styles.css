@@ -117,6 +117,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .game-h { display: flex; align-items: center; gap: 12px; }
 .game-h .gh-title { font-size: 18px; font-weight: 800; }
 .game-h .gh-sub { font-size: 12px; color: var(--muted); font-weight: 600; }
+/* Back button sits on the light content area here, not the dark topbar. */
+.game-h .iconbtn {
+  background: var(--surface); color: var(--brand); border: 1px solid var(--line);
+  height: 40px; box-shadow: var(--shadow);
+}
+.game-h .iconbtn:hover { background: #f3f1fb; border-color: var(--brand-2); }
 .main .live-embed { height: calc(100dvh - 120px); border-radius: 12px; }
 
 /* mobile: sidebar becomes an off-canvas drawer */
