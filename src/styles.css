@@ -51,13 +51,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .content { padding: 16px; padding-bottom: 120px; }
 
 /* ================= Left sidebar shell ================= */
-.shell { min-height: 100%; overflow-x: clip; }
+/* Two-column grid. minmax(0,1fr) is what lets the content column shrink so a
+   wide table scrolls inside its own box instead of widening the whole page. */
+.shell { display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100%; }
 .sidebar {
-  width: 264px;
   background: var(--brand); color: #fff;
   display: flex; flex-direction: column; gap: 4px;
   padding: 14px 12px; padding-top: max(14px, env(safe-area-inset-top));
-  position: fixed; left: 0; top: 0; height: 100dvh; overflow-y: auto; z-index: 40;
+  position: sticky; top: 0; height: 100dvh; overflow-y: auto; z-index: 40;
 }
 .sidebar .sb-eventhead { padding: 4px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.14); margin-bottom: 8px; }
 .sb-back {
@@ -97,7 +98,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .sb-who .who { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sb-who .role { font-size: 11px; color: rgba(255,255,255,.6); }
 
-.main { margin-left: 264px; min-width: 0; display: flex; flex-direction: column; overflow-x: clip; }
+.main { min-width: 0; display: flex; flex-direction: column; }
 .appbar {
   position: sticky; top: 0; z-index: 15; background: var(--surface);
   border-bottom: 1px solid var(--line); padding: 10px 16px;
@@ -121,15 +122,15 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 /* mobile: sidebar becomes an off-canvas drawer */
 .sb-scrim { display: none; }
 @media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
   .sidebar {
-    position: fixed; top: 0; left: 0; z-index: 60; height: 100dvh;
+    width: 264px; position: fixed; top: 0; left: 0; z-index: 60; height: 100dvh;
     transform: translateX(-100%); transition: transform .22s ease;
     box-shadow: 2px 0 24px rgba(0,0,0,.3);
   }
   .sidebar.open { transform: translateX(0); }
   .sb-scrim.show { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.4); }
   .sb-toggle { display: inline-flex; }
-  .main { margin-left: 0; }
 }
 
 /* ---------- Topbar logo ---------- */
