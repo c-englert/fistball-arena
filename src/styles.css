@@ -331,6 +331,18 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .ag-role.r-viewer { border-color: var(--line); color: var(--text); background: #fff; }
 .ag-role.r-none { color: #aab0bf; }
 .ag-saving { margin-left: 4px; color: var(--muted); font-weight: 800; }
+/* hybrid cells: role chip + revoke, or a grant link */
+.ag-cell { white-space: nowrap; }
+.ag-chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; border: 1px solid var(--line); }
+.ag-chip.r-admin { border-color: var(--brand); color: var(--brand); background: #efeaf9; }
+.ag-chip.r-official { border-color: #1f7a4d; color: #1f7a4d; background: #e6f5ee; }
+.ag-chip.r-viewer { color: var(--text); background: #fff; }
+.ag-revoke { margin-left: 6px; border: none; background: none; color: var(--muted); font-weight: 800; border-radius: 6px; padding: 2px 6px; }
+.ag-revoke:hover:not(:disabled) { background: #fdeaea; color: var(--r); }
+.ag-revoke:disabled { opacity: .5; }
+.ag-grant { border: 1px dashed var(--line); background: none; color: var(--muted); border-radius: 8px; padding: 4px 8px; font-size: 12px; font-weight: 700; }
+.ag-grant:hover { border-color: var(--accent); color: var(--accent); }
+.tag.tag-dup { background: #fff3d6; color: #9a6b00; border: 1px solid #f0d288; }
 .acc-auto .roster-row { opacity: .95; }
 .tag.tag-org { background: var(--brand); color: #fff; }
 .linklike { background: none; border: none; padding: 0; font: inherit; color: var(--brand); font-weight: 700; cursor: pointer; text-decoration: underline; }
