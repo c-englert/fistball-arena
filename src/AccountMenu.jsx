@@ -22,7 +22,6 @@ export default function AccountMenu({ me, onSignOut }) {
               <div className="account-name">{me.name}</div>
               <div className="account-email">{me.email}{me.admin ? " · org-admin" : ""}</div>
             </div>
-            <a className="menu-item" href="#/guide" onClick={() => setOpen(false)}>Guide</a>
             <button className="menu-item" onClick={() => { setOpen(false); onSignOut(); }}>Sign out</button>
           </div>
         </>
