@@ -349,14 +349,57 @@ export async function clearLiveEvent() {
 // Reset all match reports (súmulas) — deletes every report and sets each public
 // results row back to "Not Started" (keeps games, schedule, teams and rosters).
 // Use after a scoring rehearsal to start the tournament clean.
+// Rebuild the placeholder label a knockout slot had before advancement filled
+// it (e.g. "Winner Quarterfinal 1", "Loser Semifinal 2", "1st"). Used by reset.
+function slotPlaceholder(src, gamesById) {
+  if (!src) return null;
+  if (src.type === "seed") {
+    const n = Number(src.rank) || 0;
+    const suf = n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th";
+    return `${n}${suf}`;
+  }
+  const round = gamesById[src.game || src.dep]?.round;
+  if (!round) return null;
+  if (src.type === "winner") return `Winner ${round}`;
+  if (src.type === "loser") return `Loser ${round}`;
+  return null;
+}
+
 export async function resetScores() {
   await clearCollection("reports");
+  // Games carry srcA/srcB and the (possibly advancement-filled) teamA/teamB.
+  const gsnap = await getDocs(ecol("games"));
+  const gamesById = {};
+  gsnap.docs.forEach((d) => { gamesById[d.id] = { id: d.id, ...d.data() }; });
+  // Revert every knockout slot that has a source back to its placeholder, on
+  // both the game and its result (the Live bracket reads results).
+  const slotReverts = {}; // gameId -> { teamA?, teamB? }
+  gsnap.docs.forEach((d) => {
+    const g = gamesById[d.id];
+    const pa = slotPlaceholder(g.srcA, gamesById);
+    const pb = slotPlaceholder(g.srcB, gamesById);
+    const patch = {};
+    if (pa && g.teamA?.name !== pa) patch.teamA = { name: pa, short: "" };
+    if (pb && g.teamB?.name !== pb) patch.teamB = { name: pb, short: "" };
+    if (Object.keys(patch).length) slotReverts[d.id] = patch;
+  });
+  const gdocs = gsnap.docs.filter((d) => slotReverts[d.id]);
+  for (let i = 0; i < gdocs.length; i += 300) {
+    const batch = writeBatch(db);
+    gdocs.slice(i, i + 300).forEach((d) => batch.set(d.ref, slotReverts[d.id], { merge: true }));
+    await batch.commit();
+  }
+
   const snap = await getDocs(ecol("results"));
   const docs = snap.docs;
   for (let i = 0; i < docs.length; i += 300) {
     const batch = writeBatch(db);
     docs.slice(i, i + 300).forEach((d) => {
-      batch.set(d.ref, { setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], cards: [], status: "Not Started", updatedAt: serverTimestamp() }, { merge: true });
+      const rev = slotReverts[d.id] || {};
+      const teamPatch = {};
+      if (rev.teamA) teamPatch.teamA = rev.teamA.name;
+      if (rev.teamB) teamPatch.teamB = rev.teamB.name;
+      batch.set(d.ref, { setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], cards: [], status: "Not Started", ...teamPatch, updatedAt: serverTimestamp() }, { merge: true });
     });
     await batch.commit();
   }
