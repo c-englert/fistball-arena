@@ -277,7 +277,7 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
    Items keep their own styles; the grid owns the spacing. */
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: stretch; }
 .card-grid.loose { align-items: start; } /* accordion cards (roster) keep their own height */
-.card-grid > .card, .card-grid > .match-card { margin-bottom: 0; max-width: none; }
+.card-grid > .card, .card-grid > .match-card, .card-grid > .ev-card { margin-bottom: 0; max-width: none; }
 .card h2 { margin: 0 0 14px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
@@ -778,10 +778,40 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .logo-actions .btn { min-width: 118px; white-space: nowrap; }
 .promo-logo { height: 40px; background: #fff; border-radius: 8px; padding: 4px; display: inline-flex; align-items: center; flex: none; }
 .promo-logo img { height: 100%; max-width: 80px; object-fit: contain; }
-.ev-body { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+/* ---------- Event card (fixed zones) ---------- */
+.ev-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 14px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 12px; height: 100%;
+}
+.ev-card:hover { border-color: var(--brand-2); }
+.ev-card:active { transform: scale(0.995); }
+.ev-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ev-badges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ev-role { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 3px 7px; border-radius: 999px; font-size: 12px; font-weight: 800; text-transform: capitalize; border: 1px solid var(--line); color: var(--muted); background: #fff; }
+.ev-role.role-org-admin { color: var(--brand); background: #efeaf9; border-color: #d9d0f0; }
+.ev-role.role-admin { color: var(--brand); background: #efeaf9; border-color: #d9d0f0; }
+.ev-role.role-official { color: #1f7a4d; background: #e6f5ee; border-color: #bfe6d2; }
+.ev-role.role-viewer { color: var(--muted); background: #f1f3f8; }
+.ev-edit {
+  flex: none; width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--brand); display: grid; place-items: center;
+}
+.ev-edit:hover { background: #f3f1fb; border-color: var(--brand-2); }
+
+.ev-body { display: flex; align-items: center; gap: 14px; flex: 1; }
 .ev-logo { width: 60px; height: 60px; flex: none; object-fit: contain; background: #fff; border-radius: 10px; padding: 5px; border: 1px solid var(--line); }
-.ev-promos { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.ev-info { min-width: 0; }
+.ev-name { font-size: 19px; font-weight: 800; line-height: 1.2; }
+.ev-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+.ev-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; }
+.ev-promos { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .ev-promos img { height: 22px; max-width: 56px; object-fit: contain; }
+.ev-live { flex: none; }
+.live-ind { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--win); }
+.live-ind .live-dot { background: var(--win); }
 
 /* ---------- Embedded Fistball Live (Standings) ---------- */
 .live-embed { width: 100%; height: calc(100dvh - 70px); border: 0; display: block; background: #0b1220; }

@@ -47,6 +47,23 @@ export const IconSettings = (p) => (
     <path d="M4 16h3.3M11.7 16H20" /><circle cx="9.3" cy="16" r="2.2" /></Svg>
 );
 
+// Roles
+export const IconEye = (p) => (
+  <Svg {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="2.6" /></Svg>
+);
+export const IconWhistle = (p) => (
+  <Svg {...p}><path d="M3 11.5A4.5 4.5 0 0 1 7.5 7H20a1 1 0 0 1 1 1v1.2a5.8 5.8 0 1 1-9.9 4.05" /><circle cx="7.2" cy="12.2" r="3" /><path d="M12.5 7V4.6h4" /></Svg>
+);
+export const IconShield = (p) => (
+  <Svg {...p}><path d="M12 3.5 5.5 6v5.2c0 4 2.8 6.9 6.5 8.3 3.7-1.4 6.5-4.3 6.5-8.3V6L12 3.5Z" /><path d="M9.2 12l2 2 3.6-4" /></Svg>
+);
+export const IconStar = (p) => (
+  <Svg {...p}><path d="M12 4l2.35 4.76 5.25.76-3.8 3.7.9 5.23L12 16.9l-4.7 2.25.9-5.23-3.8-3.7 5.25-.76L12 4Z" /></Svg>
+);
+export const IconEdit = (p) => (
+  <Svg {...p}><path d="M4 20h4l10-10-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></Svg>
+);
+
 // Utility
 export const IconBack = (p) => (
   <Svg {...p} sw={2}><path d="M14 6l-6 6 6 6" /></Svg>

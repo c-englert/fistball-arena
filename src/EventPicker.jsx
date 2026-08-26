@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { listMyEvents, createEvent, setEvent, publishEventImport, subscribeLivePointer, setLiveEvent, clearLiveEvent, subscribeAllBranding } from "./cloud.js";
 import { fetchEventFromSheet } from "./schedule/importEventSheet.js";
 import { formatRange } from "./dates.js";
+import { IconStar, IconShield, IconWhistle, IconEye, IconEdit } from "./icons.jsx";
 
 export default function EventPicker({ me, onSignOut }) {
   const nav = useNavigate();
@@ -109,28 +110,39 @@ export default function EventPicker({ me, onSignOut }) {
         {shown.map((ev) => {
           const isLive = live?.eventId === ev.id;
           const canEdit = me.admin || ev.myRole === "admin";
+          const role = me.admin ? "org-admin" : ev.myRole;
+          const RoleIcon = role === "org-admin" ? IconStar : role === "admin" ? IconShield : role === "official" ? IconWhistle : IconEye;
+          const promos = (brandings[ev.id]?.promoters || []).slice(0, 4);
           return (
-            <div className="match-card" key={ev.id} onClick={() => nav(`/e/${ev.id}`)} style={{ cursor: "pointer" }}>
-              <div className="mc-top">
-                <span className={`state ${ev.status === "archived" ? "none" : "submitted"}`}>{ev.status === "archived" ? "Archived" : "Active"}</span>
-                <span className="tag">{ev.myRole}</span>
-                {isLive && <span className="tag live-tag">● On Fistball Live</span>}
-                <span className="spacer" style={{ flex: 1 }} />
-                {canEdit && <button className="btn sm" onClick={(e) => { e.stopPropagation(); nav(`/e/${ev.id}/settings`); }}>Edit</button>}
-                {canManageLive(ev) && (
-                  <button className={`btn sm ${isLive ? "danger" : ""}`} onClick={(e) => { e.stopPropagation(); toggleLive(ev, isLive); }}>
-                    {isLive ? "Remove from Live" : "Show on Live"}
+            <div className="ev-card" key={ev.id} onClick={() => nav(`/e/${ev.id}`)}>
+              <div className="ev-head">
+                <div className="ev-badges">
+                  <span className={`state ${ev.status === "archived" ? "none" : "submitted"}`}>{ev.status === "archived" ? "Archived" : "Active"}</span>
+                  <span className={`ev-role role-${role}`} title={`Your role: ${role}`}><RoleIcon size={14} /> {role}</span>
+                </div>
+                {canEdit && (
+                  <button className="ev-edit" title="Edit event" aria-label="Edit event" onClick={(e) => { e.stopPropagation(); nav(`/e/${ev.id}/settings`); }}>
+                    <IconEdit size={17} />
                   </button>
                 )}
               </div>
+
               <div className="ev-body">
                 {brandings[ev.id]?.eventLogo?.dataUrl && <img className="ev-logo" src={brandings[ev.id].eventLogo.dataUrl} alt="" />}
-                <div style={{ minWidth: 0 }}>
-                  <div className="mc-teams" style={{ fontSize: 20 }}>{ev.name}</div>
-                  <div className="muted-sm">{[ev.place, ev.dates].filter(Boolean).join(" · ")}</div>
-                  <div className="ev-promos">
-                    {(brandings[ev.id]?.promoters || []).slice(0, 4).map((p, i) => <img key={i} src={p.dataUrl} alt="" />)}
-                  </div>
+                <div className="ev-info">
+                  <div className="ev-name">{ev.name}</div>
+                  <div className="ev-meta">{[ev.place, ev.dates].filter(Boolean).join(" · ")}</div>
+                </div>
+              </div>
+
+              <div className="ev-foot">
+                <div className="ev-promos">{promos.map((p, i) => <img key={i} src={p.dataUrl} alt="" />)}</div>
+                <div className="ev-live">
+                  {canManageLive(ev) ? (
+                    <button className={`btn sm ${isLive ? "danger" : ""}`} onClick={(e) => { e.stopPropagation(); toggleLive(ev, isLive); }}>
+                      {isLive ? "Remove from Live" : "Show on Live"}
+                    </button>
+                  ) : (isLive && <span className="live-ind"><span className="live-dot" /> On Fistball Live</span>)}
                 </div>
               </div>
             </div>
