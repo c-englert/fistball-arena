@@ -101,7 +101,7 @@ export default function Roster({ me }) {
           <div className="empty">No teams in the registry yet — import from the DB sheet above.</div>
         )}
 
-        <div className="card-grid">
+        <div className="card-grid loose">
         {teams.map((t) => (
           <div className="card" key={t.key}>
             <button className="roster-head" onClick={() => setOpen(open === t.key ? null : t.key)}>
