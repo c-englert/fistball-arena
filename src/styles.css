@@ -74,6 +74,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .sb-state .dot-live { width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a; box-shadow: 0 0 0 0 rgba(255,90,90,.7); animation: livepulse 1.6s infinite; }
 @keyframes livepulse { 0% { box-shadow: 0 0 0 0 rgba(255,90,90,.6); } 70% { box-shadow: 0 0 0 7px rgba(255,90,90,0); } 100% { box-shadow: 0 0 0 0 rgba(255,90,90,0); } }
 .sb-state .live-link { color: #fff; text-decoration: underline; margin-left: auto; }
+.sb-brandhead { display: flex; align-items: center; gap: 10px; padding: 4px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.14); margin-bottom: 8px; }
+.sb-mark { width: 38px; height: 38px; flex: none; background: #fff; border-radius: 9px; display: grid; place-items: center; }
+.sb-mark img { width: 100%; height: 100%; object-fit: contain; padding: 5px; box-sizing: border-box; }
+.sb-brandname { font-weight: 800; font-size: 16px; line-height: 1.1; }
+.sb-brandsub { font-size: 12px; color: rgba(255,255,255,.6); }
+.sb-state.global { padding: 0 8px 4px; }
 .sb-label { font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.5); padding: 6px 8px 4px; }
 .sb-nav { display: flex; flex-direction: column; gap: 2px; }
 .navitem {

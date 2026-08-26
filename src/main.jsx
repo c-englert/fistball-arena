@@ -1,9 +1,11 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";
+import GlobalShell from "./GlobalShell.jsx";
 import EventPicker from "./EventPicker.jsx";
 import EventShell from "./EventShell.jsx";
 import Guide from "./pages/Guide.jsx";
+import Users from "./pages/Users.jsx";
 import Identity from "./pages/Identity.jsx";
 import InstallPrompt from "./InstallPrompt.jsx";
 import UpdatePrompt from "./UpdatePrompt.jsx";
@@ -28,8 +30,11 @@ function Root() {
     <>
       <HashRouter>
         <Routes>
-          <Route path="/" element={<EventPicker me={me} onSignOut={signOut} />} />
-          <Route path="/guide" element={<Guide me={me} onSignOut={signOut} />} />
+          <Route element={<GlobalShell me={me} onSignOut={signOut} />}>
+            <Route path="/" element={<EventPicker me={me} onSignOut={signOut} />} />
+            <Route path="/users" element={<Users me={me} />} />
+            <Route path="/guide" element={<Guide />} />
+          </Route>
           <Route path="/e/:eventId/*" element={<EventShell me={me} onSignOut={signOut} />} />
         </Routes>
       </HashRouter>

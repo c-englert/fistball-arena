@@ -1,12 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { GUIDE, UI, LANGS } from "../content/guide.js";
-import AccountMenu from "../AccountMenu.jsx";
 
 // In-app reference guide with a language switcher. Content lives in
 // src/content/guide.js (single source of truth, kept in sync with the app).
-export default function Guide({ me, onSignOut }) {
-  const nav = useNavigate();
+export default function Guide() {
   const [lang, setLang] = useState(() => localStorage.getItem("fb_guide_lang") || "pt");
   const pick = (l) => { setLang(l); localStorage.setItem("fb_guide_lang", l); };
   const g = GUIDE[lang] || GUIDE.pt;
@@ -14,19 +11,9 @@ export default function Guide({ me, onSignOut }) {
   const html = (s) => ({ dangerouslySetInnerHTML: { __html: s } });
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <button className="iconbtn" onClick={() => nav(-1)}>{ui.back}</button>
-        <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
-        <div className="spacer" />
-        <div style={{ textAlign: "right" }}>
-          <div className="title">{ui.heading}</div>
-          <div className="sub">{ui.sub}</div>
-        </div>
-        {me && <AccountMenu me={me} onSignOut={onSignOut} />}
-      </header>
-
-      <div className="content">
+    <>
+      <h2 className="page-h">{ui.heading}</h2>
+      <div>
         <div className="lang-bar">
           <span className="filter-label">{ui.lang}</span>
           {LANGS.map((l) => (
@@ -70,6 +57,6 @@ export default function Guide({ me, onSignOut }) {
           <p className="guide-updated">{ui.updated}</p>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listMyEvents, createEvent, setEvent, publishEventImport, subscribeLivePointer, setLiveEvent, clearLiveEvent, subscribeAllBranding } from "./cloud.js";
 import { fetchEventFromSheet } from "./schedule/importEventSheet.js";
-import AccountMenu from "./AccountMenu.jsx";
 import { formatRange } from "./dates.js";
 
 export default function EventPicker({ me, onSignOut }) {
@@ -66,18 +65,9 @@ export default function EventPicker({ me, onSignOut }) {
   };
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <div className="brand-logo"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
-        <div>
-          <div className="title">Fistball Arena</div>
-          <div className="sub">Choose an event</div>
-        </div>
-        <div className="spacer" />
-        <AccountMenu me={me} onSignOut={onSignOut} />
-      </header>
-
-      <div className="content">
+    <>
+      <h2 className="page-h">Eventos</h2>
+      <div>
         {me.admin && !creating && (
           <button className="btn primary" style={{ width: "100%", marginBottom: 16 }} onClick={() => setCreating(true)}>+ New event</button>
         )}
@@ -147,7 +137,7 @@ export default function EventPicker({ me, onSignOut }) {
         })}
       </div>
 
-      {imp && (
+      {imp && me.admin && (
         <div className="modal-overlay" onClick={() => !impBusy && setImp(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <button className="modal-x" onClick={() => setImp(null)} aria-label="Close">✕</button>
@@ -191,6 +181,6 @@ export default function EventPicker({ me, onSignOut }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
