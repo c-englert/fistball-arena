@@ -52,19 +52,9 @@ export default function Members({ me }) {
   };
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
-        <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
-        <div className="spacer" />
-        <div style={{ textAlign: "right" }}>
-          <div className="title">Org-admins</div>
-          <div className="sub">{event?.name}</div>
-        </div>
-      </header>
-
-      <div className="content">
-        {me?.admin ? (
+    <>
+      <h2 className="page-h">Org-admins</h2>
+      {me?.admin ? (
           <div className="card">
             <h2>Org-admins <span className="muted-sm" style={{ fontWeight: 400 }}>· full access to ALL events</span></h2>
             <p className="muted-sm">Org-admins manage and create any event. To give access to a <b>single event</b>, use <button className="linklike" onClick={() => nav(`/e/${eventId}/settings`)}>Settings → Access to this event</button>.</p>
@@ -101,8 +91,7 @@ export default function Members({ me }) {
             <h2>Access to this event</h2>
             <p className="muted-sm">Manage who can score and manage this event in <button className="linklike" onClick={() => nav(`/e/${eventId}/settings`)}>Settings → Access to this event</button>. Org-admin management is available to org-admins only.</p>
           </div>
-        )}
-      </div>
-    </div>
+      )}
+    </>
   );
 }

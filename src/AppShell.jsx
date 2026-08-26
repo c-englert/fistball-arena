@@ -1,0 +1,98 @@
+import { useEffect, useState } from "react";
+import { Outlet, useNavigate, useLocation, useMatch } from "react-router-dom";
+import { useEvent } from "./eventContext.js";
+import { subscribeLivePointer } from "./cloud.js";
+import AccountMenu from "./AccountMenu.jsx";
+import { IconBack, IconGames, IconStandings, IconRoster, IconSettings, IconSchedule, IconUsers } from "./icons.jsx";
+
+const LIVE_URL = "https://c-englert.github.io/fistball-live/";
+
+// Left-sidebar app shell for the event context. Pages render into <Outlet/>.
+export default function AppShell({ me, onSignOut }) {
+  const nav = useNavigate();
+  const loc = useLocation();
+  const { eventId, event, isAdmin, archived } = useEvent();
+  const base = `/e/${eventId}`;
+  const [live, setLive] = useState(null);
+  const [open, setOpen] = useState(false); // mobile drawer
+  useEffect(() => subscribeLivePointer(setLive), []);
+  const onAir = live?.eventId === eventId;
+  const go = (to) => { setOpen(false); nav(to); };
+
+  // active section from the sub-path (after /e/:eventId)
+  const sub = loc.pathname.replace(base, "").replace(/^\//, "").split("/")[0]; // "", "standings", "game", …
+  const gameMatch = useMatch("/e/:eventId/game/:id");
+
+  const items = [
+    { key: "", label: "Jogos", Icon: IconGames },
+    { key: "standings", label: "Standings", Icon: IconStandings },
+    ...(isAdmin ? [
+      { key: "arrange", label: "Cronograma", Icon: IconSchedule },
+      { key: "roster", label: "Jogadores & staff", Icon: IconRoster },
+      { key: "members", label: "Org-admins", Icon: IconUsers },
+      { key: "settings", label: "Configurações", Icon: IconSettings },
+    ] : []),
+  ];
+  const activeKey = gameMatch ? "" : sub;
+  const activeLabel = (items.find((i) => i.key === activeKey) || {}).label || "";
+  const evName = event?.name || "Evento";
+
+  return (
+    <div className="shell">
+      <div className={`sb-scrim ${open ? "show" : ""}`} onClick={() => setOpen(false)} />
+      <aside className={`sidebar ${open ? "open" : ""}`}>
+        <div className="sb-eventhead">
+          <button className="sb-back" onClick={() => go("/")}><IconBack size={13} /> Eventos</button>
+          <div className="sb-eventname">{evName}</div>
+          <div className="sb-eventmeta">{[event?.place, event?.dates].filter(Boolean).join(" · ")}{archived ? " · Arquivado" : ""}</div>
+          {onAir && (
+            <div className="sb-state">
+              <span className="dot-live" /> Ao vivo no Live
+              <a className="live-link" href={`${LIVE_URL}?event=${eventId}`} target="_blank" rel="noreferrer">Ver ↗</a>
+            </div>
+          )}
+        </div>
+        <div className="sb-label">Evento</div>
+        <nav className="sb-nav">
+          {items.map((it) => (
+            <button key={it.key} className={`navitem ${activeKey === it.key ? "active" : ""}`}
+              onClick={() => go(it.key ? `${base}/${it.key}` : base)}>
+              <span className="ic"><it.Icon /></span> {it.label}
+            </button>
+          ))}
+        </nav>
+        <div className="sb-foot">
+          <AccountMenu me={me} onSignOut={onSignOut} />
+          <div className="sb-who"><div className="who">{me.name}</div><div className="role">{me.admin ? "org-admin" : "membro"}</div></div>
+        </div>
+      </aside>
+
+      <div className="main">
+        <header className="appbar">
+          <button className="sb-toggle" onClick={() => setOpen(true)} aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </button>
+          <nav className="crumbs" aria-label="Caminho">
+            <button className="crumb-link" onClick={() => nav("/")}>Arena</button>
+            <span className="sep">›</span>
+            <button className="crumb-link" onClick={() => nav("/")}>Eventos</button>
+            <span className="sep">›</span>
+            {gameMatch || activeKey === "" ? (
+              <span className="crumb-cur">{evName}</span>
+            ) : (
+              <>
+                <button className="crumb-link" onClick={() => nav(base)}>{evName}</button>
+                <span className="sep">›</span>
+                <span className="crumb-cur">{activeLabel}</span>
+              </>
+            )}
+            {gameMatch && (<><span className="sep">›</span><button className="crumb-link" onClick={() => nav(base)}>Jogos</button><span className="sep">›</span><span className="crumb-cur">Súmula</span></>)}
+          </nav>
+        </header>
+        <div className="content">
+          <Outlet />
+        </div>
+      </div>
+    </div>
+  );
+}

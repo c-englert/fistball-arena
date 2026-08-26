@@ -313,18 +313,9 @@ export default function Settings({ me }) {
   const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[4], !done[4], !done[5], !done[0]];
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
-        <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
-        <div className="spacer" />
-        <div style={{ textAlign: "right" }}>
-          <div className="title">Event settings{archived && <span className="arch-badge">Archived</span>}</div>
-          <div className="sub">{event?.name}</div>
-        </div>
-      </header>
-
-      <div className="content">
+    <>
+      <h2 className="page-h">Event settings{archived && <span className="arch-badge">Archived</span>}</h2>
+      <div>
         {remote && (
           <div className="sync-banner">
             <span>Another admin just changed this event.</span>
@@ -719,7 +710,7 @@ export default function Settings({ me }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

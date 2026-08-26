@@ -50,6 +50,80 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
 .content { padding: 16px; padding-bottom: 120px; }
 
+/* ================= Left sidebar shell ================= */
+.shell { display: flex; min-height: 100%; align-items: stretch; }
+.sidebar {
+  width: 264px; flex: none; align-self: stretch;
+  background: var(--brand); color: #fff;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 12px; padding-top: max(14px, env(safe-area-inset-top));
+  position: sticky; top: 0; height: 100dvh; overflow-y: auto;
+}
+.sidebar .sb-eventhead { padding: 4px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.14); margin-bottom: 8px; }
+.sb-back {
+  background: none; border: none; color: rgba(255,255,255,.7); padding: 0; margin-bottom: 10px;
+  display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 12px;
+}
+.sb-back:hover { color: #fff; }
+.sb-eventname { font-weight: 800; font-size: 17px; line-height: 1.2; }
+.sb-eventmeta { font-size: 12px; color: rgba(255,255,255,.66); margin-top: 3px; }
+.sb-state {
+  margin-top: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: 12px; font-weight: 700; color: #ffd9d9;
+}
+.sb-state .dot-live { width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a; box-shadow: 0 0 0 0 rgba(255,90,90,.7); animation: livepulse 1.6s infinite; }
+@keyframes livepulse { 0% { box-shadow: 0 0 0 0 rgba(255,90,90,.6); } 70% { box-shadow: 0 0 0 7px rgba(255,90,90,0); } 100% { box-shadow: 0 0 0 0 rgba(255,90,90,0); } }
+.sb-state .live-link { color: #fff; text-decoration: underline; margin-left: auto; }
+.sb-label { font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.5); padding: 6px 8px 4px; }
+.sb-nav { display: flex; flex-direction: column; gap: 2px; }
+.navitem {
+  display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+  background: none; border: none; color: rgba(255,255,255,.82);
+  padding: 11px 12px; border-radius: 10px; font-weight: 700; font-size: 14.5px;
+}
+.navitem .ic { display: inline-flex; opacity: .82; }
+.navitem:hover { background: rgba(255,255,255,.08); color: #fff; }
+.navitem.active { background: #fff; color: var(--brand); }
+.navitem.active .ic { opacity: 1; }
+.sb-foot { margin-top: auto; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.14); display: flex; align-items: center; gap: 10px; }
+.sb-who { line-height: 1.2; min-width: 0; }
+.sb-who .who { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-who .role { font-size: 11px; color: rgba(255,255,255,.6); }
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.appbar {
+  position: sticky; top: 0; z-index: 15; background: var(--surface);
+  border-bottom: 1px solid var(--line); padding: 10px 16px;
+  padding-top: max(10px, env(safe-area-inset-top));
+  display: flex; align-items: center; gap: 10px;
+}
+.crumbs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; min-width: 0; }
+.crumb-link { background: none; border: none; padding: 0; color: var(--muted); font-weight: 600; }
+.crumb-link:hover { color: var(--accent); text-decoration: underline; }
+.crumbs .sep { color: var(--line); }
+.crumb-cur { color: var(--text); font-weight: 800; }
+.sb-toggle { display: none; background: var(--brand); color: #fff; border: none; border-radius: 10px; width: 40px; height: 40px; flex: none; align-items: center; justify-content: center; }
+.main .content { padding: 18px; padding-bottom: 120px; max-width: 1000px; width: 100%; }
+.page-h { margin: 2px 0 16px; font-size: 22px; font-weight: 800; }
+.page-h .arch-badge { margin-left: 10px; }
+.game-h { display: flex; align-items: center; gap: 12px; }
+.game-h .gh-title { font-size: 18px; font-weight: 800; }
+.game-h .gh-sub { font-size: 12px; color: var(--muted); font-weight: 600; }
+.main .live-embed { height: calc(100dvh - 120px); border-radius: 12px; }
+
+/* mobile: sidebar becomes an off-canvas drawer */
+.sb-scrim { display: none; }
+@media (max-width: 860px) {
+  .sidebar {
+    position: fixed; top: 0; left: 0; z-index: 60; height: 100dvh;
+    transform: translateX(-100%); transition: transform .22s ease;
+    box-shadow: 2px 0 24px rgba(0,0,0,.3);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sb-scrim.show { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.4); }
+  .sb-toggle { display: inline-flex; }
+}
+
 /* ---------- Topbar logo ---------- */
 .brand-logo {
   width: 44px; height: 44px; flex: none; background: #fff; border-radius: 10px;

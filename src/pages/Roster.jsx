@@ -68,18 +68,8 @@ export default function Roster({ me }) {
   );
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
-        <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
-        <div className="spacer" />
-        <div style={{ textAlign: "right" }}>
-          <div className="title">Players &amp; staff</div>
-          <div className="sub">Team registry</div>
-        </div>
-      </header>
-
-      <div className="content">
+    <>
+      <h2 className="page-h">Players &amp; staff</h2>
         {/* ---- Excel upload ---- */}
         <ExcelImport me={me} teamNames={(event?.entries || []).map((e) => e.name)} categories={eventCategoryNames(event)} />
 
@@ -150,10 +140,9 @@ export default function Roster({ me }) {
             )}
           </div>
         ))}
-      </div>
 
       {profile && <PersonModal person={profile} results={results} onClose={() => setProfile(null)} me={me} isAdmin={isAdmin} />}
-    </div>
+    </>
   );
 }
 

@@ -147,24 +147,15 @@ export default function Schedule({ me }) {
   };
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
-        <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
-        <div className="spacer" />
-        <div style={{ textAlign: "right" }}>
-          <div className="title">Schedule generator</div>
-          <div className="sub">Groups · round-robin · knockout · auto slots</div>
-        </div>
-      </header>
-
+    <>
+      <h2 className="page-h">Schedule generator</h2>
       <nav className="steps">
         {steps.map(([k, label]) => (
           <button key={k} className={`step ${step === k ? "active" : ""}`} onClick={() => setStep(k)}>{label}</button>
         ))}
       </nav>
 
-      <div className="content">
+      <div>
         {step === "cats" && <CatsStep config={config} patch={patch} />}
         {step === "format" && <FormatStep config={config} patch={patch} />}
         {step === "slots" && <SlotsStep config={config} patch={patch} />}
@@ -186,7 +177,7 @@ export default function Schedule({ me }) {
       </div>
 
       {confirm && <ConfirmModal confirm={confirm} onClose={() => setConfirm(null)} />}
-    </div>
+    </>
   );
 }
 

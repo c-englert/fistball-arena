@@ -139,16 +139,14 @@ export default function Sumula({ me }) {
   if (!draft) return <div className="empty">Loading…</div>;
 
   return (
-    <div className="app">
-      <header className="topbar">
+    <>
+      <div className="page-h game-h">
         <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
-        <div className="brand-logo sm"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="IFA" /></div>
-        <div className="spacer" />
-        <div style={{ textAlign: "right" }}>
-          <div className="title">#{draft.info.nr} · {short(draft.teamA.name)} vs {short(draft.teamB.name)}</div>
-          <div className="sub">{draft.info.time} · Court {draft.info.court} · Best of {draft.info.bestOf}</div>
+        <div>
+          <div className="gh-title">#{draft.info.nr} · {short(draft.teamA.name)} vs {short(draft.teamB.name)}</div>
+          <div className="gh-sub">{draft.info.time} · Court {draft.info.court} · Best of {draft.info.bestOf}</div>
         </div>
-      </header>
+      </div>
 
       {readOnly && (
         <div className="lockbar">
@@ -183,7 +181,7 @@ export default function Sumula({ me }) {
         ))}
       </nav>
 
-      <div className="content">
+      <div>
         {section === "info" && <InfoSection d={draft} />}
         {section === "lineup" && (
           <LineupSection d={draft} team={team} setTeam={setTeam} update={update} loadRoster={loadRoster} readOnly={readOnly} />
@@ -205,7 +203,7 @@ export default function Sumula({ me }) {
           </button>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
