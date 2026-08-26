@@ -8,10 +8,15 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "prompt",     // show a "new version" toast instead of silent reload
+      registerType: "autoUpdate", // new deploys activate on the next load, no manual click
       injectRegister: false,      // we register manually in src/UpdatePrompt.jsx
       includeAssets: ["favicon.svg"],
-      workbox: { maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        skipWaiting: true,        // take over immediately
+        clientsClaim: true,       // control open tabs right away
+        cleanupOutdatedCaches: true,
+      },
       manifest: {
         name: "Fistball Arena",
         short_name: "Arena",

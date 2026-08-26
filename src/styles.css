@@ -110,7 +110,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .crumbs .sep { color: var(--line); }
 .crumb-cur { color: var(--text); font-weight: 800; }
 .sb-toggle { display: none; background: var(--brand); color: #fff; border: none; border-radius: 10px; width: 40px; height: 40px; flex: none; align-items: center; justify-content: center; }
-.main .content { padding: 18px; padding-bottom: 120px; max-width: 1320px; width: 100%; }
+.main .content { padding: 18px; padding-bottom: 120px; max-width: none; width: 100%; }
 .page-h { margin: 2px 0 16px; font-size: 22px; font-weight: 800; }
 .page-h .arch-badge { margin-left: 10px; }
 .game-h { display: flex; align-items: center; gap: 12px; }
