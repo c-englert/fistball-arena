@@ -224,6 +224,13 @@ export function subscribeAllMembers(cb) {
     }).filter((m) => m.eventId)),
     (err) => { console.warn("all members unavailable:", err?.code || err); cb([]); });
 }
+// Members of a SPECIFIC event (event-scoped, no reqEid()). Normal subcollection
+// read — allowed for org-admins by the rules, unlike a collection-group query.
+export function subscribeMembersAt(eventId, cb) {
+  return onSnapshot(collection(db, "events", eventId, "members"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, email: d.id, ...d.data() }))),
+    (err) => { console.warn(`members of ${eventId} unavailable:`, err?.code || err); cb([]); });
+}
 // Grant/change a member's role in a SPECIFIC event (event-scoped, no reqEid()).
 export async function setMemberRoleAt(eventId, { email, name, role }, me) {
   const e = (email || "").toLowerCase().trim();

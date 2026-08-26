@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   subscribeOrgAdmins, addOrgAdmin, removeOrgAdmin, subscribePeople, BOOTSTRAP_ORG_ADMINS,
-  listMyEvents, subscribeAllMembers, setMemberRoleAt, removeMemberAt,
+  listMyEvents, subscribeMembersAt, setMemberRoleAt, removeMemberAt,
 } from "../cloud.js";
 
 // Same Gmail account written differently — used only to warn.
@@ -26,7 +26,7 @@ export default function Users({ me }) {
   const [orgAdmins, setOrgAdmins] = useState([]);
   const [people, setPeople] = useState([]);
   const [events, setEvents] = useState(null);
-  const [members, setMembers] = useState(null); // all memberships across events
+  const [membersByEvent, setMembersByEvent] = useState({}); // eventId -> [{email,name,role,eventId}]
   const [oaForm, setOaForm] = useState({ email: "", name: "" });
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
@@ -37,8 +37,23 @@ export default function Users({ me }) {
 
   useEffect(() => subscribeOrgAdmins(setOrgAdmins), []);
   useEffect(() => subscribePeople(setPeople), []);
-  useEffect(() => (me?.admin ? subscribeAllMembers(setMembers) : undefined), [me]);
   useEffect(() => (me?.admin ? listMyEvents(me, setEvents) : undefined), [me]);
+
+  // Read members per event (normal subcollection reads — org-admin allowed),
+  // instead of one collection-group query (which the rules deny). Aggregate.
+  const eventIds = useMemo(() => (events || []).map((e) => e.id).sort().join(","), [events]);
+  useEffect(() => {
+    if (!me?.admin || !eventIds) return undefined;
+    const ids = eventIds.split(",").filter(Boolean);
+    setMembersByEvent((prev) => { // drop events that no longer exist
+      const next = {}; ids.forEach((id) => { if (prev[id]) next[id] = prev[id]; }); return next;
+    });
+    const unsubs = ids.map((id) =>
+      subscribeMembersAt(id, (list) =>
+        setMembersByEvent((prev) => ({ ...prev, [id]: list.map((m) => ({ ...m, eventId: id })) }))));
+    return () => unsubs.forEach((u) => u && u());
+  }, [me, eventIds]);
+  const members = useMemo(() => Object.values(membersByEvent).flat(), [membersByEvent]);
 
   const orgAdminEmails = useMemo(
     () => new Set([...BOOTSTRAP_ORG_ADMINS, ...orgAdmins.map((o) => o.email)]),
@@ -156,7 +171,7 @@ export default function Users({ me }) {
     }
   };
 
-  const loading = events === null || members === null;
+  const loading = events === null;
 
   return (
     <>
