@@ -75,7 +75,11 @@ service cloud.firestore {
       allow delete: if isOrgAdmin();
 
       match /members/{memberEmail} {
-        allow read: if isOrgAdmin() || isEventAdmin(eventId) || (signedIn() && memberEmail == email());
+        // Read own membership: match the EMAIL FIELD (not the doc id) so the
+        // collection-group query `where('email','==', myEmail)` in listMyEvents
+        // is authorized — a doc-id condition can't be proven safe for that query.
+        allow read: if isOrgAdmin() || isEventAdmin(eventId)
+                    || (signedIn() && resource.data.email == email());
         allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
       }
 
