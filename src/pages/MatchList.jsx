@@ -27,6 +27,15 @@ export default function MatchList({ me }) {
   const [day, setDay] = useState(() => localStorage.getItem("fb_day") || "all");
   const [q, setQ] = useState("");
 
+  // Short names come from the game (if published with one) or the event's team
+  // entries (so setting a short name reflects even on already-published games).
+  const shortOf = useMemo(() => {
+    const m = {};
+    (event?.entries || []).forEach((e) => { if (e?.short && e.short.trim()) m[e.name] = e.short.trim(); });
+    return m;
+  }, [event]);
+  const teamLabel = (t) => String((t?.short || shortOf[t?.name] || t?.name || "")).split(" - ")[0];
+
   useEffect(() => {
     const u1 = subscribeGames(setGames);
     const u2 = subscribeReports(setReports);
@@ -121,9 +130,9 @@ export default function MatchList({ me }) {
               )}
             </div>
             <div className="mc-teams">
-              <span className="flag">{flagFor(m.teamA.name)}</span>{m.teamA.name.split(" - ")[0]}
+              <span className="flag">{flagFor(m.teamA.name)}</span>{teamLabel(m.teamA)}
               <span className="vs">vs</span>
-              <span className="flag">{flagFor(m.teamB.name)}</span>{m.teamB.name.split(" - ")[0]}
+              <span className="flag">{flagFor(m.teamB.name)}</span>{teamLabel(m.teamB)}
             </div>
           </div>
         );

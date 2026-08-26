@@ -7,6 +7,7 @@ export const FLAGS = {
   Chile: "🇨🇱", India: "🇮🇳", Namibia: "🇳🇦", Kenya: "🇰🇪",
   "New Zealand": "🇳🇿", Italy: "🇮🇹", "Czech Republic": "🇨🇿", Denmark: "🇩🇰",
   Serbia: "🇷🇸", Argentina: "🇦🇷", Poland: "🇵🇱", "United States": "🇺🇸",
+  "United States of America": "🇺🇸", USA: "🇺🇸", "Estados Unidos": "🇺🇸",
   France: "🇫🇷", Belgium: "🇧🇪", Spain: "🇪🇸", Netherlands: "🇳🇱",
   // Portuguese/Spanish spellings + rest of South America
   Brasil: "🇧🇷", Uruguay: "🇺🇾", Uruguai: "🇺🇾", Paraguay: "🇵🇾", Paraguai: "🇵🇾",
