@@ -4,6 +4,7 @@ import { listMyEvents, createEvent, setEvent, publishEventImport, subscribeLiveP
 import { fetchEventFromSheet } from "./schedule/importEventSheet.js";
 import { formatRange } from "./dates.js";
 import { IconStar, IconShield, IconWhistle, IconEye, IconEdit } from "./icons.jsx";
+import EventsTimeline from "./EventsTimeline.jsx";
 
 export default function EventPicker({ me, onSignOut }) {
   const nav = useNavigate();
@@ -12,6 +13,8 @@ export default function EventPicker({ me, onSignOut }) {
   const [form, setForm] = useState({ name: "", place: "", startDate: "", endDate: "" });
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState("active");
+  const [view, setView] = useState(() => localStorage.getItem("fb_events_view") || "cards");
+  const pickView = (v) => { setView(v); localStorage.setItem("fb_events_view", v); };
   const [live, setLive] = useState(null);
   const [brandings, setBrandings] = useState({});
   const [imp, setImp] = useState(null); // Google-Sheet import modal: null = closed
@@ -97,6 +100,10 @@ export default function EventPicker({ me, onSignOut }) {
           <button className={`filter-pill ${tab === "active" ? "active" : ""}`} onClick={() => setTab("active")}>Active &amp; upcoming</button>
           <button className={`filter-pill ${tab === "archived" ? "active" : ""}`} onClick={() => setTab("archived")}>Archived</button>
           <span style={{ flex: 1 }} />
+          <div className="seg">
+            <button className={`seg-btn ${view === "cards" ? "active" : ""}`} onClick={() => pickView("cards")}>Cards</button>
+            <button className={`seg-btn ${view === "timeline" ? "active" : ""}`} onClick={() => pickView("timeline")}>Timeline</button>
+          </div>
           {me.admin && tab === "archived" && (
             <button className="btn sm" onClick={openImport} title="Create an archived event from a past Google Sheet">⬇ Import from Google Sheet</button>
           )}
@@ -106,6 +113,16 @@ export default function EventPicker({ me, onSignOut }) {
         {events !== null && shown.length === 0 && (
           <div className="empty">{tab === "archived" ? "No archived events." : me.admin ? "No active events — create one above." : "You're not a member of any active event yet."}</div>
         )}
+
+        {view === "timeline" && shown.length > 0 && (
+          <EventsTimeline
+            events={shown} brandings={brandings} live={live}
+            roleOf={(ev) => (me.admin ? "org-admin" : ev.myRole)}
+            onOpen={(id) => nav(`/e/${id}`)}
+          />
+        )}
+
+        {view === "cards" && (
         <div className="card-grid">
         {shown.map((ev) => {
           const isLive = live?.eventId === ev.id;
@@ -149,6 +166,7 @@ export default function EventPicker({ me, onSignOut }) {
           );
         })}
         </div>
+        )}
       </div>
 
       {imp && me.admin && (

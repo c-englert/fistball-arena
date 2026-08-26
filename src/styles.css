@@ -813,6 +813,41 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .live-ind { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--win); }
 .live-ind .live-dot { background: var(--win); }
 
+/* ---------- Segmented control (Cards / Timeline) ---------- */
+.seg { display: inline-flex; background: #e9ecf3; border-radius: 10px; padding: 3px; gap: 2px; }
+.seg-btn { border: none; background: none; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 13px; color: var(--muted); }
+.seg-btn.active { background: var(--surface); color: var(--brand); box-shadow: 0 1px 3px rgba(20,28,48,.14); }
+
+/* ---------- Events timeline ---------- */
+.tl-wrap { margin-top: 4px; }
+.tl-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.tl-inner { position: relative; min-width: 100%; }
+.tl-months { display: flex; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #f6f7fb; z-index: 2; }
+.tl-month { flex: none; padding: 8px 10px; border-left: 1px solid var(--line); }
+.tl-month:first-child { border-left: none; }
+.tl-month-lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.tl-lanes { position: relative; }
+.tl-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); opacity: .6; }
+.tl-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--r); z-index: 1; }
+.tl-today-lbl { position: absolute; top: 2px; left: 3px; font-size: 10px; font-weight: 800; color: var(--r); background: var(--surface); padding: 0 3px; border-radius: 4px; }
+.tl-item { position: absolute; }
+.tl-bar { height: 5px; border-radius: 3px; background: #d9d0f0; margin: 0 0 3px 12px; }
+.tl-pill {
+  display: inline-flex; align-items: center; gap: 9px; max-width: 236px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 14px 5px 5px; box-shadow: var(--shadow); cursor: pointer; text-align: left;
+}
+.tl-pill:hover { border-color: var(--brand-2); }
+.tl-pill.live { border-color: #f2b8b8; }
+.tl-logo { width: 34px; height: 34px; flex: none; border-radius: 50%; object-fit: contain; background: #fff; border: 1px solid var(--line); }
+.tl-logo-ph { display: grid; place-items: center; font-weight: 800; color: var(--brand); background: #efeaf9; }
+.tl-txt { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.tl-name { font-weight: 800; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+.tl-meta { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: capitalize; }
+.tl-liveflag { display: inline-flex; align-items: center; gap: 3px; color: var(--win); margin-left: 2px; }
+.tl-liveflag .live-dot { background: var(--win); }
+.tl-undated { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
 /* ---------- Embedded Fistball Live (Standings) ---------- */
 .live-embed { width: 100%; height: calc(100dvh - 70px); border: 0; display: block; background: #0b1220; }
 
