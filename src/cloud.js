@@ -85,7 +85,12 @@ export function listMyEvents(me, cb) {
       }));
       cb(rows.filter(Boolean));
     },
-    (err) => { console.warn("my events unavailable:", err?.code || err); cb([]); }
+    (err) => {
+      // Full error on purpose: a missing-index (failed-precondition) error
+      // includes a direct "create index" link in its message.
+      console.error("my events unavailable:", err?.code, err?.message, err);
+      cb([]);
+    }
   );
 }
 
