@@ -34,7 +34,7 @@ export default function AppShell({ me, onSignOut }) {
   ];
   const activeKey = gameMatch ? "" : sub;
   const activeLabel = (items.find((i) => i.key === activeKey) || {}).label || "";
-  const evName = event?.name || "Evento";
+  const evName = event?.name || "Event";
 
   return (
     <div className="shell">

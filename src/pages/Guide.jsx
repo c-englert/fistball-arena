@@ -4,7 +4,7 @@ import { GUIDE, UI, LANGS } from "../content/guide.js";
 // In-app reference guide with a language switcher. Content lives in
 // src/content/guide.js (single source of truth, kept in sync with the app).
 export default function Guide() {
-  const [lang, setLang] = useState(() => localStorage.getItem("fb_guide_lang") || "pt");
+  const [lang, setLang] = useState(() => localStorage.getItem("fb_guide_lang") || "en");
   const pick = (l) => { setLang(l); localStorage.setItem("fb_guide_lang", l); };
   const g = GUIDE[lang] || GUIDE.pt;
   const ui = UI[lang] || UI.pt;
