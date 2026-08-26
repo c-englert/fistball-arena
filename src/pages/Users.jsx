@@ -206,6 +206,21 @@ export default function Users({ me }) {
         </div>
         <p className="muted-sm">Ligue o <b>toggle org-admin</b> ao lado do nome para dar acesso total a todos os eventos. Para um único evento, escolha o papel na coluna do evento (<b>—</b> remove). Papéis: <b>Admin</b> gerencia · <b>Official</b> pontua · <b>Viewer</b> só vê.</p>
 
+        <details className="access-note">
+          <summary>O que é <b>org-admin</b>? Como escolher o papel?</summary>
+          <div className="access-note-body">
+            <p><b>Org-admin</b> é o nível mais alto: acesso <b>total a todos os eventos</b> (criar, arquivar, gerenciar, pontuar) sem precisar ser autorizado em cada um — e é o único que enxerga esta tela. Na grade, org-admins aparecem como <b>TOTAL</b>. Use para quem organiza o campeonato como um todo. Alguns são <span className="tag">built-in</span> (fixos no código, não removíveis aqui).</p>
+            <p>Os demais papéis valem <b>só para um evento</b> (escolha na coluna do evento):</p>
+            <ul>
+              <li><b>Admin</b> — gerencia aquele evento (cronograma, jogadores, configurações, formato) e pontua.</li>
+              <li><b>Official</b> — pontua as súmulas daquele evento.</li>
+              <li><b>Viewer</b> — só visualiza aquele evento.</li>
+              <li><b>—</b> — sem acesso àquele evento (remove).</li>
+            </ul>
+            <p className="muted-sm">Regra prática: <b>org-admin</b> = organizador do campeonato; <b>Admin/Official/Viewer</b> = participante de <b>um</b> evento.</p>
+          </div>
+        </details>
+
         {/* pre-authorize someone who hasn't logged in yet */}
         <div className="add-row" style={{ marginTop: 8 }}>
           <input style={{ flex: "2 1 200px" }} value={oaForm.email} onChange={(e) => setOaForm({ ...oaForm, email: e.target.value })} placeholder="Adicionar org-admin por e-mail…" />

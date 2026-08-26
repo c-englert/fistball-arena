@@ -363,6 +363,16 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
   display: grid; place-items: center; cursor: pointer;
 }
 .search-clear:hover { background: #d9dde8; color: var(--text); }
+/* Role explainer on the access screen */
+.access-note { margin: 4px 0 2px; border: 1px solid var(--line); border-radius: 10px; background: #f7f8fc; }
+.access-note > summary { cursor: pointer; padding: 8px 12px; font-size: 13px; font-weight: 700; color: var(--brand); list-style: none; }
+.access-note > summary::-webkit-details-marker { display: none; }
+.access-note > summary::before { content: "▸ "; color: var(--muted); }
+.access-note[open] > summary::before { content: "▾ "; }
+.access-note-body { padding: 0 14px 12px; font-size: 13px; color: var(--text); }
+.access-note-body p { margin: 8px 0; }
+.access-note-body ul { margin: 6px 0; padding-left: 18px; }
+.access-note-body li { margin: 3px 0; }
 .ag-searchrow .ag-switchlbl { font-size: 13px; }
 .ag-cell { text-align: center; }
 .ag-full { color: var(--brand); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
