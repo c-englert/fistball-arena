@@ -1,6 +1,6 @@
 import {
   collection, collectionGroup, doc, getDoc, getDocs, setDoc, onSnapshot,
-  runTransaction, serverTimestamp, updateDoc, writeBatch, deleteDoc, query, where,
+  runTransaction, serverTimestamp, updateDoc, writeBatch, deleteDoc, deleteField, query, where,
 } from "firebase/firestore";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { db, auth, googleProvider } from "./firebase.js";
@@ -73,24 +73,22 @@ export function listMyEvents(me, cb) {
       (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data(), myRole: "admin" }))),
       (err) => { console.warn("events unavailable:", err?.code || err); cb([]); });
   }
+  // Non-admins discover their events from their OWN people/{email} doc's
+  // { events: { eventId: role } } map — a single self-read the rules allow.
+  // (A collection-group query over members can't be reliably authorized.)
   return onSnapshot(
-    query(collectionGroup(db, "members"), where("email", "==", me.email)),
+    doc(db, "people", me.email),
     async (snap) => {
-      const rows = await Promise.all(snap.docs.map(async (m) => {
-        const evRef = m.ref.parent.parent;
+      const evs = (snap.exists() && snap.data().events) || {};
+      const rows = await Promise.all(Object.entries(evs).map(async ([eid, role]) => {
         try {
-          const ev = await getDoc(evRef);
-          return ev.exists() ? { id: ev.id, ...ev.data(), myRole: m.data().role } : null;
+          const ev = await getDoc(doc(db, "events", eid));
+          return ev.exists() ? { id: ev.id, ...ev.data(), myRole: role } : null;
         } catch (_) { return null; }
       }));
       cb(rows.filter(Boolean));
     },
-    (err) => {
-      // Full error on purpose: a missing-index (failed-precondition) error
-      // includes a direct "create index" link in its message.
-      console.error("my events unavailable:", err?.code, err?.message, err);
-      cb([]);
-    }
+    (err) => { console.error("my events unavailable:", err?.code, err?.message, err); cb([]); }
   );
 }
 
@@ -181,6 +179,7 @@ export async function addMember({ email, name, role }, me) {
     addedBy: me.email, addedAt: serverTimestamp(),
   });
   await upsertPerson(e, name); // remember for reuse across events
+  await mirrorMembership(reqEid(), e, role || "viewer", name);
 }
 
 /* ----------------- global people directory (reuse across events) ----------------- */
@@ -195,6 +194,27 @@ async function upsertPerson(email, name) {
   const patch = { email: e };
   if (name && name.trim()) patch.name = name.trim();
   await setDoc(doc(db, "people", e), patch, { merge: true });
+}
+
+// Mirror a membership onto the person's own people/{email} doc as an
+// { events: { [eventId]: role } } map. This lets a non-admin discover their
+// events by reading ONLY their own doc — no collection-group query (which the
+// rules can't reliably authorize). Best-effort; the members doc stays the source
+// of truth for org-admins.
+export async function mirrorMembership(eventId, email, role, name) {
+  const e = (email || "").toLowerCase().trim();
+  if (!eventId || !e) return;
+  try {
+    const patch = { email: e, events: { [eventId]: role || "viewer" } };
+    if (name && name.trim()) patch.name = name.trim();
+    await setDoc(doc(db, "people", e), patch, { merge: true });
+  } catch (_) { /* best-effort */ }
+}
+async function unmirrorMembership(eventId, email) {
+  const e = (email || "").toLowerCase().trim();
+  if (!eventId || !e) return;
+  try { await setDoc(doc(db, "people", e), { events: { [eventId]: deleteField() } }, { merge: true }); }
+  catch (_) { /* best-effort */ }
 }
 
 /* ----------------- org admins (global, manageable — beyond the bootstrap list) ----------------- */
@@ -215,7 +235,9 @@ export async function removeOrgAdmin(email) {
   if (e) await deleteDoc(doc(db, "orgAdmins", e));
 }
 export async function removeMember(email) {
-  await deleteDoc(edoc("members", (email || "").toLowerCase().trim()));
+  const e = (email || "").toLowerCase().trim();
+  await deleteDoc(edoc("members", e));
+  await unmirrorMembership(reqEid(), e);
 }
 
 /* ----------------- global access grid (org-admins) -----------------
@@ -245,10 +267,14 @@ export async function setMemberRoleAt(eventId, { email, name, role }, me) {
     addedBy: me?.email || "", addedAt: serverTimestamp(),
   }, { merge: true });
   await upsertPerson(e, name);
+  await mirrorMembership(eventId, e, role || "viewer", name);
 }
 export async function removeMemberAt(eventId, email) {
   const e = (email || "").toLowerCase().trim();
-  if (eventId && e) await deleteDoc(doc(db, "events", eventId, "members", e));
+  if (eventId && e) {
+    await deleteDoc(doc(db, "events", eventId, "members", e));
+    await unmirrorMembership(eventId, e);
+  }
 }
 
 // My role for the current event ('admin' | 'official' | 'viewer' | null).

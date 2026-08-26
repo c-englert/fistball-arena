@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   subscribeOrgAdmins, addOrgAdmin, removeOrgAdmin, subscribePeople, BOOTSTRAP_ORG_ADMINS,
-  listMyEvents, subscribeMembersAt, setMemberRoleAt, removeMemberAt,
+  listMyEvents, subscribeMembersAt, setMemberRoleAt, removeMemberAt, mirrorMembership,
 } from "../cloud.js";
 
 // Same Gmail account written differently — used only to warn.
@@ -35,6 +35,7 @@ export default function Users({ me }) {
   const [pending, setPending] = useState({}); // optimistic role overlay: `${email}||${eventId}` -> role
   const [saving, setSaving] = useState({});    // `${email}||${eventId}` -> true while writing
   const [errCell, setErrCell] = useState({});  // `${email}||${eventId}` -> error message
+  const mirroredRef = useRef(new Set()); // backfill dedupe: `${eventId}|${email}|${role}`
 
   useEffect(() => subscribeOrgAdmins(setOrgAdmins), []);
   useEffect(() => subscribePeople(setPeople), []);
@@ -50,8 +51,15 @@ export default function Users({ me }) {
       const next = {}; ids.forEach((id) => { if (prev[id]) next[id] = prev[id]; }); return next;
     });
     const unsubs = ids.map((id) =>
-      subscribeMembersAt(id, (list) =>
-        setMembersByEvent((prev) => ({ ...prev, [id]: list.map((m) => ({ ...m, eventId: id })) }))));
+      subscribeMembersAt(id, (list) => {
+        setMembersByEvent((prev) => ({ ...prev, [id]: list.map((m) => ({ ...m, eventId: id })) }));
+        // Backfill each membership onto the person's own people/{email} doc, so
+        // non-admins (whose app reads only their own doc) can see their events.
+        list.forEach((m) => {
+          const key = `${id}|${m.email}|${m.role}`;
+          if (!mirroredRef.current.has(key)) { mirroredRef.current.add(key); mirrorMembership(id, m.email, m.role, m.name); }
+        });
+      }));
     return () => unsubs.forEach((u) => u && u());
   }, [me, eventIds]);
   const members = useMemo(() => Object.values(membersByEvent).flat(), [membersByEvent]);
