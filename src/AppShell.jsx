@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation, useMatch } from "react-router-dom";
 import { useEvent } from "./eventContext.js";
 import { subscribeLivePointer } from "./cloud.js";
 import AccountMenu from "./AccountMenu.jsx";
-import { IconBack, IconGames, IconStandings, IconRoster, IconSettings, IconSchedule, IconUsers } from "./icons.jsx";
+import { IconBack, IconGames, IconStandings, IconRoster, IconSettings, IconSchedule } from "./icons.jsx";
 
 const LIVE_URL = "https://c-englert.github.io/fistball-live/";
 
@@ -29,7 +29,6 @@ export default function AppShell({ me, onSignOut }) {
     ...(isAdmin ? [
       { key: "arrange", label: "Cronograma", Icon: IconSchedule },
       { key: "roster", label: "Jogadores & staff", Icon: IconRoster },
-      { key: "members", label: "Org-admins", Icon: IconUsers },
       { key: "settings", label: "Configurações", Icon: IconSettings },
     ] : []),
   ];

@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { subscribeOrgAdmins, addOrgAdmin, removeOrgAdmin, subscribePeople, BOOTSTRAP_ORG_ADMINS } from "../cloud.js";
+import { useNavigate } from "react-router-dom";
+import {
+  subscribeOrgAdmins, addOrgAdmin, removeOrgAdmin, subscribePeople, BOOTSTRAP_ORG_ADMINS,
+  listMyEvents, subscribeAllMembers, setMemberRoleAt, removeMemberAt,
+} from "../cloud.js";
 
 // Same Gmail account written differently — used only to warn.
 function canonEmail(e) {
@@ -11,17 +15,27 @@ function canonEmail(e) {
   return s;
 }
 
-// GLOBAL users & access area (org-admins only). Org-admins have full access to
-// every event; per-event access is still granted inside each event's Settings.
+const ROLES = ["", "viewer", "official", "admin"];
+const ROLE_LABEL = { "": "—", viewer: "Viewer", official: "Official", admin: "Admin" };
+
+// GLOBAL users & access area (org-admins only): manage org-admins and see/edit
+// every user's access across every event in one grid. Per-event granting is
+// still available inside each event's Settings wizard.
 export default function Users({ me }) {
+  const nav = useNavigate();
   const [orgAdmins, setOrgAdmins] = useState([]);
   const [people, setPeople] = useState([]);
+  const [events, setEvents] = useState(null);
+  const [members, setMembers] = useState(null); // all memberships across events
   const [oaForm, setOaForm] = useState({ email: "", name: "" });
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
+  const [showAll, setShowAll] = useState(false); // include users with no access
 
   useEffect(() => subscribeOrgAdmins(setOrgAdmins), []);
   useEffect(() => subscribePeople(setPeople), []);
+  useEffect(() => (me?.admin ? subscribeAllMembers(setMembers) : undefined), [me]);
+  useEffect(() => (me?.admin ? listMyEvents(me, setEvents) : undefined), [me]);
 
   const orgAdminEmails = useMemo(
     () => new Set([...BOOTSTRAP_ORG_ADMINS, ...orgAdmins.map((o) => o.email)]),
@@ -35,33 +49,68 @@ export default function Users({ me }) {
     return hit ? hit.email : null;
   }, [oaForm.email, people]);
 
-  const shownPeople = useMemo(() => {
+  // Events as grid columns: active first, then archived, each by date.
+  const cols = useMemo(() => {
+    const list = [...(events || [])];
+    const rank = (e) => (e.status === "archived" ? 1 : 0);
+    return list.sort((a, b) => rank(a) - rank(b) || String(a.dates || "").localeCompare(String(b.dates || "")) || String(a.name).localeCompare(String(b.name)));
+  }, [events]);
+
+  // role lookup: `${email}||${eventId}` -> role
+  const roleAt = useMemo(() => {
+    const m = new Map();
+    (members || []).forEach((x) => m.set(`${x.email}||${x.eventId}`, x.role));
+    return m;
+  }, [members]);
+
+  // one row per user: union of org-admins + everyone with a membership (+ directory when showAll)
+  const rows = useMemo(() => {
+    const byEmail = new Map();
+    const nameFor = (email) => {
+      const p = people.find((pp) => pp.email === email);
+      if (p?.name) return p.name;
+      const mem = (members || []).find((mm) => mm.email === email && mm.name);
+      return mem?.name || "";
+    };
+    const touch = (email) => { if (!byEmail.has(email)) byEmail.set(email, { email, name: nameFor(email) }); };
+    orgAdminEmails.forEach(touch);
+    (members || []).forEach((x) => touch(x.email));
+    if (showAll) people.forEach((p) => touch(p.email));
     const t = q.trim().toLowerCase();
-    return [...people]
-      .filter((p) => !t || (p.email || "").toLowerCase().includes(t) || (p.name || "").toLowerCase().includes(t))
-      .sort((a, b) => (a.name || a.email || "").localeCompare(b.name || b.email || ""));
-  }, [people, q]);
+    return [...byEmail.values()]
+      .filter((u) => !t || u.email.toLowerCase().includes(t) || (u.name || "").toLowerCase().includes(t))
+      .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  }, [orgAdminEmails, members, people, showAll, q]);
 
   if (!me?.admin) return <div className="empty">Org-admins only.</div>;
 
   const addOrgA = async () => {
     if (!oaForm.email.trim()) return;
     setStatus("Adding org-admin…");
-    try { await addOrgAdmin(oaForm, me); setOaForm({ email: "", name: "" }); setStatus("Org-admin added."); }
-    catch (e) { setStatus("Failed: " + (e?.message || e)); }
+    try { await addOrgAdmin(oaForm, me); setOaForm({ email: "", name: "" }); setStatus("Org-admin adicionado."); }
+    catch (e) { setStatus("Falhou: " + (e?.message || e)); }
   };
   const removeOrgA = async (emailAddr) => {
-    if (!window.confirm(`Remove org-admin ${emailAddr}? They lose full access to all events.`)) return;
-    try { await removeOrgAdmin(emailAddr); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+    if (!window.confirm(`Remover org-admin ${emailAddr}? Perde acesso total a todos os eventos.`)) return;
+    try { await removeOrgAdmin(emailAddr); } catch (e) { setStatus("Falhou: " + (e?.message || e)); }
   };
+  const changeRole = async (user, eventId, role) => {
+    try {
+      if (!role) await removeMemberAt(eventId, user.email);
+      else await setMemberRoleAt(eventId, { email: user.email, name: user.name, role }, me);
+    } catch (e) { setStatus("Falhou: " + (e?.message || e)); }
+  };
+
+  const loading = events === null || members === null;
 
   return (
     <>
       <h2 className="page-h">Usuários & acessos</h2>
 
+      {/* ---- Org-admins ---- */}
       <div className="card">
         <h2>Org-admins <span className="muted-sm" style={{ fontWeight: 400 }}>· acesso total a TODOS os eventos</span></h2>
-        <p className="muted-sm">Org-admins criam e gerenciam qualquer evento. Para dar acesso a <b>um único evento</b>, abra o evento → <b>Configurações → Acesso a este evento</b>.</p>
+        <p className="muted-sm">Org-admins criam e gerenciam qualquer evento. O acesso a <b>um único evento</b> é dado na grade abaixo ou no próprio evento → <b>Configurações → Acesso a este evento</b>.</p>
         <div className="add-row" style={{ marginTop: 8 }}>
           <input style={{ flex: "2 1 200px" }} value={oaForm.email} onChange={(e) => setOaForm({ ...oaForm, email: e.target.value })} placeholder="email@example.com" />
           <input style={{ flex: "1 1 120px" }} value={oaForm.name} onChange={(e) => setOaForm({ ...oaForm, name: e.target.value })} placeholder="Nome (opcional)" />
@@ -91,21 +140,67 @@ export default function Users({ me }) {
         <p className="muted-sm" style={{ marginTop: 6 }}>Org-admins “built-in” são definidos no código e não podem ser removidos aqui. Os demais passam a valer quando a pessoa entrar de novo. {status}</p>
       </div>
 
+      {/* ---- Access grid ---- */}
       <div className="card">
-        <div className="row-between" style={{ alignItems: "center" }}>
-          <h2 style={{ margin: 0 }}>Todos os usuários <span className="muted-sm" style={{ fontWeight: 400 }}>· {people.length}</span></h2>
+        <div className="row-between" style={{ alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <h2 style={{ margin: 0 }}>Acesso por evento <span className="muted-sm" style={{ fontWeight: 400 }}>· {rows.length} usuário(s) · {cols.length} evento(s)</span></h2>
+          <label className="imp-active" style={{ margin: 0 }}>
+            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+            <span>Mostrar quem ainda não tem acesso</span>
+          </label>
         </div>
-        <p className="muted-sm">Pessoas que já entraram no app pelo menos uma vez. O acesso por evento (quem pontua/gerencia cada evento) aparecerá aqui em grid na próxima fase.</p>
-        <input className="game-search" style={{ marginTop: 8, width: "100%" }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou e-mail…" />
-        <div style={{ marginTop: 10 }}>
-          {shownPeople.length === 0 && <div className="empty">Nenhum usuário encontrado.</div>}
-          {shownPeople.map((p) => (
-            <div className="roster-row" key={p.email}>
-              <span className="roster-name">{p.name || "—"} <span className="muted-sm">{p.email}</span></span>
-              {orgAdminEmails.has(p.email) && <span className="tag tag-org">org-admin</span>}
-            </div>
-          ))}
-        </div>
+        <p className="muted-sm">Org-admins têm acesso total automaticamente. Para os demais, ajuste o papel por evento aqui. Papéis: <b>Admin</b> gerencia o evento · <b>Official</b> pontua · <b>Viewer</b> só vê.</p>
+        <input className="game-search" style={{ marginTop: 8, width: "100%", maxWidth: 360 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou e-mail…" />
+
+        {loading && <div className="empty">Carregando acessos…</div>}
+        {!loading && cols.length === 0 && <div className="empty">Nenhum evento ainda.</div>}
+        {!loading && cols.length > 0 && (
+          <div className="grid-scroll">
+            <table className="access-grid">
+              <thead>
+                <tr>
+                  <th className="ag-user">Usuário</th>
+                  {cols.map((ev) => (
+                    <th key={ev.id} className={ev.status === "archived" ? "ag-arch" : ""}>
+                      <button className="ag-evbtn" onClick={() => nav(`/e/${ev.id}/settings`)} title="Abrir acesso deste evento">
+                        {ev.name}
+                      </button>
+                      <div className="ag-evsub">{ev.status === "archived" ? "Arquivado" : "Ativo"}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 && (
+                  <tr><td className="ag-user muted-sm" colSpan={cols.length + 1}>Nenhum usuário para este filtro.</td></tr>
+                )}
+                {rows.map((u) => {
+                  const isOrg = orgAdminEmails.has(u.email);
+                  return (
+                    <tr key={u.email}>
+                      <td className="ag-user">
+                        <div className="ag-name">{u.name || "—"} {isOrg && <span className="tag tag-org">org-admin</span>}</div>
+                        <div className="ag-email muted-sm">{u.email}</div>
+                      </td>
+                      {cols.map((ev) => {
+                        if (isOrg) return <td key={ev.id} className="ag-cell ag-full">total</td>;
+                        const role = roleAt.get(`${u.email}||${ev.id}`) || "";
+                        return (
+                          <td key={ev.id} className="ag-cell">
+                            <select className={`ag-role r-${role || "none"}`} value={role}
+                              onChange={(e) => changeRole(u, ev.id, e.target.value)}>
+                              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                            </select>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );

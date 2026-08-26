@@ -213,6 +213,32 @@ export async function removeMember(email) {
   await deleteDoc(edoc("members", (email || "").toLowerCase().trim()));
 }
 
+/* ----------------- global access grid (org-admins) -----------------
+ * Every membership across every event. Readable in one collection-group
+ * query by org-admins (their read rule doesn't depend on the document). */
+export function subscribeAllMembers(cb) {
+  return onSnapshot(collectionGroup(db, "members"),
+    (snap) => cb(snap.docs.map((d) => {
+      const ev = d.ref.parent.parent;
+      return { eventId: ev ? ev.id : null, email: d.id, ...d.data() };
+    }).filter((m) => m.eventId)),
+    (err) => { console.warn("all members unavailable:", err?.code || err); cb([]); });
+}
+// Grant/change a member's role in a SPECIFIC event (event-scoped, no reqEid()).
+export async function setMemberRoleAt(eventId, { email, name, role }, me) {
+  const e = (email || "").toLowerCase().trim();
+  if (!eventId || !e) return;
+  await setDoc(doc(db, "events", eventId, "members", e), {
+    email: e, name: name || "", role: role || "viewer",
+    addedBy: me?.email || "", addedAt: serverTimestamp(),
+  }, { merge: true });
+  await upsertPerson(e, name);
+}
+export async function removeMemberAt(eventId, email) {
+  const e = (email || "").toLowerCase().trim();
+  if (eventId && e) await deleteDoc(doc(db, "events", eventId, "members", e));
+}
+
 // My role for the current event ('admin' | 'official' | 'viewer' | null).
 // Org-admins are admin everywhere.
 export function subscribeMyRole(me, cb) {

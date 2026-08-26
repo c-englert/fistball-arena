@@ -308,6 +308,27 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .callout-box { border: 1px solid var(--line); background: #efeaf9; color: var(--text); border-radius: 12px; padding: 11px 14px; font-size: 13.5px; }
 .callout-box b { color: var(--brand); }
 .access-panel > .subhead:first-of-type { margin-top: 14px; }
+
+/* ---------- Global access grid ---------- */
+.grid-scroll { overflow-x: auto; margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.access-grid { border-collapse: collapse; width: 100%; font-size: 13px; }
+.access-grid th, .access-grid td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: middle; }
+.access-grid thead th { background: #f6f7fb; font-weight: 800; color: var(--muted); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+.access-grid th.ag-arch { opacity: .7; }
+.access-grid .ag-user { position: sticky; left: 0; background: var(--surface); min-width: 190px; z-index: 2; border-right: 1px solid var(--line); }
+.access-grid thead th.ag-user { z-index: 3; background: #f6f7fb; }
+.ag-evbtn { background: none; border: none; padding: 0; font: inherit; font-weight: 800; color: var(--text); text-align: left; }
+.ag-evbtn:hover { color: var(--accent); text-decoration: underline; }
+.ag-evsub { font-size: 11px; font-weight: 600; color: var(--muted); }
+.ag-name { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.ag-email { font-size: 11px; }
+.ag-cell { text-align: center; }
+.ag-full { color: var(--brand); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+.ag-role { border: 1px solid var(--line); border-radius: 8px; padding: 5px 6px; background: #fff; font-weight: 700; color: var(--muted); min-width: 82px; }
+.ag-role.r-admin { border-color: var(--brand); color: var(--brand); background: #efeaf9; }
+.ag-role.r-official { border-color: #1f7a4d; color: #1f7a4d; background: #e6f5ee; }
+.ag-role.r-viewer { border-color: var(--line); color: var(--text); background: #fff; }
+.ag-role.r-none { color: #aab0bf; }
 .acc-auto .roster-row { opacity: .95; }
 .tag.tag-org { background: var(--brand); color: #fff; }
 .linklike { background: none; border: none; padding: 0; font: inherit; color: var(--brand); font-weight: 700; cursor: pointer; text-decoration: underline; }
