@@ -13,7 +13,7 @@ function ManageMenu({ base }) {
     ["Schedule", `${base}/schedule`],
     ["Arrange schedule", `${base}/arrange`],
     ["Players & staff", `${base}/roster`],
-    ["Access", `${base}/members`],
+    ["Org-admins", `${base}/members`],
     ["Settings", `${base}/settings`],
   ];
   return (

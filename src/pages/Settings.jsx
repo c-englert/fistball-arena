@@ -11,6 +11,7 @@ import { generateSchedule } from "../schedule/generator.js";
 import { eventToConfig } from "../schedule/eventToConfig.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
 import ScheduleGrid from "../schedule/ScheduleGrid.jsx";
+import EventAccess from "./EventAccess.jsx";
 import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
 import { flagFor } from "../flags.js";
@@ -306,9 +307,10 @@ export default function Settings({ me }) {
     published,
     !!(branding?.eventLogo || (branding?.promoters || []).length),
     thisIsLive,
+    false, // 9 access — always available, never "done"
   ];
-  // 1 details · 2 categories · 3 teams · 4 format · 5 courts · 6 schedule · 7 logos · 8 live
-  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[4], !done[4], !done[5]];
+  // 1 details · 2 categories · 3 teams · 4 format · 5 courts · 6 schedule · 7 logos · 8 live · 9 access
+  const locked = [false, !done[0], !done[1], !done[2], !done[3], !done[4], !done[4], !done[5], !done[0]];
 
   return (
     <div className="app">
@@ -595,6 +597,11 @@ export default function Settings({ me }) {
           {thisIsLive
             ? <button className="btn danger" onClick={stopLive}>Stop showing</button>
             : <button className="btn primary" onClick={publishLive}>{live?.eventId ? "Show this instead" : "Publish to Live"}</button>}
+        </Step>
+
+        {/* ---- 9. Access to this event ---- */}
+        <Step n={9} title="Access to this event" sub={locked[8] ? "" : "who can score & manage"} done={done[8]} locked={locked[8]} open={openStep === 9} onToggle={() => openOrToggle(9)}>
+          <EventAccess me={me} />
         </Step>
 
         <div className="tools-divider">Tools (optional)</div>

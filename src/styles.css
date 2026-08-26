@@ -225,6 +225,12 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .chip.r.on { background: var(--r); color: #fff; border-color: var(--r); }
 
 .subhead { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin: 16px 0 6px; }
+.callout-box { border: 1px solid var(--line); background: #efeaf9; color: var(--text); border-radius: 12px; padding: 11px 14px; font-size: 13.5px; }
+.callout-box b { color: var(--brand); }
+.access-panel > .subhead:first-of-type { margin-top: 14px; }
+.acc-auto .roster-row { opacity: .95; }
+.tag.tag-org { background: var(--brand); color: #fff; }
+.linklike { background: none; border: none; padding: 0; font: inherit; color: var(--brand); font-weight: 700; cursor: pointer; text-decoration: underline; }
 
 /* ---------- Score: rally-by-rally point record ---------- */
 .set-pills { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 14px; padding-bottom: 2px; }
