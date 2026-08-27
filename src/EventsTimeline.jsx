@@ -3,7 +3,7 @@ import { IconStar, IconShield, IconWhistle, IconEye } from "./icons.jsx";
 
 const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = 86400000;
-const COLW = 200;      // px per month column
+const COLW = 320;      // px per month column (wider → duration bars are clearer)
 const PILLW = 340;     // assumed pill width for lane packing (~+50%)
 const LANE_H = 84;     // px per lane row
 const parseISO = (s) => {
