@@ -8,13 +8,12 @@ import { team } from "./seed.js";
 import { resolveAdvancement } from "./schedule/advance.js";
 
 /* ----------------- identity (Google login) ----------------- */
-// Org-admins can create events and manage members of any event. Kept in sync
-// with the same list in firestore.rules.
-const ORG_ADMINS = [
-  "claudio.englert@gmail.com",
-  "claudio@qualitin.com",
-  "gastaoenglert@gmail.com",
-];
+// Bootstrap org-admins — can create events and manage members of any event.
+// Set VITE_ORG_ADMINS (comma-separated emails) in your .env to override.
+// Keep this in sync with the same list in firestore.rules (rules can't read env).
+const ORG_ADMINS = (import.meta.env.VITE_ORG_ADMINS ||
+  "claudio.englert@gmail.com,claudio@qualitin.com,gastaoenglert@gmail.com")
+  .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 export function isOrgAdmin(email) {
   return ORG_ADMINS.includes((email || "").toLowerCase());
 }

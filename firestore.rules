@@ -5,8 +5,11 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function email() { return request.auth.token.email; }
 
-    // Org-admins: a hardcoded bootstrap list (mirror of ORG_ADMINS in src/cloud.js)
-    // PLUS anyone listed in the /orgAdmins collection (manageable in-app).
+    // Org-admins: a hardcoded bootstrap list PLUS anyone in the /orgAdmins
+    // collection (manageable in-app). FORKS: replace the emails below with your
+    // own bootstrap org-admin(s) before publishing — rules can't read env, so
+    // this list is the one place that must be edited by hand (keep it in sync
+    // with VITE_ORG_ADMINS / ORG_ADMINS in src/cloud.js).
     function isOrgAdmin() {
       return signedIn() && (
         email() in [
