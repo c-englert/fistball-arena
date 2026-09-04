@@ -691,10 +691,26 @@ export async function buildReportSeed(gameId) {
   return blankReport(game);
 }
 
+const REF_KEYS = ["r1", "r2", "clerk", "a1", "a2"];
 export async function ensureReport(gameId) {
   const ref = edoc("reports", gameId);
   const snap = await getDoc(ref);
-  if (snap.exists()) return;
+  if (snap.exists()) {
+    // Report already exists: backfill referees from the game's assignment if the
+    // report has none yet (so games scored before an assignment still pick it up).
+    const refs = snap.data().referees || {};
+    const hasRefs = REF_KEYS.some((k) => (refs[k] || "").trim());
+    if (!hasRefs) {
+      try {
+        const g = await getDoc(edoc("games", gameId));
+        const gr = g.exists() ? g.data().refs : null;
+        if (gr && REF_KEYS.some((k) => (gr[k] || "").trim())) {
+          await updateDoc(ref, { referees: { r1: "", r2: "", clerk: "", a1: "", a2: "", ...gr } });
+        }
+      } catch (e) { console.warn("referee backfill skipped:", e?.code || e); }
+    }
+    return;
+  }
   const gsnap = await getDoc(edoc("games", gameId));
   if (!gsnap.exists()) return;
   const game = { id: gameId, ...gsnap.data() };
