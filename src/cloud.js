@@ -547,6 +547,11 @@ export function subscribeReferees(cb) {
     (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
     (err) => { console.warn("referees unavailable:", err?.code || err); cb([]); });
 }
+// Assign the referee team to a game (planning, on the schedule). Stored on the
+// game doc as `refs`; pre-fills the game report when it's created.
+export async function saveGameRefs(gameId, refs) {
+  await setDoc(edoc("games", gameId), { refs }, { merge: true });
+}
 export async function publishReferees(list, { replaceAll } = {}) {
   if (replaceAll) await clearCollection("referees");
   for (let i = 0; i < list.length; i += 400) {
@@ -639,7 +644,8 @@ function blankReport(game) {
     sets: Array.from({ length: game.bestOf }, () => ({ rallies: [] })),
     timeouts: { teamA: [], teamB: [] },
     ballChoice: { set1: "", set5: "" },
-    referees: { r1: "", r2: "", clerk: "", a1: "", a2: "" },
+    // Pre-fill from the referees assigned to the game in the schedule, if any.
+    referees: { r1: "", r2: "", clerk: "", a1: "", a2: "", ...(game.refs || {}) },
     remarks: "", responsible: "",
     signatures: { capA: false, capB: false, referee: false },
     status: "not_started",

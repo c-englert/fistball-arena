@@ -862,6 +862,18 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .et-logo img { width: 34px; height: 34px; border-radius: 8px; object-fit: contain; background: #fff; border: 1px solid var(--line); display: block; }
 .et-logo-ph { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; color: var(--brand); background: #efeaf9; }
 .et-name { font-weight: 800; }
+
+/* ---------- Referees assignment grid ---------- */
+.ref-grid { border-collapse: collapse; width: 100%; font-size: 13px; }
+.ref-grid th, .ref-grid td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: middle; }
+.ref-grid thead th { background: #f6f7fb; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); white-space: nowrap; }
+.ref-grid .rg-game { min-width: 240px; cursor: pointer; }
+.ref-grid .rg-game:hover .rg-nr { color: var(--accent); }
+.rg-nr { font-weight: 800; }
+.rg-teams { font-weight: 700; margin: 2px 0; }
+.ref-input { width: 150px; min-height: 38px; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; background: #fff; font-size: 13px; }
+.ref-input:focus { outline: 2px solid var(--brand-2); border-color: var(--brand-2); }
+.rg-saved td { background: #e6f5ee; transition: background .3s; }
 .et-actions { text-align: right; }
 .ev-edit.sm { width: 30px; height: 30px; }
 

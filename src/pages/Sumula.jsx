@@ -4,6 +4,7 @@ import { pdf } from "@react-pdf/renderer";
 import {
   ensureReport, subscribeReport, acquireLock, releaseLock, heartbeat,
   adminUnlock, reopenReport, saveReport, submitReport, fetchTeamRosters, buildReportSeed,
+  subscribeReferees,
 } from "../cloud.js";
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
 import { flagFor } from "../flags.js";
@@ -30,6 +31,11 @@ export default function Sumula({ me }) {
   const holdRef = useRef(false);
   const draftRef = useRef(null);
   const saveTimer = useRef(null);
+
+  const [refNames, setRefNames] = useState([]);
+  useEffect(() => subscribeReferees((list) =>
+    setRefNames([...new Set(list.map((r) => [r.first, r.name].filter(Boolean).join(" ").trim()).filter(Boolean))].sort())
+  ), []);
 
   const iHold = !!lockedBy && lockedBy.uid === me.uid;
   const readOnly = !iHold || submitted || !canScore;
@@ -187,7 +193,7 @@ export default function Sumula({ me }) {
           <LineupSection d={draft} team={team} setTeam={setTeam} update={update} loadRoster={loadRoster} readOnly={readOnly} />
         )}
         {section === "score" && <ScoreSection d={draft} scoring={scoring} update={update} readOnly={readOnly} />}
-        {section === "refs" && <RefsSection d={draft} update={update} />}
+        {section === "refs" && <RefsSection d={draft} update={update} refNames={refNames} />}
         {section === "finish" && <FinishSection d={draft} scoring={scoring} update={update} onPdf={downloadPDF} />}
       </div>
 
@@ -479,7 +485,7 @@ function ScoreSection({ d, scoring, update, readOnly }) {
   );
 }
 
-function RefsSection({ d, update }) {
+function RefsSection({ d, update, refNames = [] }) {
   const fields = [
     ["r1", "Referee 1"], ["r2", "Referee 2"], ["clerk", "Recording Clerk"],
     ["a1", "Assistant 1"], ["a2", "Assistant 2"],
@@ -487,10 +493,13 @@ function RefsSection({ d, update }) {
   return (
     <div className="card">
       <h2>Referee team</h2>
+      <p className="muted-sm" style={{ marginTop: -6 }}>Pre-filled from the referees assigned to this game (Referees screen). Pick from the list or type a name.</p>
+      <datalist id="sumula-ref-names">{refNames.map((n) => <option key={n} value={n} />)}</datalist>
       {fields.map(([k, label]) => (
         <div className="field" key={k}>
           <label>{label}</label>
           <input
+            list="sumula-ref-names"
             value={d.referees[k]}
             onChange={(e) => update((n) => (n.referees[k] = e.target.value))}
             placeholder="Name"
