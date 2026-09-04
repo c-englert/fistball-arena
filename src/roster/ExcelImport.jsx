@@ -143,8 +143,15 @@ export default function ExcelImport({ me, teamNames = [], categories = [] }) {
   };
   const allKeys = files.flatMap((f) => Object.keys(f.teams).map((orig) => finalKey(f, orig)));
   const dupKeys = new Set(allKeys.filter((k, i) => k && allKeys.indexOf(k) !== i));
-  const needCategory = categories.length > 0 && files.some((f) => !f.category);
+  // Category is only meaningful for team rosters; a referees-only file needs none.
+  const needCategory = categories.length > 0 && files.some((f) => !f.category && Object.keys(f.teams).length > 0);
   const totalPeople = files.reduce((s, f) => s + f.count, 0);
+  const totalRefs = files.reduce((s, f) => s + (f.refereeCount || 0), 0);
+  const nothingToSave = totalPeople === 0 && totalRefs === 0;
+  const saveLabel = [
+    totalPeople ? `${totalPeople} people` : "",
+    totalRefs ? `${totalRefs} referee${totalRefs === 1 ? "" : "s"}` : "",
+  ].filter(Boolean).join(" & ") || "nothing";
 
   const saveAll = async () => {
     if (!files.length || dupKeys.size || needCategory) return;
@@ -197,11 +204,14 @@ export default function ExcelImport({ me, teamNames = [], categories = [] }) {
             <div className="row-between" style={{ alignItems: "center", gap: 8, marginBottom: 6 }}>
               <span className="import-file-name" title={f.filename}>📄 {f.filename}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {categories.length > 0 && (
+                {categories.length > 0 && Object.keys(f.teams).length > 0 && (
                   <select className={`cat-select ${f.category ? "" : "cat-missing"}`} value={f.category} onChange={(e) => patchFile(f.id, { category: e.target.value })}>
                     <option value="">— pick category —</option>
                     {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
+                )}
+                {Object.keys(f.teams).length === 0 && f.refereeCount > 0 && (
+                  <span className="tag" title="Referees are event-wide — no category needed">referees only</span>
                 )}
                 <button className="btn danger sm" onClick={() => removeFile(f.id)} title="Remove this file">✕</button>
               </div>
@@ -244,8 +254,8 @@ export default function ExcelImport({ me, teamNames = [], categories = [] }) {
       {needCategory && <div className="warn-box" style={{ marginTop: 8 }}>⚠️ Pick a category for every file before saving.</div>}
 
       {files.length > 0 && (
-        <button className="btn primary" style={{ width: "100%", marginTop: 10 }} onClick={saveAll} disabled={dupKeys.size > 0 || needCategory}>
-          Save {totalPeople} people from {files.length} file{files.length === 1 ? "" : "s"}
+        <button className="btn primary" style={{ width: "100%", marginTop: 10 }} onClick={saveAll} disabled={dupKeys.size > 0 || needCategory || nothingToSave}>
+          Save {saveLabel} from {files.length} file{files.length === 1 ? "" : "s"}
         </button>
       )}
       {status && <p className="muted-sm" style={{ marginTop: 10 }}>{status}</p>}
