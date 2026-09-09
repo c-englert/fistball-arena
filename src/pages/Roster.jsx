@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchRosters } from "../roster/importRoster.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
-import { subscribeRosters, subscribeResults, publishRosters, addMember } from "../cloud.js";
+import { subscribeRosters, subscribeResults, publishRosters, addMember, updateRosterPlayers } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { eventCategoryNames } from "../categories.js";
 import { useEvent } from "../eventContext.js";
@@ -15,8 +15,10 @@ function Avatar({ src, name }) {
 
 export default function Roster({ me }) {
   const nav = useNavigate();
-  const { eventId, isAdmin, event } = useEvent();
+  const { eventId, isAdmin, event, archived } = useEvent();
   const [rosters, setRosters] = useState(null);   // live registry from Firestore
+  const [numEdit, setNumEdit] = useState({});      // `${rosterKey}:${idx}` -> jersey string (in-flight edits)
+  const numTimers = useRef({});
   const [preview, setPreview] = useState(null);     // parsed import { rosters, teamCount, count, warnings }
   const [sheetId, setSheetId] = useState("");
   const [tab, setTab] = useState("DB");
@@ -60,6 +62,32 @@ export default function Roster({ me }) {
     const src = rosters || {};
     return Object.keys(src).sort((a, b) => a.localeCompare(b)).map((k) => ({ key: k, ...src[k] }));
   }, [rosters]);
+
+  // Edit a jersey number in-app (no re-upload). Debounced save of the whole
+  // players array, applying every pending edit for that team.
+  const canEditNums = isAdmin && !archived;
+  const setNum = (t, i, v) => {
+    setNumEdit((m) => ({ ...m, [`${t.key}:${i}`]: v }));
+    clearTimeout(numTimers.current[t.key]);
+    numTimers.current[t.key] = setTimeout(() => {
+      setNumEdit((cur) => {
+        const players = (t.players || []).map((p, idx) => {
+          const k = `${t.key}:${idx}`;
+          if (!(k in cur)) return p;
+          const raw = String(cur[k]).trim();
+          const nr = raw === "" ? "" : (Number.isFinite(+raw) ? +raw : raw);
+          return { ...p, nr };
+        });
+        updateRosterPlayers(t.key, players)
+          .then(() => setStatus(`Saved jersey numbers for ${t.name}.`))
+          .catch((e) => setStatus("Save failed: " + (e?.code || e?.message || e)));
+        // drop this team's in-flight edits; the subscription now holds the truth
+        const next = { ...cur };
+        Object.keys(next).forEach((k) => { if (k.startsWith(`${t.key}:`)) delete next[k]; });
+        return next;
+      });
+    }, 700);
+  };
 
   // Normalise the volume bars against the largest players/staff count across teams.
   const maxCount = useMemo(
@@ -123,11 +151,26 @@ export default function Roster({ me }) {
                 {(t.players || []).map((p, i) => (
                   <div className="roster-row clickable" key={"p" + i} onClick={() => setProfile({ ...p, team: t.name, kind: "player" })}>
                     <Avatar src={p.photo} name={p.name} />
-                    <span className="roster-nr">{p.nr}</span>
+                    {canEditNums ? (
+                      <input
+                        className="roster-nr nr-edit"
+                        value={numEdit[`${t.key}:${i}`] ?? (p.nr ?? "")}
+                        inputMode="numeric"
+                        aria-label={`Jersey number for ${p.name}`}
+                        title="Jersey number — click to edit"
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setNum(t, i, e.target.value)}
+                      />
+                    ) : (
+                      <span className="roster-nr">{p.nr}</span>
+                    )}
                     <span className="roster-name">{p.name} <span className="muted-sm">{p.first}</span></span>
                     <span className="muted-sm">{p.position}</span>
                   </div>
                 ))}
+                {canEditNums && (t.players || []).length > 0 && (
+                  <p className="muted-sm" style={{ margin: "4px 0 0" }}>Tip: edit a jersey number above — it saves automatically. In an already-open game report, use “↻ Load roster” (Line-ups tab) to pull the fix.</p>
+                )}
                 {(t.staff || []).length > 0 && <div className="subhead">Staff</div>}
                 {(t.staff || []).map((s, i) => (
                   <div className="roster-row clickable" key={"s" + i} onClick={() => setProfile({ ...s, team: t.name, kind: "staff" })}>

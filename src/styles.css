@@ -711,6 +711,8 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .roster-row:last-child { border-bottom: none; }
 .roster-nr { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #eef0f6; font-weight: 800; font-size: 14px; }
 .roster-nr.role { background: #efeaf9; color: var(--brand); font-size: 12px; }
+.roster-nr.nr-edit { padding: 0; text-align: center; border: 1px solid var(--line); background: #fff; color: var(--text); cursor: text; }
+.roster-nr.nr-edit:focus { outline: 2px solid var(--brand-2); border-color: var(--brand-2); background: #fbfcfe; }
 .roster-name { flex: 1; font-weight: 700; }
 
 /* ---------- Athlete avatars ---------- */

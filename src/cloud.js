@@ -479,13 +479,46 @@ export async function updateGameSlots(updates) {
   for (let i = 0; i < updates.length; i += 200) {
     const batch = writeBatch(db);
     updates.slice(i, i + 200).forEach((u) => {
-      const id = `g${u.nr}`;
+      const id = u.id || `g${u.nr}`; // prefer the stable doc id (nr may be renumbered)
       const patch = { date: u.date || "", time: u.time || "", court: u.court || "" };
       batch.set(edoc("games", id), patch, { merge: true });
       batch.set(edoc("results", id), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
     });
     await batch.commit();
   }
+}
+
+// Renumber games #1..N in chronological order (day · time · court), touching
+// ONLY the display number — not the games themselves, their doc ids or the
+// bracket. Updates the `nr` field on each game and its public result (and the
+// snapshot in any existing report), so the number is consistent everywhere.
+export async function renumberGames() {
+  const toMin = (t) => { const [h, m] = String(t || "").split(":").map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : 1e9; };
+  const dOf = (s) => { const [d, m, y] = String(s || "").split("/").map(Number); return d ? new Date(2000 + (y || 0), (m || 1) - 1, d).getTime() : 8.64e15; };
+  const gsnap = await getDocs(ecol("games"));
+  const games = gsnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const sorted = [...games].sort((a, b) =>
+    dOf(a.date) - dOf(b.date) || toMin(a.time) - toMin(b.time)
+    || String(a.court || "").localeCompare(String(b.court || ""), undefined, { numeric: true })
+    || (Number(a.nr) || 0) - (Number(b.nr) || 0));
+  const [rSnap, repSnap] = await Promise.all([getDocs(ecol("results")), getDocs(ecol("reports"))]);
+  const hasResult = new Set(rSnap.docs.map((d) => d.id));
+  const hasReport = new Set(repSnap.docs.map((d) => d.id));
+  let changed = 0;
+  for (let i = 0; i < sorted.length; i += 150) {
+    const batch = writeBatch(db);
+    let ops = 0;
+    sorted.slice(i, i + 150).forEach((g, j) => {
+      const newNr = i + j + 1;
+      if (Number(g.nr) === newNr) return;
+      changed++; ops++;
+      batch.update(edoc("games", g.id), { nr: newNr });
+      if (hasResult.has(g.id)) batch.update(edoc("results", g.id), { nr: newNr, updatedAt: serverTimestamp() });
+      if (hasReport.has(g.id)) batch.update(edoc("reports", g.id), { "info.nr": newNr });
+    });
+    if (ops) await batch.commit();
+  }
+  return { total: sorted.length, changed };
 }
 
 // Import a whole past event: games + real results (scores) + rosters.
@@ -541,6 +574,12 @@ export async function publishRosters(rosters) {
 }
 // Wipe the whole players & staff registry for the current event.
 export async function clearRosters() { await clearCollection("rosters"); }
+
+// Update a team's players in the registry (e.g. fix jersey numbers in-app,
+// without re-uploading the file). `rosterId` is the roster doc id (t.key).
+export async function updateRosterPlayers(rosterId, players) {
+  await setDoc(edoc("rosters", rosterId), { players }, { merge: true });
+}
 /* ----------------- referees registry ----------------- */
 export function subscribeReferees(cb) {
   return onSnapshot(ecol("referees"),
