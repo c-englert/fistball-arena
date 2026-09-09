@@ -64,6 +64,10 @@ export const IconEdit = (p) => (
   <Svg {...p}><path d="M4 20h4l10-10-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></Svg>
 );
 
+export const IconShirt = (p) => (
+  <Svg {...p}><path d="M8.5 3.5 5 6 3.2 9l2.3 1.6L7 9.4V20h10V9.4l1.5 1.2L20.8 9 19 6l-3.5-2.5a3.5 3.5 0 0 1-7 0Z" /></Svg>
+);
+
 // Utility
 export const IconBack = (p) => (
   <Svg {...p} sw={2}><path d="M14 6l-6 6 6 6" /></Svg>

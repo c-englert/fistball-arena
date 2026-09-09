@@ -591,6 +591,15 @@ export function subscribeReferees(cb) {
 export async function saveGameRefs(gameId, refs) {
   await setDoc(edoc("games", gameId), { refs }, { merge: true });
 }
+
+// Shirt/kit colour a team wears in a game (referees decide per day, sometimes
+// per game). side is "A" or "B"; color is a hex string ("" clears it). Mirrored
+// onto the public result so the spectator app can show it too.
+export async function saveGameKit(gameId, side, color) {
+  const patch = { kit: { [side]: color || "" } };
+  await setDoc(edoc("games", gameId), patch, { merge: true });
+  try { await setDoc(edoc("results", gameId), patch, { merge: true }); } catch (_) { /* result may not exist */ }
+}
 export async function publishReferees(list, { replaceAll } = {}) {
   if (replaceAll) await clearCollection("referees");
   for (let i = 0; i < list.length; i += 400) {

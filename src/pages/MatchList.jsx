@@ -130,8 +130,10 @@ export default function MatchList({ me }) {
               )}
             </div>
             <div className="mc-teams">
+              {m.kit?.A && <span className="kit-dot" style={{ background: m.kit.A }} title="Shirt colour" />}
               <span className="flag">{flagFor(m.teamA.name)}</span>{teamLabel(m.teamA)}
               <span className="vs">vs</span>
+              {m.kit?.B && <span className="kit-dot" style={{ background: m.kit.B }} title="Shirt colour" />}
               <span className="flag">{flagFor(m.teamB.name)}</span>{teamLabel(m.teamB)}
             </div>
           </div>

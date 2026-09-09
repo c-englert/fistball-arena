@@ -9,6 +9,7 @@ import Schedule from "./pages/Schedule.jsx";
 import ArrangeSchedule from "./pages/ArrangeSchedule.jsx";
 import Roster from "./pages/Roster.jsx";
 import Referees from "./pages/Referees.jsx";
+import Colors from "./pages/Colors.jsx";
 import Settings from "./pages/Settings.jsx";
 import Standings from "./pages/Standings.jsx";
 
@@ -50,6 +51,7 @@ export default function EventShell({ me, onSignOut }) {
             <Route path="arrange" element={isAdmin ? <ArrangeSchedule me={me} /> : <Navigate to=".." replace />} />
             <Route path="roster" element={isAdmin ? <Roster me={me} /> : <Navigate to=".." replace />} />
             <Route path="referees" element={isAdmin ? <Referees /> : <Navigate to=".." replace />} />
+            <Route path="colors" element={isAdmin ? <Colors /> : <Navigate to=".." replace />} />
             <Route path="members" element={<Navigate to="../settings" replace />} />
             <Route path="settings" element={isAdmin ? <Settings me={me} /> : <Navigate to=".." replace />} />
           </Route>
