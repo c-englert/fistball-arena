@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { subscribeGames, subscribeReports, adminUnlock } from "../cloud.js";
+import { subscribeGames, subscribeReports, adminUnlock, runAdvancementAll } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 import SchedulePDF from "../pdf/SchedulePDF.jsx";
@@ -85,6 +85,13 @@ export default function MatchList({ me }) {
           placeholder="Search by game # or team…" aria-label="Search games" />
         {q && <button className="filter-pill" onClick={() => setQ("")}>Clear</button>}
         <button className="filter-pill" onClick={downloadSchedule} title="Print / save the schedule as PDF">🖨 PDF</button>
+        {isAdmin && !archived && (
+          <button className="filter-pill" title="Fill knockout games with the teams that qualified (winners / group ranking)"
+            onClick={async () => {
+              try { const n = await runAdvancementAll({ silent: false }); alert(n ? `Advanced ${n} game slot(s).` : "Nothing to advance yet — finish the feeding games first."); }
+              catch (e) { alert("Advance failed: " + (e?.code || e?.message || e)); }
+            }}>↻ Advance bracket</button>
+        )}
       </div>
 
       <div className="filter-bar">

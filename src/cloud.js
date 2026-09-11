@@ -852,49 +852,76 @@ export async function submitReport(gameId, me) {
     submittedAt: serverTimestamp(),
   });
   await publishResult(gameId);
-  try { const g = await getDoc(edoc("games", gameId)); await runAdvancement(g.data()?.category); } catch (_) { /* best effort */ }
+  // Advance the whole bracket (all categories) — best-effort, and resilient to a
+  // single submit's advancement failing (the next submit/open re-tries).
+  await runAdvancementAll();
 }
 
 // Auto-advancement: after a result lands, fill the placeholder slots of later
 // knockout games — seeds from the QR ranking, and winners/losers of finished
 // games — updating the game, its public result and (if present) its report.
+// Resolve one category's knockout slots from finished sources. Returns how many
+// slots were filled. Throws on write errors (callers decide whether to swallow).
+async function advanceCategory(category, allGames, allRes) {
+  const games = allGames.filter((g) => g.category === category);
+  if (!games.length) return 0;
+  const resultsById = {};
+  for (const g of games) if (allRes[g.id]) resultsById[g.id] = allRes[g.id];
+  const qrTeams = new Set();
+  games.filter((g) => g.round === "Qualification round").forEach((g) => {
+    if (g.teamA?.name) qrTeams.add(g.teamA.name);
+    if (g.teamB?.name) qrTeams.add(g.teamB.name);
+  });
+  const shaped = games.map((g) => ({
+    id: g.id, category: g.category, phase: g.round === "Qualification round" ? "group" : "ko",
+    round: g.round, teamA: g.teamA?.name, teamB: g.teamB?.name, srcA: g.srcA, srcB: g.srcB,
+  }));
+  const patches = resolveAdvancement(shaped, resultsById, qrTeams.size);
+  let filled = 0;
+  for (const [gid, patch] of Object.entries(patches)) {
+    const gameUpd = {}, resUpd = {}, repUpd = {};
+    for (const side of ["teamA", "teamB"]) {
+      const name = patch[side];
+      if (!name) continue;
+      const roster = await getRoster(name, category);
+      gameUpd[side] = team(name);
+      resUpd[side] = name;
+      repUpd[side] = cloneTeam({ name, players: roster?.players || [], staff: roster?.staff || [] });
+    }
+    if (Object.keys(gameUpd).length) await updateDoc(edoc("games", gid), gameUpd);
+    if (Object.keys(resUpd).length) await setDoc(edoc("results", gid), resUpd, { merge: true });
+    const rep = await getDoc(edoc("reports", gid));
+    if (rep.exists()) await updateDoc(edoc("reports", gid), repUpd);
+    filled++;
+  }
+  return filled;
+}
+
 export async function runAdvancement(category) {
   if (!category) return;
   try {
-    const gsnap = await getDocs(ecol("games"));
-    const games = gsnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((g) => g.category === category);
-    if (!games.length) return;
-    const rsnap = await getDocs(ecol("results"));
-    const resultsById = {};
-    rsnap.forEach((d) => { const r = d.data(); if (r.category === category) resultsById[d.id] = r; });
-
-    const qrTeams = new Set();
-    games.filter((g) => g.round === "Qualification round").forEach((g) => {
-      if (g.teamA?.name) qrTeams.add(g.teamA.name);
-      if (g.teamB?.name) qrTeams.add(g.teamB.name);
-    });
-    const shaped = games.map((g) => ({
-      id: g.id, category: g.category, phase: g.round === "Qualification round" ? "group" : "ko",
-      round: g.round, teamA: g.teamA?.name, teamB: g.teamB?.name, srcA: g.srcA, srcB: g.srcB,
-    }));
-    const patches = resolveAdvancement(shaped, resultsById, qrTeams.size);
-
-    for (const [gid, patch] of Object.entries(patches)) {
-      const gameUpd = {}, resUpd = {}, repUpd = {};
-      for (const side of ["teamA", "teamB"]) {
-        const name = patch[side];
-        if (!name) continue;
-        const roster = await getRoster(name, category);
-        gameUpd[side] = team(name);
-        resUpd[side] = name;
-        repUpd[side] = cloneTeam({ name, players: roster?.players || [], staff: roster?.staff || [] });
-      }
-      if (Object.keys(gameUpd).length) await updateDoc(edoc("games", gid), gameUpd);
-      if (Object.keys(resUpd).length) await setDoc(edoc("results", gid), resUpd, { merge: true });
-      const rep = await getDoc(edoc("reports", gid));
-      if (rep.exists()) await updateDoc(edoc("reports", gid), repUpd);
-    }
+    const [gsnap, rsnap] = await Promise.all([getDocs(ecol("games")), getDocs(ecol("results"))]);
+    const allGames = gsnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const allRes = {}; rsnap.forEach((d) => (allRes[d.id] = d.data()));
+    await advanceCategory(category, allGames, allRes);
   } catch (e) { console.warn("runAdvancement failed:", e?.code || e); }
+}
+
+// Fill every category's bracket from whatever is finished (self-heal / manual
+// "Advance bracket" button). With { silent:false } it throws so the UI can
+// report failures instead of leaving the bracket quietly stuck.
+export async function runAdvancementAll({ silent = true } = {}) {
+  const run = async () => {
+    const [gsnap, rsnap] = await Promise.all([getDocs(ecol("games")), getDocs(ecol("results"))]);
+    const allGames = gsnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const allRes = {}; rsnap.forEach((d) => (allRes[d.id] = d.data()));
+    const cats = [...new Set(allGames.map((g) => g.category).filter(Boolean))];
+    let filled = 0;
+    for (const c of cats) filled += await advanceCategory(c, allGames, allRes);
+    return filled;
+  };
+  if (silent) { try { return await run(); } catch (e) { console.warn("runAdvancementAll failed:", e?.code || e); return 0; } }
+  return run();
 }
 
 /* ----------------- publish to Fistball Live ----------------- */
