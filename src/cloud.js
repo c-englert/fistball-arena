@@ -803,16 +803,18 @@ export async function acquireLock(gameId, me) {
   const ref = edoc("reports", gameId);
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    const data = snap.data() || {};
+    const data = snap.exists() ? snap.data() : {};
     const lock = data.lockedBy;
     const ts = data.lockedAt?.toMillis ? data.lockedAt.toMillis() : 0;
     const stale = ts > 0 && Date.now() - ts > STALE_LOCK_MS;
     if (lock && lock.uid !== me.uid && !stale) return { ok: false, lockedBy: lock };
-    tx.update(ref, {
+    // set+merge (not update) so a missing report doc — never scored, cleared by a
+    // reset, or a write not yet synced — doesn't make the lock fail to acquire.
+    tx.set(ref, {
       lockedBy: { uid: me.uid, name: me.name },
       lockedAt: serverTimestamp(),
       status: data.status === "submitted" ? "submitted" : "in_progress",
-    });
+    }, { merge: true });
     return { ok: true, tookOver: !!(lock && lock.uid !== me.uid) };
   });
 }
