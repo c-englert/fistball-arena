@@ -801,22 +801,34 @@ export async function reloadReportRoster(gameId) {
 const STALE_LOCK_MS = 60000;
 export async function acquireLock(gameId, me) {
   const ref = edoc("reports", gameId);
-  return runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref);
-    const data = snap.exists() ? snap.data() : {};
-    const lock = data.lockedBy;
-    const ts = data.lockedAt?.toMillis ? data.lockedAt.toMillis() : 0;
-    const stale = ts > 0 && Date.now() - ts > STALE_LOCK_MS;
-    if (lock && lock.uid !== me.uid && !stale) return { ok: false, lockedBy: lock };
-    // set+merge (not update) so a missing report doc — never scored, cleared by a
-    // reset, or a write not yet synced — doesn't make the lock fail to acquire.
-    tx.set(ref, {
-      lockedBy: { uid: me.uid, name: me.name },
-      lockedAt: serverTimestamp(),
-      status: data.status === "submitted" ? "submitted" : "in_progress",
-    }, { merge: true });
-    return { ok: true, tookOver: !!(lock && lock.uid !== me.uid) };
-  });
+  const lockPatch = { lockedBy: { uid: me.uid, name: me.name }, lockedAt: serverTimestamp() };
+  try {
+    return await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      const data = snap.exists() ? snap.data() : {};
+      const lock = data.lockedBy;
+      const ts = data.lockedAt?.toMillis ? data.lockedAt.toMillis() : 0;
+      const stale = ts > 0 && Date.now() - ts > STALE_LOCK_MS;
+      if (lock && lock.uid !== me.uid && !stale) return { ok: false, lockedBy: lock };
+      // set+merge (not update) so a missing report doc — never scored, cleared by
+      // a reset, or a write not yet synced — doesn't make the lock fail.
+      tx.set(ref, { ...lockPatch, status: data.status === "submitted" ? "submitted" : "in_progress" }, { merge: true });
+      return { ok: true, tookOver: !!(lock && lock.uid !== me.uid) };
+    });
+  } catch (e) {
+    // Transactions need a live connection and can fail on flaky venue wifi —
+    // never let that block scoring. Fall back to a direct write (queues offline
+    // and syncs on reconnect). Worst case two devices race; heartbeat + stale
+    // takeover resolve it, and the report is a single doc anyway.
+    console.warn("acquireLock transaction failed — direct-set fallback:", e?.code || e);
+    try {
+      await setDoc(ref, { ...lockPatch, status: "in_progress" }, { merge: true });
+      return { ok: true, fallback: true };
+    } catch (e2) {
+      console.warn("acquireLock fallback failed:", e2?.code || e2);
+      return { ok: false, error: e2?.code || String(e2) };
+    }
+  }
 }
 export async function heartbeat(gameId, me) {
   const ref = edoc("reports", gameId);
