@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 // Firebase project config (client-side, NOT secret — safe to ship publicly;
@@ -17,7 +17,17 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Offline-tolerant cache: reads keep working and writes queue through short wifi
+// drops (venue tablets), syncing on reconnect. Falls back to memory cache if
+// IndexedDB is unavailable (e.g. private browsing).
+let _db;
+try {
+  _db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+} catch (e) {
+  console.warn("Persistent cache unavailable, using memory cache:", e?.message || e);
+  _db = initializeFirestore(app, {});
+}
+export const db = _db;
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 // Always show Google's account chooser instead of silently reusing the one

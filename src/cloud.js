@@ -796,19 +796,24 @@ export async function reloadReportRoster(gameId) {
 }
 
 /* ----------------- locking ----------------- */
+// A lock whose heartbeat (every 20s) stopped this long ago is considered
+// abandoned (e.g. a tablet that froze/closed) and can be taken over.
+const STALE_LOCK_MS = 60000;
 export async function acquireLock(gameId, me) {
   const ref = edoc("reports", gameId);
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const data = snap.data() || {};
     const lock = data.lockedBy;
-    if (lock && lock.uid !== me.uid) return { ok: false, lockedBy: lock };
+    const ts = data.lockedAt?.toMillis ? data.lockedAt.toMillis() : 0;
+    const stale = ts > 0 && Date.now() - ts > STALE_LOCK_MS;
+    if (lock && lock.uid !== me.uid && !stale) return { ok: false, lockedBy: lock };
     tx.update(ref, {
       lockedBy: { uid: me.uid, name: me.name },
       lockedAt: serverTimestamp(),
       status: data.status === "submitted" ? "submitted" : "in_progress",
     });
-    return { ok: true };
+    return { ok: true, tookOver: !!(lock && lock.uid !== me.uid) };
   });
 }
 export async function heartbeat(gameId, me) {
