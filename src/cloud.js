@@ -1053,6 +1053,8 @@ function deriveResult(rep) {
     livePointsA: playing ? playing.a : 0,
     livePointsB: playing ? playing.b : 0,
   };
+  // The set being played isn't won yet — don't count it in setsA/setsB either.
+  if (playing) { setsA = live.liveSetsA; setsB = live.liveSetsB; }
   return {
     nr: i.nr, date: i.date, time: i.time, court: i.court,
     round: i.round, category: i.category, group: i.group || "", bestOf: i.bestOf,
