@@ -16,7 +16,7 @@ import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
-import { overlayUrl } from "../broadcast.js";
+import { overlayUrl, resultsJsonUrl } from "../broadcast.js";
 
 // Format variants offered per category in phase 4. The editable bracket (View
 // bracket) still fine-tunes individual knockout matchups on top of these.
@@ -758,6 +758,10 @@ function BroadcastLinks({ eventId, games }) {
       <strong>📺 Broadcast overlay (points &amp; sets)</strong>
       <p className="muted-sm">Live scoreboard with a transparent background — add it as a <em>Browser source</em> in OBS/vMix (e.g. 1920×1080). One link per court follows the game being played there; each game report also has its own link.</p>
       {courts.length === 0 && <p className="muted-sm">Publish games first to get the court links.</p>}
+      <p className="muted-sm" style={{ marginTop: 8 }}>
+        Data feed (JSON, for vMix/Singular/TV graphics — all games of this event):{" "}
+        <a href={resultsJsonUrl(eventId)} target="_blank" rel="noreferrer" style={{ wordBreak: "break-all" }}>{resultsJsonUrl(eventId)}</a>
+      </p>
       {courts.map((c) => {
         const url = overlayUrl(eventId, { court: c });
         return (

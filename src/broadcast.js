@@ -10,3 +10,10 @@ export function overlayUrl(eventId, { game, court } = {}) {
   else if (court) q.set("court", court);
   return `${LIVE_URL}overlay.html?${q}`;
 }
+
+// Public JSON of the event's results via the Firestore REST API (pollable by
+// graphics tools). Pass a gameId for a single game.
+export function resultsJsonUrl(eventId, gameId) {
+  const pid = import.meta.env.VITE_FIREBASE_PROJECT_ID || "fistball-arena";
+  return `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/events/${eventId}/results${gameId ? `/${gameId}` : ""}`;
+}

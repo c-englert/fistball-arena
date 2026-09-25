@@ -364,6 +364,7 @@ function slotPlaceholder(src, gamesById) {
   return null;
 }
 
+const LIVE_RESET = { liveSetsA: 0, liveSetsB: 0, liveSet: 1, livePointsA: 0, livePointsB: 0 };
 export async function resetScores() {
   await clearCollection("reports");
   // Games carry srcA/srcB and the (possibly advancement-filled) teamA/teamB.
@@ -398,7 +399,7 @@ export async function resetScores() {
       const teamPatch = {};
       if (rev.teamA) teamPatch.teamA = rev.teamA.name;
       if (rev.teamB) teamPatch.teamB = rev.teamB.name;
-      batch.set(d.ref, { setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], cards: [], status: "Not Started", ...teamPatch, updatedAt: serverTimestamp() }, { merge: true });
+      batch.set(d.ref, { setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], cards: [], status: "Not Started", ...LIVE_RESET, ...teamPatch, updatedAt: serverTimestamp() }, { merge: true });
     });
     await batch.commit();
   }
@@ -418,7 +419,7 @@ export async function resetReport(gameId) {
 
   await deleteDoc(edoc("reports", gameId));
   await setDoc(edoc("results", gameId), {
-    setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], cards: [], status: "Not Started", updatedAt: serverTimestamp(),
+    setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], cards: [], status: "Not Started", ...LIVE_RESET, updatedAt: serverTimestamp(),
   }, { merge: true });
   if (!game) return { reverted: 0, kept: [] };
 
@@ -1028,7 +1029,9 @@ function deriveResult(rep) {
     if (!r.length) continue;
     const a = r.filter((x) => x === "A").length;
     const b = r.filter((x) => x === "B").length;
-    sets.push({ a, b });   // objects, not [a,b] — Firestore rejects nested arrays
+    // objects, not [a,b] — Firestore rejects nested arrays. seq = point-by-point
+    // order ("AABA…"), public for the Live game ticker.
+    sets.push({ a, b, seq: r.filter((x) => x === "A" || x === "B").join("") });
     pointsA += a; pointsB += b;
     if (a > b) setsA++; else if (b > a) setsB++;
   }
@@ -1036,11 +1039,25 @@ function deriveResult(rep) {
   if (rep.status === "submitted") status = "Finished";
   else if (sets.length) status = "In progress";
   const i = rep.info || {};
+  // Flat scoreboard fields for broadcast graphics (vMix/Singular read them from
+  // the public JSON): only COMPLETED sets count as won (a fistball set ends at
+  // 11 with a 2-point lead, or at 15); live* is the set being played.
+  const setDone = (s) => (Math.max(s.a, s.b) >= 11 && Math.abs(s.a - s.b) >= 2) || Math.max(s.a, s.b) >= 15;
+  const last = sets[sets.length - 1];
+  const playing = status === "In progress" && last && !setDone(last) ? last : null;
+  const closed = playing ? sets.slice(0, -1) : sets;
+  const live = {
+    liveSetsA: closed.filter((s) => s.a > s.b).length,
+    liveSetsB: closed.filter((s) => s.b > s.a).length,
+    liveSet: status === "Finished" ? 0 : playing ? sets.length : sets.length + 1,
+    livePointsA: playing ? playing.a : 0,
+    livePointsB: playing ? playing.b : 0,
+  };
   return {
     nr: i.nr, date: i.date, time: i.time, court: i.court,
     round: i.round, category: i.category, group: i.group || "", bestOf: i.bestOf,
     teamA: rep.teamA?.name || "", teamB: rep.teamB?.name || "",
-    setsA, setsB, pointsA, pointsB, sets, status,
+    setsA, setsB, pointsA, pointsB, sets, status, ...live,
     cards: deriveCards(rep),
     updatedAt: serverTimestamp(),
   };
