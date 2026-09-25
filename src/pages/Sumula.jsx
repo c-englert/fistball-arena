@@ -630,14 +630,19 @@ function setScore(s) {
   return { a, b };
 }
 
+// A set ends at 11 with a 2-point lead, or at 15.
+const setOver = ({ a, b }) => (Math.max(a, b) >= 11 && Math.abs(a - b) >= 2) || Math.max(a, b) >= 15;
+
+// Sets won — like Fistball Live and the broadcast overlay, the set being played
+// isn't counted until it's over. Sets before the last played one count as over.
 function computeScore(d) {
   if (!d) return { setsA: 0, setsB: 0, winner: null };
   let setsA = 0, setsB = 0;
-  for (const s of d.sets) {
-    const { a, b } = setScore(s);
-    if (a + b === 0) continue;
-    if (a > b) setsA++; else if (b > a) setsB++;
-  }
+  const played = d.sets.map(setScore).filter(({ a, b }) => a + b > 0);
+  played.forEach((sc, i) => {
+    if (i === played.length - 1 && !setOver(sc)) return;
+    if (sc.a > sc.b) setsA++; else if (sc.b > sc.a) setsB++;
+  });
   const need = Math.floor((d.info.bestOf) / 2) + 1;
   const winner = setsA >= need ? "A" : setsB >= need ? "B" : null;
   return { setsA, setsB, winner };
