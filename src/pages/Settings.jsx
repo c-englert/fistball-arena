@@ -16,6 +16,7 @@ import { fileToLogoDataUrl } from "../img.js";
 import { formatRange } from "../dates.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
+import { overlayUrl } from "../broadcast.js";
 
 // Format variants offered per category in phase 4. The editable bracket (View
 // bracket) still fine-tunes individual knockout matchups on top of these.
@@ -614,6 +615,7 @@ export default function Settings({ me }) {
           {thisIsLive
             ? <button className="btn danger" onClick={stopLive}>Stop showing</button>
             : <button className="btn primary" onClick={publishLive}>{live?.eventId ? "Show this instead" : "Publish to Live"}</button>}
+          <BroadcastLinks eventId={eventId} games={existingGames} />
         </Step>
 
         {/* ---- 9. Access to this event ---- */}
@@ -668,7 +670,7 @@ export default function Settings({ me }) {
           </div>
           {!archived && (
             <div className="row-between" style={{ marginTop: 12, alignItems: "center" }}>
-              <span className="muted-sm">Rehearsed scoring? Clear all game reports and reset the bracket to start the tournament clean (keeps games &amp; rosters).</span>
+              <span className="muted-sm">Rehearsed scoring? Clear all game reports and reset the bracket to start the tournament clean (keeps games &amp; rosters). To clear a single game, open it and use “Reset this report”.</span>
               <button className="btn danger sm" onClick={resetAllScores}>Reset all game reports</button>
             </div>
           )}
@@ -743,6 +745,34 @@ export default function Settings({ me }) {
 // Editable bracket of one category (group + every knockout match) in a modal.
 // Each slot is a dropdown (seed / winner-of / loser-of); changes are saved as a
 // per-category override. Stepped through one category at a time.
+// Per-court scoreboard overlay links for the TV/stream producer (OBS/vMix
+// browser source). Each follows whatever game is on that court.
+function BroadcastLinks({ eventId, games }) {
+  const courts = [...new Set(games.map((g) => String(g.court || "")).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const copy = async (url) => {
+    try { await navigator.clipboard.writeText(url); } catch (_) { window.prompt("Copy the link:", url); }
+  };
+  return (
+    <div style={{ marginTop: 14 }}>
+      <strong>📺 Broadcast overlay (points &amp; sets)</strong>
+      <p className="muted-sm">Live scoreboard with a transparent background — add it as a <em>Browser source</em> in OBS/vMix (e.g. 1920×1080). One link per court follows the game being played there; each game report also has its own link.</p>
+      {courts.length === 0 && <p className="muted-sm">Publish games first to get the court links.</p>}
+      {courts.map((c) => {
+        const url = overlayUrl(eventId, { court: c });
+        return (
+          <div key={c} className="row-between" style={{ gap: 8, marginTop: 6, alignItems: "center" }}>
+            <span style={{ minWidth: 64, fontWeight: 600 }}>Court {c}</span>
+            <input readOnly value={url} onFocus={(e) => e.target.select()} style={{ flex: 1, minWidth: 0, fontSize: 12 }} />
+            <button className="btn sm" onClick={() => copy(url)}>Copy</button>
+            <a className="btn sm" href={url} target="_blank" rel="noreferrer">Open ↗</a>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function BracketModal({ category, teams, override, onSlot, onRound, onAdd, onRemove, onReset, onSave, archived, idx, total, onClose, onNext }) {
   const n = teams.length;
   const matches = formatMatches(n, override);

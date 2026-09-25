@@ -936,3 +936,4 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .guide-warn-p { margin: 6px 0; font-size: 13.5px; color: #5a3d0a; }
 .guide-summary { background: #efecf7; color: var(--brand); border-radius: 8px; padding: 12px 14px; margin-top: 20px; font-size: 14px; }
 .guide-updated { margin-top: 10px; font-size: 12px; color: var(--muted); text-align: right; }
+.game-h .gh-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }

@@ -405,6 +405,59 @@ export async function resetScores() {
   return docs.length;
 }
 
+// Reset ONE match report (súmula): deletes its report and puts its public result
+// back to "Not Started" (teams kept). Knockout slots this game already filled
+// (winner/loser, or QR seeds of its category) go back to their placeholder —
+// but only on games that haven't started; those that have are returned in
+// `kept` so the UI can warn. Other games are untouched.
+export async function resetReport(gameId) {
+  const gsnap = await getDocs(ecol("games"));
+  const gamesById = {};
+  gsnap.docs.forEach((d) => { gamesById[d.id] = { id: d.id, ...d.data() }; });
+  const game = gamesById[gameId];
+
+  await deleteDoc(edoc("reports", gameId));
+  await setDoc(edoc("results", gameId), {
+    setsA: 0, setsB: 0, pointsA: 0, pointsB: 0, sets: [], cards: [], status: "Not Started", updatedAt: serverTimestamp(),
+  }, { merge: true });
+  if (!game) return { reverted: 0, kept: [] };
+
+  const isQR = game.round === "Qualification round";
+  const dependsOnThis = (src) => !!src && (
+    ((src.type === "winner" || src.type === "loser") && (src.game || src.dep) === gameId)
+    || (src.type === "seed" && isQR));
+  const rsnap = await getDocs(ecol("results"));
+  const resById = {};
+  rsnap.forEach((d) => (resById[d.id] = d.data()));
+
+  let reverted = 0;
+  const kept = [];
+  for (const g of Object.values(gamesById)) {
+    if (g.category !== game.category) continue;
+    const patch = {};
+    for (const [side, src] of [["teamA", g.srcA], ["teamB", g.srcB]]) {
+      if (!dependsOnThis(src)) continue;
+      const ph = slotPlaceholder(src, gamesById);
+      if (ph && g[side]?.name !== ph) patch[side] = ph;
+    }
+    if (!Object.keys(patch).length) continue;
+    const st = resById[g.id]?.status || "Not Started";
+    if (st !== "Not Started") { kept.push(g.nr); continue; }
+    const gameUpd = {}, resUpd = {}, repUpd = {};
+    for (const [side, name] of Object.entries(patch)) {
+      gameUpd[side] = { name, short: "" };
+      resUpd[side] = name;
+      repUpd[side] = cloneTeam({ name, players: [], staff: [] });
+    }
+    await setDoc(edoc("games", g.id), gameUpd, { merge: true });
+    await setDoc(edoc("results", g.id), { ...resUpd, updatedAt: serverTimestamp() }, { merge: true });
+    const rep = await getDoc(edoc("reports", g.id));
+    if (rep.exists()) await updateDoc(edoc("reports", g.id), repUpd);
+    reverted++;
+  }
+  return { reverted, kept };
+}
+
 /* ----------------- schedule generator config ----------------- */
 export function subscribeScheduleConfig(cb) {
   return onSnapshot(edoc("meta", "schedule"),
@@ -996,7 +1049,9 @@ export async function publishResult(gameId) {
   try {
     const snap = await getDoc(edoc("reports", gameId));
     if (!snap.exists()) return;
-    await setDoc(edoc("results", gameId), deriveResult(snap.data()));
+    // merge: keep fields only the schedule publish writes (teamAShort/teamBShort),
+    // which Fistball Live and the broadcast overlay use for display names.
+    await setDoc(edoc("results", gameId), deriveResult(snap.data()), { merge: true });
   } catch (e) {
     console.warn("publishResult failed:", e);
   }

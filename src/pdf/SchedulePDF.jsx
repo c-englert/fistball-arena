@@ -10,7 +10,7 @@ const s = StyleSheet.create({
   tr: { flexDirection: "row", borderBottomWidth: 0.5, borderColor: LINE, minHeight: 15, alignItems: "center" },
   th: { fontFamily: "Helvetica-Bold", padding: 3, fontSize: 7 },
   td: { padding: 3, fontSize: 8 },
-  cNr: { width: 26 }, cTime: { width: 34 }, cCourt: { width: 44 }, cCat: { width: 96 }, cTeams: { flex: 1 }, cRound: { width: 92 },
+  cNr: { width: 26 }, cTime: { width: 34 }, cCourt: { width: 44 }, cCat: { width: 96 }, cTeams: { flex: 1 }, cRound: { width: 92 }, cBo: { width: 34, textAlign: "center" },
   foot: { position: "absolute", bottom: 14, left: 24, right: 24, fontSize: 7, color: "#888", textAlign: "center" },
 });
 
@@ -56,6 +56,7 @@ export default function SchedulePDF({ games = [], event }) {
               <Text style={[s.th, s.cCat]}>Category</Text>
               <Text style={[s.th, s.cTeams]}>Match</Text>
               <Text style={[s.th, s.cRound]}>Round</Text>
+              <Text style={[s.th, s.cBo]}>Best of</Text>
             </View>
             {day.items.map((g) => (
               <View key={g.nr} style={s.tr} wrap={false}>
@@ -65,6 +66,7 @@ export default function SchedulePDF({ games = [], event }) {
                 <Text style={[s.td, s.cCat]}>{g.category}</Text>
                 <Text style={[s.td, s.cTeams]}>{nm(g.teamA)}  vs  {nm(g.teamB)}</Text>
                 <Text style={[s.td, s.cRound]}>{g.round}</Text>
+                <Text style={[s.td, s.cBo]}>{g.bestOf || "—"}</Text>
               </View>
             ))}
           </View>

@@ -4,11 +4,12 @@ import { pdf } from "@react-pdf/renderer";
 import {
   ensureReport, subscribeReport, acquireLock, releaseLock, heartbeat,
   adminUnlock, reopenReport, saveReport, submitReport, fetchTeamRosters, buildReportSeed,
-  subscribeReferees,
+  subscribeReferees, resetReport,
 } from "../cloud.js";
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
+import { overlayUrl } from "../broadcast.js";
 
 const SECTIONS = [
   ["info", "Info"],
@@ -21,7 +22,7 @@ const SECTIONS = [
 export default function Sumula({ me }) {
   const { id } = useParams();
   const nav = useNavigate();
-  const { eventId, canScore, branding, archived } = useEvent();
+  const { eventId, canScore, isAdmin, branding, archived } = useEvent();
   const [draft, setDraft] = useState(null);
   const [lockedBy, setLockedBy] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -142,6 +143,24 @@ export default function Sumula({ me }) {
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
+  // Clear just this game's report (admins). Leaves the page so it reopens clean.
+  async function resetThis() {
+    if (!window.confirm(`Reset game report #${draft.info.nr}? This deletes its scores, cards, line-up choices and signatures and sets it back to “Not Started”. Other games are kept. This cannot be undone.`)) return;
+    clearTimeout(saveTimer.current);
+    holdRef.current = false; // the report is deleted — don't try to release a lock on it
+    try {
+      const { kept } = await resetReport(id);
+      if (kept.length) alert(`Report reset. Note: game${kept.length > 1 ? "s" : ""} #${kept.join(", #")} already started with the team this game had advanced — check ${kept.length > 1 ? "them" : "it"} manually.`);
+      nav(`/e/${eventId}`);
+    } catch (e) { alert("Reset failed: " + (e?.message || e)); }
+  }
+
+  async function copyOverlay() {
+    const url = overlayUrl(eventId, { game: id });
+    try { await navigator.clipboard.writeText(url); alert("Broadcast link copied:\n" + url); }
+    catch (_) { window.prompt("Broadcast link (copy it):", url); }
+  }
+
   if (!draft) return <div className="empty">Loading…</div>;
 
   return (
@@ -151,6 +170,12 @@ export default function Sumula({ me }) {
         <div>
           <div className="gh-title">#{draft.info.nr} · {short(draft.teamA.name)} vs {short(draft.teamB.name)}</div>
           <div className="gh-sub">{draft.info.time} · Court {draft.info.court} · Best of {draft.info.bestOf}</div>
+        </div>
+        <div className="gh-actions">
+          <button className="btn sm" onClick={copyOverlay} title="Copy the live scoreboard link for this game (OBS/vMix browser source)">📺 Broadcast link</button>
+          {isAdmin && !archived && (
+            <button className="btn danger sm" onClick={resetThis} title="Clear only this game report">Reset this report</button>
+          )}
         </div>
       </div>
 
