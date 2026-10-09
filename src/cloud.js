@@ -315,6 +315,17 @@ export async function setTeamKits(teamName, kits) {
   const eid = reqEid();
   await setDoc(teamKitsRef(eid), { eventId: eid, kits: { [teamName]: kits } }, { merge: true });
 }
+// Referee shirt colours of the event (no preference between them): [{ id, name, shirt }].
+// Same public doc; a game's officials wear one of them (game.kit.R = id, via saveGameKit).
+export function subscribeRefKits(cb) {
+  return onSnapshot(teamKitsRef(reqEid()),
+    (d) => cb(d.exists() ? d.data().refKits || [] : []),
+    (err) => { console.warn("referee shirts unavailable:", err?.code || err); cb([]); });
+}
+export async function setRefKits(refKits) {
+  const eid = reqEid();
+  await setDoc(teamKitsRef(eid), { eventId: eid, refKits }, { merge: true });
+}
 
 /* ----------------- logo library + event branding ----------------- */
 // Reusable logo library (global). Each logo is { name, dataUrl } (small PNG).
@@ -679,6 +690,7 @@ export async function saveGameRefs(gameId, refs) {
 
 // Uniform a team wears in a game (referees decide per day, sometimes per game).
 // side is "A" or "B"; kit is the team's uniform number (1 or 2, see team kits),
+// or side "R" with the id of the officials' shirt colour (see setRefKits),
 // or "" to clear. Older events stored a shirt hex string here. Mirrored onto
 // the public result so the spectator app can show it too.
 export async function saveGameKit(gameId, side, kit) {
@@ -686,16 +698,43 @@ export async function saveGameKit(gameId, side, kit) {
   await setDoc(edoc("games", gameId), patch, { merge: true });
   try { await setDoc(edoc("results", gameId), patch, { merge: true }); } catch (_) { /* result may not exist */ }
 }
+const refereeId = (r, i) => (`${r.name}_${r.first}`).toLowerCase().replace(/[^a-z0-9]+/g, "_") || `ref_${i}`;
+// Officials fields (see src/officials/model.js). The import may bring some of
+// them; whatever it leaves blank is kept from the existing doc, so a re-import
+// never wipes availability etc. edited in the app.
+const OFFICIAL_FIELDS = ["roles", "country", "club", "gender", "lrPair", "availability", "maxPerDay"];
 export async function publishReferees(list, { replaceAll } = {}) {
+  const prev = {};
+  (await getDocs(ecol("referees"))).forEach((d) => { prev[d.id] = d.data(); });
   if (replaceAll) await clearCollection("referees");
   for (let i = 0; i < list.length; i += 400) {
     const batch = writeBatch(db);
     list.slice(i, i + 400).forEach((r, j) => {
-      const id = (`${r.name}_${r.first}`).toLowerCase().replace(/[^a-z0-9]+/g, "_") || `ref_${i + j}`;
-      batch.set(edoc("referees", id), { name: r.name, first: r.first, role: r.role || "Referee", photo: r.photo || "", birthday: r.birthday || "" });
+      const id = refereeId(r, i + j);
+      const data = { name: r.name, first: r.first, role: r.role || "Referee", photo: r.photo || "", birthday: r.birthday || "" };
+      for (const k of OFFICIAL_FIELDS) {
+        const v = r[k] ?? prev[id]?.[k];
+        if (v !== undefined && v !== "") data[k] = v;
+      }
+      batch.set(edoc("referees", id), data);
     });
     await batch.commit();
   }
+}
+// Officials card: add one person, edit fields (top-level fields are replaced
+// whole, e.g. the full availability map), or remove them from the registry.
+export async function addReferee(r) {
+  const id = refereeId(r, Date.now());
+  await setDoc(edoc("referees", id), { name: r.name || "", first: r.first || "", role: "Referee", photo: "", birthday: "", ...r }, { merge: true });
+  return id;
+}
+export async function updateReferee(id, patch) {
+  const p = {};
+  for (const [k, v] of Object.entries(patch)) p[k] = v === "" || v == null ? deleteField() : v;
+  await updateDoc(edoc("referees", id), p);
+}
+export async function deleteReferee(id) {
+  await deleteDoc(edoc("referees", id));
 }
 
 // "/" is illegal in a Firestore document id (it's a path separator), and some
