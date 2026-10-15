@@ -1058,3 +1058,11 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .as-court { margin-right: 10px; white-space: nowrap; }
 .of-window { display: flex; align-items: center; gap: 3px; margin-top: 4px; }
 .of-input.of-time { width: 84px; padding: 2px 4px; }
+
+/* ---------- Games grid (read-only timetable) ---------- */
+.gg-card { cursor: pointer; }
+.gg-card:hover { border-color: var(--brand-2); }
+.gg-card.gg-submitted { background: #f3f8f4; }
+.gg-state { margin-left: 6px; font-weight: 700; font-size: 11px; }
+.gg-state.live { color: #d0454f; }
+.gg-state.done { color: #1c6b3f; }

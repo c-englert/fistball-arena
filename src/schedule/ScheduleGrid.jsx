@@ -3,7 +3,7 @@ import { subscribeGames, updateGameSlots, saveScheduleBlocks } from "../cloud.js
 import { normalizeSlots, dayGameMinutes } from "./scheduler.js";
 import { useEvent } from "../eventContext.js";
 
-const PALETTE = ["#6c5ce7", "#e84393", "#00b894", "#0984e3", "#e17055", "#00cec9", "#d63031", "#a29bfe", "#e1b12c", "#636e72"];
+export const PALETTE = ["#6c5ce7", "#e84393", "#00b894", "#0984e3", "#e17055", "#00cec9", "#d63031", "#a29bfe", "#e1b12c", "#636e72"];
 const toMin = (hhmm) => { const [h, m] = String(hhmm || "").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
 const toHHMM = (mins) => `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 const short = (s) => (String(s || "").length > 16 ? String(s).slice(0, 15) + "…" : s);

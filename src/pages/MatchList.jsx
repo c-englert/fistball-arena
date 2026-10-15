@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { subscribeGames, subscribeReports, subscribeTeamKits, adminUnlock, runAdvancementAll } from "../cloud.js";
+import { subscribeGames, subscribeReports, subscribeResults, subscribeTeamKits, adminUnlock, runAdvancementAll } from "../cloud.js";
+import { PALETTE } from "../schedule/ScheduleGrid.jsx";
 import { resolveKit, teamKitsFor } from "../kits.js";
 import { KitSwatch } from "../KitSwatch.jsx";
 import { flagFor } from "../flags.js";
@@ -29,6 +30,11 @@ export default function MatchList({ me }) {
   const [day, setDay] = useState(() => localStorage.getItem("fb_day") || "all");
   const [q, setQ] = useState("");
   const [teamKits, setTeamKits] = useState({});
+  // Grid (day × time × court, like Schedule → Arrange) or the card list.
+  const [view, setView] = useState(() => { try { return localStorage.getItem("fb_games_view") || "grid"; } catch (_) { return "grid"; } });
+  const pickView = (v) => { setView(v); try { localStorage.setItem("fb_games_view", v); } catch (_) { /* private mode */ } };
+  const [results, setResults] = useState({});
+  useEffect(() => subscribeResults((list) => setResults(Object.fromEntries(list.map((r) => [r.id, r])))), [eventId]);
   useEffect(() => subscribeTeamKits(setTeamKits), [eventId]);
 
   // Short names come from the game (if published with one) or the event's team
@@ -113,8 +119,17 @@ export default function MatchList({ me }) {
         ))}
       </div>
 
+      <div className="filter-bar">
+        <div className="seg">
+          <button className={`seg-btn ${view === "grid" ? "on" : ""}`} onClick={() => pickView("grid")}>Grid</button>
+          <button className={`seg-btn ${view === "list" ? "on" : ""}`} onClick={() => pickView("list")}>List</button>
+        </div>
+      </div>
+
       {shown.length === 0 && <div className="empty">No games for this filter.</div>}
-      <div className="card-grid">
+      {view === "grid" && <GamesGrid games={shown} courts={court === "all" ? courts : [court]} reports={reports} results={results}
+        teamLabel={teamLabel} teamKits={teamKits} onOpen={(m) => nav(`${base}/game/${m.id}`)} />}
+      {view === "list" && <div className="card-grid">
       {shown.map((m) => {
         const rep = reports[m.id] || {};
         const st = rep.status || "not_started";
@@ -150,7 +165,62 @@ export default function MatchList({ me }) {
           </div>
         );
       })}
-      </div>
+      </div>}
     </>
   );
+}
+
+// Read-only timetable of the games: one table per day, a row per start time,
+// a column per court. Click a game to open its report.
+function GamesGrid({ games, courts, reports, results, teamLabel, teamKits, onOpen }) {
+  const cats = [...new Set(games.map((g) => g.category))];
+  const catColor = (c) => PALETTE[Math.max(0, cats.indexOf(c)) % PALETTE.length];
+  const toMin = (t) => { const [h, mm] = String(t || "").split(":").map(Number); return (h || 0) * 60 + (mm || 0); };
+  const days = [...new Set(games.map((g) => g.date))].sort((a, b) => parseDate(a) - parseDate(b));
+  return days.map((date) => {
+    const dayGames = games.filter((g) => g.date === date);
+    const times = [...new Set(dayGames.map((g) => g.time))].sort((a, b) => toMin(a) - toMin(b));
+    return (
+      <div className="ag-day" key={date}>
+        <div className="day-head" style={{ position: "static" }}>{dayLabel(date)}</div>
+        <div className="ag-grid-wrap">
+          <table className="ag-grid">
+            <thead><tr><th className="ag-th-time" />{courts.map((c) => <th key={c} className="ag-th-court">Court {c}</th>)}</tr></thead>
+            <tbody>
+              {times.map((time) => (
+                <tr key={time}>
+                  <td className="ag-time">{time}</td>
+                  {courts.map((c) => (
+                    <td key={c} className="ag-cell">
+                      {dayGames.filter((g) => g.time === time && String(g.court) === String(c)).map((g) => {
+                        const st = reports[g.id]?.status || "not_started";
+                        const r = results[g.id] || {};
+                        const score = (Number(r.setsA) || 0) + (Number(r.setsB) || 0) > 0 ? `${r.setsA}–${r.setsB}` : "";
+                        return (
+                          <div key={g.id} className={`ag-card gg-card gg-${st}`} style={{ borderLeftColor: catColor(g.category) }} onClick={() => onOpen(g)}
+                            title={`${g.category} · ${g.round}`}>
+                            <div className="ag-card-cat" style={{ color: catColor(g.category) }}>#{g.nr} · {g.category}</div>
+                            <div className="ag-card-teams">
+                              <KitSwatch kit={resolveKit(g.kit?.A, teamKitsFor(teamKits, g.teamA?.name, g.category))} size={11} />{teamLabel(g.teamA)}
+                              <span className="muted-sm"> {score || "v"} </span>
+                              <KitSwatch kit={resolveKit(g.kit?.B, teamKitsFor(teamKits, g.teamB?.name, g.category))} size={11} />{teamLabel(g.teamB)}
+                            </div>
+                            <div className="ag-card-round muted-sm">
+                              {g.round}
+                              {st === "in_progress" && <span className="gg-state live"><span className="live-dot" /> live</span>}
+                              {st === "submitted" && <span className="gg-state done">✓</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  });
 }
