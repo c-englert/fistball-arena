@@ -74,6 +74,10 @@ export default function MatchList({ me }) {
     .filter((m) => (court === "all" || String(m.court) === String(court)) && (day === "all" || m.date === day) && matchesQuery(m))
     .sort((a, b) => parseDate(a.date) - parseDate(b.date) || String(a.time).localeCompare(b.time) || a.nr - b.nr);
 
+  // Category colours from ALL games (same order as Schedule → Arrange), so a
+  // category keeps its colour whatever the day / court / search filter.
+  const allCategories = useMemo(() => [...new Set(games.map((g) => g.category))], [games]);
+
   const pickCourt = (c) => { setCourt(c); localStorage.setItem("fb_court", c); };
   const pickDay = (d) => { setDay(d); localStorage.setItem("fb_day", d); };
 
@@ -127,7 +131,7 @@ export default function MatchList({ me }) {
       </div>
 
       {shown.length === 0 && <div className="empty">No games for this filter.</div>}
-      {view === "grid" && <GamesGrid games={shown} courts={court === "all" ? courts : [court]} reports={reports} results={results}
+      {view === "grid" && <GamesGrid games={shown} allCategories={allCategories} courts={court === "all" ? courts : [court]} reports={reports} results={results}
         teamLabel={teamLabel} teamKits={teamKits} onOpen={(m) => nav(`${base}/game/${m.id}`)} />}
       {view === "list" && <div className="card-grid">
       {shown.map((m) => {
@@ -172,8 +176,8 @@ export default function MatchList({ me }) {
 
 // Read-only timetable of the games: one table per day, a row per start time,
 // a column per court. Click a game to open its report.
-function GamesGrid({ games, courts, reports, results, teamLabel, teamKits, onOpen }) {
-  const cats = [...new Set(games.map((g) => g.category))];
+function GamesGrid({ games, allCategories, courts, reports, results, teamLabel, teamKits, onOpen }) {
+  const cats = allCategories;
   const catColor = (c) => PALETTE[Math.max(0, cats.indexOf(c)) % PALETTE.length];
   const toMin = (t) => { const [h, mm] = String(t || "").split(":").map(Number); return (h || 0) * 60 + (mm || 0); };
   const days = [...new Set(games.map((g) => g.date))].sort((a, b) => parseDate(a) - parseDate(b));
