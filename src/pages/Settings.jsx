@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   setEventStatus, subscribeLivePointer, setLiveEvent, clearLiveEvent,
-  subscribeLogos, addLogo, deleteLogo, subscribeTeamLogos, setTeamLogo, saveBranding, updateEventDetails, updateEventFields, publishGames, resetScores, saveScoringRules, subscribeGames,
+  subscribeLogos, addLogo, deleteLogo, subscribeTeamLogos, setTeamLogo, saveBranding, updateEventDetails, updateEventFields, publishGames, resetScores, saveScoringRules, subscribeGames, regroupGames,
 } from "../cloud.js";
 import { TYPES, COMMON_AGES, expandBuilder, buildColumns, sexWord } from "../categories.js";
 import { assignGroups, describeGroupFormat, groupKoFor, groupSlotOptions, matchWarnings, QUALIFIER_OPTIONS, describeFormat, formatMatches, formatWarnings, slotOptions, parseSlot, slotValue, normalizeOverride, ROUND_OPTIONS } from "../schedule/format.js";
@@ -144,6 +144,17 @@ export default function Settings({ me }) {
     const groupOf = Object.fromEntries(groups.flatMap((g) => g.teams.map((t) => [t, g.label])));
     groupOf[teamName] = label;
     setVariantField(cat, { groupOf });
+  };
+
+  const doRegroup = async (cat, groups) => {
+    if (!window.confirm(`Update the published ${cat} group games to the groups shown here? Day, time, court and game numbers stay; teams that changed group swap into those games (their uniform choice for those games is cleared). Use only before these games start.`)) return;
+    setStatus("Updating games…");
+    try {
+      const shortOf = Object.fromEntries((details.entries || []).filter((e) => e.short?.trim()).map((e) => [e.name, e.short.trim()]));
+      const n = await regroupGames(cat, groups.map((g) => ({ label: g.label, teams: g.teams })), shortOf);
+      setStatus(`${cat}: ${n} game(s) updated to the new groups.`);
+      window.alert(`${cat}: ${n} game(s) updated to the new groups.`);
+    } catch (e) { setStatus("Update failed: " + (e?.message || e)); window.alert("Update failed: " + (e?.message || e)); }
   };
 
   const cb = details.categoryBuilder;
@@ -539,6 +550,13 @@ export default function Settings({ me }) {
               const gWarn = gd && flags.knockout ? matchWarnings(groupKoFor(groups, { qualifiers: v?.qualifiers, placements: v?.placements !== false, override: details.formatOverrides?.[cat] }) || []) : [];
               const minSize = Math.min(...groups.map((g) => g.teams.length));
               const hasQF = gd && gd.rounds.some((r) => /quarterfinal/i.test(r.round));
+              // Published group games that don't match the groups set here
+              // (teams moved after publishing).
+              const pubGroups = {};
+              existingGames.filter((g) => g.category === cat && g.round === "Qualification round" && g.group)
+                .forEach((g) => { for (const t of [g.teamA?.name, g.teamB?.name]) if (t) (pubGroups[g.group] ||= new Set()).add(t); });
+              const groupsOutOfDate = gd && Object.keys(pubGroups).length > 0
+                && groups.some((g) => { const p = pubGroups[g.label]; return !p || p.size !== g.teams.length || g.teams.some((t) => !p.has(t)); });
               return (
                 <div className="fmt-cat" key={cat}>
                   <div className="fmt-head"><b>{cat}</b><span className="tag">{count} team{count === 1 ? "" : "s"}</span>
@@ -582,6 +600,13 @@ export default function Settings({ me }) {
                         )}
                       </div>
                       {gd && (
+                        <>
+                        {groupsOutOfDate && (
+                          <div className="warn-box" style={{ marginBottom: 8 }}>
+                            ⚠️ The published games still use other groups ({Object.entries(pubGroups).sort().map(([l, t]) => `Group ${l}: ${[...t].sort().join(", ")}`).join(" · ")}).
+                            {!archived && <div style={{ marginTop: 6 }}><button className="btn sm primary" onClick={() => doRegroup(cat, groups)}>Update the published games to these groups</button></div>}
+                          </div>
+                        )}
                         <div className="fmt-group-grid">
                           {groups.map((g) => (
                             <div className="fmt-group" key={g.label}>
@@ -597,6 +622,7 @@ export default function Settings({ me }) {
                             </div>
                           ))}
                         </div>
+                        </>
                       )}
                     </>
                   )}

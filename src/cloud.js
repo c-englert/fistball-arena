@@ -793,6 +793,56 @@ async function getRoster(teamName, category) {
   }
   return null;
 }
+// Make a category's published group games follow the groups now set in
+// Settings → Format (teams moved between groups after publishing). Within each
+// group the teams that stay keep their games; each team that left is replaced
+// by one that joined, in every game of that group. Every pairing is still played
+// exactly once and day / time / court / number stay as they are — so the
+// schedule, rest pattern and knockout seeds ("1st Group A") are unchanged.
+// groups: [{ label, teams }]; shortOf: { [team]: short name }. Returns games changed.
+export async function regroupGames(category, groups, shortOf = {}) {
+  const gsnap = await getDocs(ecol("games"));
+  const qr = gsnap.docs.filter((d) => { const g = d.data(); return g.category === category && g.round === "Qualification round" && g.group; });
+  // Name mapping per group: removed teams → added teams (sorted, one to one).
+  const map = {};
+  for (const grp of groups) {
+    const docs = qr.filter((d) => d.data().group === grp.label);
+    const old = new Set(docs.flatMap((d) => [d.data().teamA?.name, d.data().teamB?.name]).filter(Boolean));
+    const now = new Set(grp.teams);
+    if (old.size !== now.size) throw new Error(`Group ${grp.label}: ${old.size} teams in the games but ${now.size} in Format — regenerate this category instead.`);
+    const out = [...old].filter((t) => !now.has(t)).sort();
+    const inn = [...now].filter((t) => !old.has(t)).sort();
+    out.forEach((t, i) => { map[`${grp.label}|${t}`] = inn[i]; });
+  }
+  let changed = 0;
+  for (const d of qr) {
+    const g = d.data();
+    const gameUpd = {}, resUpd = {};
+    for (const [side, k] of [["teamA", "A"], ["teamB", "B"]]) {
+      const to = map[`${g.group}|${g[side]?.name}`];
+      if (!to) continue;
+      gameUpd[side] = { name: to, short: shortOf[to] || "" };
+      resUpd[side] = to;
+      if (g.kit?.[k]) { gameUpd[`kit.${k}`] = ""; resUpd[`kit.${k}`] = ""; } // the uniform belonged to the old team
+    }
+    if (!Object.keys(gameUpd).length) continue;
+    await updateDoc(d.ref, gameUpd);
+    try { await updateDoc(edoc("results", d.id), resUpd); } catch (_) { /* no result yet */ }
+    const rep = await getDoc(edoc("reports", d.id));
+    if (rep.exists()) {
+      const repUpd = {};
+      for (const side of ["teamA", "teamB"]) {
+        if (!gameUpd[side]) continue;
+        const roster = await getRoster(gameUpd[side].name, category);
+        repUpd[side] = cloneTeam({ name: gameUpd[side].name, players: roster?.players || [], staff: roster?.staff || [] });
+      }
+      await updateDoc(edoc("reports", d.id), repUpd);
+    }
+    changed++;
+  }
+  return changed;
+}
+
 // Rename a team in this event's published games — game docs, public results
 // and game reports — e.g. when the schedule spelled it differently from the
 // players & staff registry ("Puntas Chica" vs "Punta Chica"). A report whose
