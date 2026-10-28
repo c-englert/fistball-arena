@@ -47,6 +47,11 @@ function tidyName(s) {
   return v;
 }
 
+// Words that mark a person (or a whole "team") as an official, in the
+// languages the files come in. Referee lists often fill Team with the nation
+// or "Referees" and Role with "Official", "Árbitro", "Schiedsrichter"…
+const OFFICIAL_WORD = /refer(ee|i)|árbitr|arbitr|schiedsricht|umpire|official|oficial|clerk|scorer|mes[aá]ri|apontador|planiller|anschreiber|line ?judge|juez de l|juiz de l|linienricht|court ?manager/i;
+
 function buildFromRows(rows) {
   const norm = (s) => String(s ?? "").trim();
   const teams = {};
@@ -87,12 +92,17 @@ function buildFromRows(rows) {
     // Referees have no team. Count an explicit "referee" role — OR any named row
     // with no team that isn't a player — as a referee, because referee-list files
     // often fill the Role only on the first row (or put the whole name in one cell).
-    if (role === "referee" || (!country && role !== "player")) {
+    const officialRoles = parseRoles(g("Official Roles"));
+    const isOfficial = role !== "player" && (OFFICIAL_WORD.test(role) || OFFICIAL_WORD.test(g("Staff Role"))
+      || OFFICIAL_WORD.test(country) || officialRoles.length > 0);
+    if (isOfficial || (!country && role !== "player")) {
       const ref = { name: fam, first: giv, role: g("Staff Role") || "Referee", photo, birthday: g("Birthday") };
-      const roles = parseRoles(g("Official Roles"));
+      const roles = officialRoles;
       const sex = parseGender(g("Gender")); // not the section banner — referee rows often trail the MALE block
       if (roles.length) ref.roles = roles;
-      if (g("Nation") || g("Country")) ref.country = g("Nation") || g("Country");
+      // Nation: its own column, else the Team cell when that holds a nation.
+      const nation = g("Nation") || g("Country") || (country && !OFFICIAL_WORD.test(country) ? country : "");
+      if (nation) ref.country = nation;
       if (g("Club")) ref.club = g("Club");
       if (sex) ref.gender = sex;
       const rank = parseRank(g("Rank"));

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchRosters } from "../roster/importRoster.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
-import { subscribeRosters, subscribeResults, subscribeGames, publishRosters, addMember, updateRosterPlayers, renameTeamInGames, rosterKey } from "../cloud.js";
+import { subscribeRosters, subscribeResults, subscribeGames, publishRosters, addMember, updateRosterPlayers, renameTeamInGames, rosterKey, moveRosterToReferees } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { eventCategoryNames } from "../categories.js";
 import { useEvent } from "../eventContext.js";
@@ -208,6 +208,17 @@ export default function Roster({ me }) {
             </button>
             {open === t.key && (
               <div style={{ marginTop: 10 }}>
+                {!archived && (
+                  <div className="row-between" style={{ marginBottom: 8, gap: 8 }}>
+                    <span className="muted-sm">Are these referees / officials, not a team?</span>
+                    <button className="btn sm" onClick={async () => {
+                      if (!window.confirm(`Move all ${(t.players?.length || 0) + (t.staff?.length || 0)} people of “${t.name}” to the Referees page and remove “${t.name}” from Players & staff?`)) return;
+                      setStatus(`Moving ${t.name} to Referees…`);
+                      try { const n = await moveRosterToReferees(t.key); setStatus(`Moved ${n} people from “${t.name}” to Referees.`); window.alert(`Moved ${n} people from “${t.name}” to Referees.`); setOpen(null); }
+                      catch (e) { setStatus("Move failed: " + (e?.code || e?.message || e)); window.alert("Move failed: " + (e?.code || e?.message || e)); }
+                    }}>Move to Referees →</button>
+                  </div>
+                )}
                 {(t.players || []).map((p, i) => (
                   <div className="roster-row clickable" key={"p" + i} onClick={() => setProfile({ ...p, team: t.name, kind: "player" })}>
                     <Avatar src={p.photo} name={p.name} />

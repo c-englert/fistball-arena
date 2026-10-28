@@ -741,6 +741,23 @@ const refereeId = (r, i) => (`${r.name}_${r.first}`).toLowerCase().replace(/[^a-
 // them; whatever it leaves blank is kept from the existing doc, so a re-import
 // never wipes availability etc. edited in the app.
 const OFFICIAL_FIELDS = ["roles", "rank", "country", "club", "gender", "assistantPair", "availability", "maxPerDay"];
+// A "team" in Players & staff that is really officials (imported before the
+// importer recognised referee files): add its people to the Referees registry
+// and remove it from the rosters. Returns how many people moved.
+export async function moveRosterToReferees(rosterId) {
+  const snap = await getDoc(edoc("rosters", rosterId));
+  if (!snap.exists()) return 0;
+  const t = snap.data();
+  const people = [...(t.players || []), ...(t.staff || [])].filter((p) => p.name || p.first);
+  const nation = /refer|árbitr|arbitr|schiedsricht|official|oficial/i.test(t.name || "") ? "" : (t.name || "");
+  await publishReferees(people.map((p) => ({
+    name: p.name || "", first: p.first || "", role: p.role && p.role !== "Staff" ? p.role : "Referee",
+    photo: p.photo || "", birthday: p.birthday || "", ...(nation || p.country ? { country: nation || p.country } : {}),
+  })));
+  await deleteDoc(edoc("rosters", rosterId));
+  return people.length;
+}
+
 export async function publishReferees(list, { replaceAll } = {}) {
   const prev = {};
   (await getDocs(ecol("referees"))).forEach((d) => { prev[d.id] = d.data(); });
