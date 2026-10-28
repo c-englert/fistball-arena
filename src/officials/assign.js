@@ -25,6 +25,7 @@
 import {
   canFill, parseRoles, availabilityOn, availableAt, parseSlots,
   teamMeta, sameCountry, sameClub, isWomensGame, isWomenFinal, rankOf, rankLevel, gameRank, isClubGame, minutesOn,
+  teamsAt, playingClash,
 } from "./model.js";
 import { checkAssignments, isKnockout, officialName, DEFAULT_RULES, SLOTS, isRequiredSlot, refsOnLines } from "./rules.js";
 import { isPlaceholder } from "../schedule/advance.js";
@@ -125,6 +126,7 @@ export function autoAssign(games, officials, entries, opts = {}) {
   // Who may take a slot: in the final (event setting) the referees work the lines.
   const eligible = (o, g, slot) => ((slot === "a1" || slot === "a2") && refsOnLines(g, rules) ? hasRole(o, "referee") : canFill(o, slot));
   const keyOf = new Map(pool.map((o) => [o, norm(officialName(o))]));
+  const playing = teamsAt(games);
   const byKey = new Map(pool.map((o) => [keyOf.get(o), o]));
 
   // Working copy. Cells in scope are cleared when overwriting; out-of-scope
@@ -196,6 +198,7 @@ export function autoAssign(games, officials, entries, opts = {}) {
     const k = keyOf.get(o);
     if (!eligible(o, g, slot)) return null;
     if (!availableAt(o, g.date, g.time, minutesOn(rules, g.date))) return null;
+    if (playingClash(o, g, playing)) return null; // player-referee: own team plays now
     if (SLOTS.some((s) => norm(g.refs[s]) === k)) return null;
     if (S(k).booked.has(g.date + "|" + timeKey(g.time))) return null;
     if (slot === "cm") {

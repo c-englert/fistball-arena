@@ -1073,3 +1073,4 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .gg-state { margin-left: 6px; font-weight: 700; font-size: 11px; }
 .gg-state.live { color: #d0454f; }
 .gg-state.done { color: #1c6b3f; }
+.ref-pick-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }

@@ -117,6 +117,17 @@ function buildFromRows(rows) {
     const key = gender ? `${country}\u0000${gender}` : country;
     const t = teams[key] || (teams[key] = { name: country, gender, players: [], staff: [] });
     if (role === "player") {
+      // A player who is also an official (Official Roles / Staff Role say so):
+      // in the team AND in the referees, never officiating while the team plays.
+      if (officialRoles.length || OFFICIAL_WORD.test(g("Staff Role"))) {
+        const ref = { name: fam, first: giv, role: "Referee", photo, birthday: g("Birthday"), playsFor: [country] };
+        if (officialRoles.length) ref.roles = officialRoles;
+        const nation = g("Nation") || g("Country");
+        if (nation) ref.country = nation;
+        const sex = parseGender(g("Gender"));
+        if (sex) ref.gender = sex;
+        referees.push(ref);
+      }
       const nr = parseInt(g("Jersey Number"), 10);
       t.players.push({
         nr: isNaN(nr) ? "" : nr, name: fam, first: giv, position: g("Player Position"),

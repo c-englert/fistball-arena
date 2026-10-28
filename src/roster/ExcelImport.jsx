@@ -191,13 +191,29 @@ export default function ExcelImport({ me, teamNames = [], categories = [], sched
           if (!name) continue;
           rosters[finalKey(f, orig)] = { ...t, name, category: f.category || "" };
         }
-        refs.push(...(f.referees || []));
+        // Player-referees point at their team by the file's name — use the
+        // (possibly corrected) name the team is saved under.
+        const finalName = (team) => {
+          const orig = Object.keys(f.teams).find((k) => f.teams[k].name === team);
+          return orig ? (f.names[orig] ?? orig).trim() || team : team;
+        };
+        refs.push(...(f.referees || []).map((r) => (r.playsFor ? { ...r, playsFor: r.playsFor.map(finalName) } : r)));
       }
       await publishRosters(rosters);
       if (refs.length) {
-        const seen = new Set();
-        const uniq = refs.filter((r) => { const k = `${r.name}|${r.first}`.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
-        await publishReferees(uniq, { replaceAll: true });
+        // One entry per person; a person listed twice keeps every team they play for.
+        const byKey = new Map();
+        for (const r of refs) {
+          const k = `${r.name}|${r.first}`.toLowerCase();
+          const cur = byKey.get(k);
+          if (!cur) { byKey.set(k, r); continue; }
+          const plays = [...new Set([...(cur.playsFor || []), ...(r.playsFor || [])])];
+          byKey.set(k, { ...r, ...cur, ...(plays.length ? { playsFor: plays } : {}) });
+        }
+        const uniq = [...byKey.values()];
+        // Merge, never replace: team files (with player-referees) and the
+        // referee list are imported separately and must not wipe each other.
+        await publishReferees(uniq);
       }
       for (const f of files) {
         try {

@@ -12,7 +12,7 @@
 import {
   SLOT_ROLE, ROLE_LABEL, parseRoles, canFill, availabilityOn, availableAt, parseSlots,
   teamMeta, sameCountry, sameClub, isWomenFinal, RANK_LABEL, rankOf, rankLevel, gameRank,
-  isFinalsRound, isGoldFinal, isClubGame, windowLabel, minutesOn,
+  isFinalsRound, isGoldFinal, isClubGame, windowLabel, minutesOn, teamsAt, playingClash,
 } from "./model.js";
 
 export const SLOTS = ["r1", "r2", "clerk", "clerk2", "a1", "a2", "cm"];
@@ -97,6 +97,7 @@ export function checkAssignments(games, officials, entries, opts = {}) {
     }
   }
   const roundIdx = new Map([...roundsOf].map(([d, set]) => [d, new Map([...set].sort().map((t, i) => [t, i]))]));
+  const playing = teamsAt(games);
 
   for (const g of games) {
     const refs = g.refs || {};
@@ -126,6 +127,11 @@ export function checkAssignments(games, officials, entries, opts = {}) {
       if (clash.length) add(g.id, slot, "hard", "double", `Also in game ${clash.map((w) => "#" + w.game.nr).join(", ")} at ${t}`);
 
       if (!o) continue; // not in the registry → nothing else to check
+
+      // 0. Player-referees: never while their own team plays (this game or
+      // another one at the same time).
+      const plays = playingClash(o, g, playing);
+      if (plays) add(g.id, slot, "hard", "plays", plays.nr === g.nr ? `Plays for ${plays.team} in this game` : `Plays for ${plays.team} at this time (game #${plays.nr})`);
 
       // 5. Role not allowed (only when roles are set). In the final the
       // referees may work the lines; assistants who aren't referees get a warning.

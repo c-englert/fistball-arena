@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchRosters } from "../roster/importRoster.js";
 import ExcelImport from "../roster/ExcelImport.jsx";
-import { subscribeRosters, subscribeResults, subscribeGames, publishRosters, addMember, updateRosterPlayers, renameTeamInGames, rosterKey, moveRosterToReferees } from "../cloud.js";
+import { subscribeRosters, subscribeResults, subscribeGames, publishRosters, addMember, updateRosterPlayers, renameTeamInGames, rosterKey, moveRosterToReferees, addPlayersAsReferees } from "../cloud.js";
 import { flagFor } from "../flags.js";
 import { eventCategoryNames } from "../categories.js";
 import { useEvent } from "../eventContext.js";
@@ -31,7 +31,8 @@ export default function Roster({ me }) {
   useEffect(() => subscribeResults(setResults), []);
   const [games, setGames] = useState([]);
   useEffect(() => subscribeGames(setGames), []);
-  const [fixTo, setFixTo] = useState({}); // "name|category" -> registered team name
+  const [fixTo, setFixTo] = useState({});
+  const [refPick, setRefPick] = useState(null); // { team, picks: Set(index key) } while choosing player-referees // "name|category" -> registered team name
 
   const doImport = async () => {
     setStatus("Reading DB tab…");
@@ -208,19 +209,42 @@ export default function Roster({ me }) {
             </button>
             {open === t.key && (
               <div style={{ marginTop: 10 }}>
-                {!archived && (
-                  <div className="row-between" style={{ marginBottom: 8, gap: 8 }}>
-                    <span className="muted-sm">Are these referees / officials, not a team?</span>
-                    <button className="btn sm" onClick={async () => {
-                      if (!window.confirm(`Move all ${(t.players?.length || 0) + (t.staff?.length || 0)} people of “${t.name}” to the Referees page and remove “${t.name}” from Players & staff?`)) return;
-                      setStatus(`Moving ${t.name} to Referees…`);
-                      try { const n = await moveRosterToReferees(t.key); setStatus(`Moved ${n} people from “${t.name}” to Referees.`); window.alert(`Moved ${n} people from “${t.name}” to Referees.`); setOpen(null); }
-                      catch (e) { setStatus("Move failed: " + (e?.code || e?.message || e)); window.alert("Move failed: " + (e?.code || e?.message || e)); }
-                    }}>Move to Referees →</button>
-                  </div>
-                )}
+                {!archived && (() => {
+                  const picking = refPick?.team === t.key;
+                  const people = [...(t.players || []).map((p, i) => ({ ...p, _k: "p" + i })), ...(t.staff || []).map((p, i) => ({ ...p, _k: "s" + i }))];
+                  return (
+                    <div className="ref-pick-bar">
+                      {!picking ? (
+                        <>
+                          <span className="muted-sm">Players who also referee?</span>
+                          <button className="btn sm" onClick={() => setRefPick({ team: t.key, picks: new Set() })}>Add to Referees…</button>
+                          {!(t.players || []).length && (
+                            <button className="btn sm" title="This card is only officials, not a team" onClick={async () => {
+                              if (!window.confirm(`“${t.name}” has no players — move its ${(t.staff || []).length} people to the Referees page and remove “${t.name}” from Players & staff?`)) return;
+                              try { const n = await moveRosterToReferees(t.key); window.alert(`Moved ${n} people from “${t.name}” to Referees.`); setOpen(null); }
+                              catch (e) { window.alert("Move failed: " + (e?.code || e?.message || e)); }
+                            }}>Move all to Referees →</button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span className="muted-sm">Tick who also referees — they stay in {t.name} and are never assigned while {t.name} plays.</span>
+                          <button className="btn sm primary" disabled={!refPick.picks.size} onClick={async () => {
+                            const chosen = people.filter((p) => refPick.picks.has(p._k));
+                            try { await addPlayersAsReferees(chosen, t.name); window.alert(`Added ${chosen.length} to Referees (they stay in ${t.name}).`); setRefPick(null); }
+                            catch (e) { window.alert("Couldn't add: " + (e?.code || e?.message || e)); }
+                          }}>Add {refPick.picks.size || ""} to Referees</button>
+                          <button className="btn sm" onClick={() => setRefPick(null)}>Cancel</button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
                 {(t.players || []).map((p, i) => (
-                  <div className="roster-row clickable" key={"p" + i} onClick={() => setProfile({ ...p, team: t.name, kind: "player" })}>
+                  <div className="roster-row clickable" key={"p" + i} onClick={() => (refPick?.team === t.key
+                    ? setRefPick((rp) => { const picks = new Set(rp.picks); const k = "p" + i; picks.has(k) ? picks.delete(k) : picks.add(k); return { ...rp, picks }; })
+                    : setProfile({ ...p, team: t.name, kind: "player" }))}>
+                    {refPick?.team === t.key && <input type="checkbox" readOnly checked={refPick.picks.has("p" + i)} aria-label="Also a referee" />}
                     <Avatar src={p.photo} name={p.name} />
                     {canEditNums ? (
                       <input
@@ -244,7 +268,10 @@ export default function Roster({ me }) {
                 )}
                 {(t.staff || []).length > 0 && <div className="subhead">Staff</div>}
                 {(t.staff || []).map((s, i) => (
-                  <div className="roster-row clickable" key={"s" + i} onClick={() => setProfile({ ...s, team: t.name, kind: "staff" })}>
+                  <div className="roster-row clickable" key={"s" + i} onClick={() => (refPick?.team === t.key
+                    ? setRefPick((rp) => { const picks = new Set(rp.picks); const k = "s" + i; picks.has(k) ? picks.delete(k) : picks.add(k); return { ...rp, picks }; })
+                    : setProfile({ ...s, team: t.name, kind: "staff" }))}>
+                    {refPick?.team === t.key && <input type="checkbox" readOnly checked={refPick.picks.has("s" + i)} aria-label="Also a referee" />}
                     <Avatar src={s.photo} name={s.name} />
                     <span className="roster-nr role">{(s.role || "").split(" ").map((w) => w[0]).join("").slice(0, 3)}</span>
                     <span className="roster-name">{s.name} <span className="muted-sm">{s.first}</span></span>

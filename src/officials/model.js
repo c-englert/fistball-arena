@@ -176,3 +176,26 @@ export function officialsSettings(event) {
 }
 // Game length on a date (a day's own duration, else the event default).
 export const minutesOn = (settings, date) => settings?.dayMinutes?.[date] || settings?.gameMinutes || 45;
+
+// Player-referees: an official who also plays (o.playsFor = [team names]).
+// teamsAt(games) maps "date|time" → Map(team name → game nr); playingClash
+// returns the game (nr) in which one of the official's teams plays at the
+// time of `game` — including `game` itself — or null.
+const playKey = (g) => `${g.date}|${String(g.time ?? "").trim()}`;
+export function teamsAt(games) {
+  const m = new Map();
+  for (const g of games || []) {
+    const k = playKey(g);
+    if (!m.has(k)) m.set(k, new Map());
+    for (const t of [g.teamA?.name ?? g.teamA, g.teamB?.name ?? g.teamB]) if (t) m.get(k).set(norm(t), g.nr);
+  }
+  return m;
+}
+export function playingClash(o, game, at) {
+  const teams = Array.isArray(o?.playsFor) ? o.playsFor : [];
+  if (!teams.length) return null;
+  const here = at.get(playKey(game));
+  if (!here) return null;
+  for (const t of teams) if (here.has(norm(t))) return { team: t, nr: here.get(norm(t)) };
+  return null;
+}

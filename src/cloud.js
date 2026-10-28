@@ -740,7 +740,21 @@ const refereeId = (r, i) => (`${r.name}_${r.first}`).toLowerCase().replace(/[^a-
 // Officials fields (see src/officials/model.js). The import may bring some of
 // them; whatever it leaves blank is kept from the existing doc, so a re-import
 // never wipes availability etc. edited in the app.
-const OFFICIAL_FIELDS = ["roles", "rank", "country", "club", "gender", "assistantPair", "availability", "maxPerDay"];
+const OFFICIAL_FIELDS = ["roles", "rank", "country", "club", "gender", "assistantPair", "availability", "maxPerDay", "playsFor"];
+
+// Player-referees: add people of a team to the Referees registry while they
+// stay in the team. playsFor keeps them from officiating while their team plays.
+export async function addPlayersAsReferees(people, teamName) {
+  const prev = {};
+  (await getDocs(ecol("referees"))).forEach((d) => { prev[d.id] = d.data(); });
+  await publishReferees(people.filter((p) => p.name || p.first).map((p, i) => {
+    const before = prev[refereeId(p, i)]?.playsFor || [];
+    return {
+      name: p.name || "", first: p.first || "", role: "Referee", photo: p.photo || "", birthday: p.birthday || "",
+      playsFor: [...new Set([...before, teamName].filter(Boolean))],
+    };
+  }));
+}
 // A "team" in Players & staff that is really officials (imported before the
 // importer recognised referee files): add its people to the Referees registry
 // and remove it from the rosters. Returns how many people moved.
