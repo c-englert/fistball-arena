@@ -93,7 +93,11 @@ function buildFromRows(rows) {
     // with no team that isn't a player — as a referee, because referee-list files
     // often fill the Role only on the first row (or put the whole name in one cell).
     const officialRoles = parseRoles(g("Official Roles"));
-    const isOfficial = role !== "player" && (OFFICIAL_WORD.test(role) || OFFICIAL_WORD.test(g("Staff Role"))
+    // Team staff with a team role (coach, physio…) who also officiates: stays
+    // staff AND becomes a referee (below), like a player-referee.
+    const staffAlsoOfficial = role !== "player" && country && !OFFICIAL_WORD.test(country)
+      && g("Staff Role") && !OFFICIAL_WORD.test(g("Staff Role")) && !OFFICIAL_WORD.test(role) && officialRoles.length > 0;
+    const isOfficial = !staffAlsoOfficial && role !== "player" && (OFFICIAL_WORD.test(role) || OFFICIAL_WORD.test(g("Staff Role"))
       || OFFICIAL_WORD.test(country) || officialRoles.length > 0);
     if (isOfficial || (!country && role !== "player")) {
       const ref = { name: fam, first: giv, role: g("Staff Role") || "Referee", photo, birthday: g("Birthday") };
@@ -116,18 +120,19 @@ function buildFromRows(rows) {
     // Keep women's and men's teams of the same club apart.
     const key = gender ? `${country}\u0000${gender}` : country;
     const t = teams[key] || (teams[key] = { name: country, gender, players: [], staff: [] });
+    // A player or team staff member who is also an official (Official Roles /
+    // Staff Role say so): in the team AND in the referees, never officiating
+    // while the team plays.
+    if (staffAlsoOfficial || (role === "player" && (officialRoles.length || OFFICIAL_WORD.test(g("Staff Role"))))) {
+      const ref = { name: fam, first: giv, role: "Referee", photo, birthday: g("Birthday"), playsFor: [country] };
+      if (officialRoles.length) ref.roles = officialRoles;
+      const nation = g("Nation") || g("Country");
+      if (nation) ref.country = nation;
+      const sex = parseGender(g("Gender"));
+      if (sex) ref.gender = sex;
+      referees.push(ref);
+    }
     if (role === "player") {
-      // A player who is also an official (Official Roles / Staff Role say so):
-      // in the team AND in the referees, never officiating while the team plays.
-      if (officialRoles.length || OFFICIAL_WORD.test(g("Staff Role"))) {
-        const ref = { name: fam, first: giv, role: "Referee", photo, birthday: g("Birthday"), playsFor: [country] };
-        if (officialRoles.length) ref.roles = officialRoles;
-        const nation = g("Nation") || g("Country");
-        if (nation) ref.country = nation;
-        const sex = parseGender(g("Gender"));
-        if (sex) ref.gender = sex;
-        referees.push(ref);
-      }
       const nr = parseInt(g("Jersey Number"), 10);
       t.players.push({
         nr: isNaN(nr) ? "" : nr, name: fam, first: giv, position: g("Player Position"),
