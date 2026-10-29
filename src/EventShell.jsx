@@ -13,6 +13,7 @@ import Colors from "./pages/Colors.jsx";
 import Settings from "./pages/Settings.jsx";
 import Standings from "./pages/Standings.jsx";
 import Plans from "./pages/Plans.jsx";
+import Venue from "./pages/Venue.jsx";
 
 export default function EventShell({ me, onSignOut }) {
   const { eventId } = useParams();
@@ -54,6 +55,7 @@ export default function EventShell({ me, onSignOut }) {
             <Route path="roster" element={isAdmin ? <Roster me={me} /> : <Navigate to=".." replace />} />
             <Route path="referees" element={isAdmin ? <Referees /> : <Navigate to=".." replace />} />
             <Route path="colors" element={isAdmin ? <Colors /> : <Navigate to=".." replace />} />
+            <Route path="venue" element={isAdmin ? <Venue /> : <Navigate to=".." replace />} />
             <Route path="members" element={<Navigate to="../settings" replace />} />
             <Route path="settings" element={isAdmin ? <Settings me={me} /> : <Navigate to=".." replace />} />
           </Route>

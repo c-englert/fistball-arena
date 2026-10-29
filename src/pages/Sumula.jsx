@@ -33,6 +33,9 @@ export default function Sumula({ me }) {
     return ["info", "lineup", "sfA", "sfB", "score", "refs", "finish"].includes(t) ? t : "info";
   });
   const [team, setTeam] = useState("teamA");
+  // Set picked on the Score tab; kept here so leaving for Line-ups and coming
+  // back stays on the same set. null = follow the set being played.
+  const [scoreSet, setScoreSet] = useState(null);
   const [saving, setSaving] = useState(false);
   // Starting five lives outside the draft: it's edited without the scoring lock
   // and must show live on every device (incl. the scorer holding the lock).
@@ -180,6 +183,31 @@ export default function Sumula({ me }) {
     setStartingFive((cur) => ({ ...cur, [side]: five }));
     saveStartingFive(id, side, five).catch((e) => alert("Couldn't save the starting five: " + (e?.code || e?.message || e)));
   };
+  // Starting 5 → OC in the line-up: players put in (or taken out of) the five
+  // get OC switched on (off). Only changes are applied, so later substitutions
+  // marked by hand are kept; on first load OC is only filled for a team that
+  // has no one on court yet.
+  const fiveSeen = useRef({});
+  useEffect(() => {
+    if (!draft || readOnly) return;
+    const changes = [];
+    for (const side of ["teamA", "teamB"]) {
+      const now = new Set(Object.values(startingFive[side] || {}).filter(Boolean).map(fiveKey));
+      const before = fiveSeen.current[side];
+      fiveSeen.current[side] = now;
+      const players = draft[side].players || [];
+      players.forEach((p, i) => {
+        const k = fiveKey(p);
+        if (before === undefined) {
+          if (now.has(k) && !p.onCourt && !players.some((x) => x.onCourt)) changes.push([side, i, true]);
+        } else if (now.has(k) && !before.has(k) && !p.onCourt) changes.push([side, i, true]);
+        else if (!now.has(k) && before.has(k) && p.onCourt) changes.push([side, i, false]);
+      });
+    }
+    if (changes.length) update((n) => changes.forEach(([side, i, on]) => { if (n[side].players[i]) n[side].players[i].onCourt = on; }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startingFive, readOnly, !!draft]);
+
   // Media see the starting five in Arena only (viewer access, login) — never
   // on the public Fistball Live. The link opens this game's Starting 5 tab.
   async function copyStartLink() {
@@ -256,7 +284,8 @@ export default function Sumula({ me }) {
           return <StartingFiveSection team={draft[side]} five={startingFive[side] || {}} canEdit={canEditFive}
             onChange={(f) => setFive(side, f)} onCopyLink={copyStartLink} />;
         })()}
-        {section === "score" && <ScoreSection d={draft} scoring={scoring} update={update} readOnly={readOnly} />}
+        {section === "score" && <ScoreSection d={draft} scoring={scoring} update={update} readOnly={readOnly}
+          cur={scoreSet} setCur={setScoreSet} />}
         {section === "refs" && <RefsSection d={draft} update={update} refNames={refNames} />}
         {section === "finish" && <FinishSection d={draft} scoring={scoring} update={update} onPdf={downloadPDF} />}
       </div>
@@ -463,11 +492,11 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNa
   );
 }
 
-function ScoreSection({ d, scoring, update, readOnly }) {
-  const [cur, setCur] = useState(() => {
-    const i = d.sets.findIndex((s) => !(s.rallies && s.rallies.length));
-    return i === -1 ? d.sets.length - 1 : i;
-  });
+function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
+  // First time on the tab: open the set being played, then stay on it (also
+  // across tab switches) until another set is tapped.
+  const cur = picked ?? currentSet(d);
+  useEffect(() => { if (picked == null) setCur(cur); }, [picked, cur, setCur]);
   const scroller = useRef(null);
   const [selCol, setSelCol] = useState(null);   // rally being corrected
   const set = d.sets[cur] || { rallies: [] };
@@ -757,6 +786,18 @@ function setScore(s) {
   let a = 0, b = 0;
   for (const x of r) { if (x === "A") a++; else if (x === "B") b++; }
   return { a, b };
+}
+
+const fiveKey = (p) => `${p.nr}|${p.name}|${p.first}`;
+
+// The set being played: the last one with points — or the next one once it's
+// over (unless the match is decided). Fresh report → set 1.
+function currentSet(d) {
+  let last = -1;
+  d.sets.forEach((s, i) => { if (s.rallies && s.rallies.length) last = i; });
+  if (last === -1) return 0;
+  if (setOver(setScore(d.sets[last])) && !computeScore(d).winner && last < d.sets.length - 1) return last + 1;
+  return last;
 }
 
 // A set ends at 11 with a 2-point lead, or at 15.

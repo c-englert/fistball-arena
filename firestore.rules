@@ -103,6 +103,20 @@ service cloud.firestore {
         allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
       }
 
+      // Training slots: PUBLIC read (Fistball Live). Event admins manage them;
+      // anyone (no login, from Live) may book a FREE slot by writing only its
+      // team name — a booked slot can't be overwritten, only an admin clears it.
+      match /training/{slotId} {
+        allow read: if true;
+        allow create, delete: if isOrgAdmin() || isEventAdmin(eventId);
+        allow update: if isOrgAdmin() || isEventAdmin(eventId)
+          || (resource.data.get('team', '') == ''
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['team', 'bookedAt'])
+              && request.resource.data.team is string
+              && request.resource.data.team.size() > 0
+              && request.resource.data.team.size() <= 60);
+      }
+
       // Reports (súmulas): official OR admin OR org-admin, AND event active.
       // No report writes when archived — for anyone. Once SUBMITTED (or being
       // amended after submission) only an event admin / org-admin can change

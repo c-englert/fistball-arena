@@ -71,6 +71,10 @@ export const IconShirt = (p) => (
   <Svg {...p}><path d="M8.5 3.5 5 6 3.2 9l2.3 1.6L7 9.4V20h10V9.4l1.5 1.2L20.8 9 19 6l-3.5-2.5a3.5 3.5 0 0 1-7 0Z" /></Svg>
 );
 
+export const IconMap = (p) => (
+  <Svg {...p}><path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5L9 4Zm0 0v13.5m6-11V20" /></Svg>
+);
+
 // Utility
 export const IconBack = (p) => (
   <Svg {...p} sw={2}><path d="M14 6l-6 6 6 6" /></Svg>

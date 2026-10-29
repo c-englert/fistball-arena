@@ -302,6 +302,40 @@ export async function setTeamLogo(teamName, dataUrl) {
   await setDoc(teamLogosRef(eid), { eventId: eid, logos: { [teamName]: dataUrl || deleteField() } }, { merge: true });
 }
 
+/* ----------------- venue map & training slots ----------------- */
+// Venue map: one public doc per event { eventId, kind: "image"|"pdf", data (data URL), name }
+// — shown in the "Venue map" tab of Fistball Live.
+const venueMapRef = (eid) => doc(db, "public", `venuemap_${eid}`);
+export function subscribeVenueMap(cb) {
+  return onSnapshot(venueMapRef(reqEid()),
+    (d) => cb(d.exists() ? d.data() : null),
+    (err) => { console.warn("venue map unavailable:", err?.code || err); cb(null); });
+}
+export async function setVenueMap(map) {
+  const eid = reqEid();
+  if (!map) { await deleteDoc(venueMapRef(eid)); return; }
+  await setDoc(venueMapRef(eid), { eventId: eid, ...map, updatedAt: serverTimestamp() });
+}
+// Training slots: events/{eid}/training/{id} { date "YYYY-MM-DD", start, end, place, team }.
+// Public read; on Fistball Live anyone can book a free slot by entering a team
+// name (firestore.rules only lets them fill an empty `team`). Admins manage them here.
+export function subscribeTraining(cb) {
+  return onSnapshot(ecol("training"),
+    (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => { console.warn("training slots unavailable:", err?.code || err); cb([]); });
+}
+export async function addTrainingSlots(slots) {
+  const b = writeBatch(db);
+  for (const sl of slots) b.set(doc(ecol("training")), { ...sl, team: "", bookedAt: null });
+  await b.commit();
+}
+export async function updateTrainingSlot(id, fields) { await updateDoc(edoc("training", id), fields); }
+export async function deleteTrainingSlots(ids) {
+  const b = writeBatch(db);
+  for (const id of ids) b.delete(edoc("training", id));
+  await b.commit();
+}
+
 /* ----------------- team kits (uniforms) ----------------- */
 // One public doc per event: { eventId, kits: { [kitKey(team, category)]: [{ colors }, { colors }] } }
 // — up to two uniforms per team. Games pick one by number (see saveGameKit);
