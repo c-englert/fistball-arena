@@ -37,6 +37,22 @@ export default function Sumula({ me }) {
   // back stays on the same set. null = follow the set being played.
   const [scoreSet, setScoreSet] = useState(null);
   const [saving, setSaving] = useState(false);
+  // Full screen for the table: hides the left menu and top bar (remembered),
+  // and asks the browser for real full screen where it can.
+  const [full, setFull] = useState(() => { try { return localStorage.getItem("sumula_full") === "1"; } catch (_) { return false; } });
+  useEffect(() => {
+    document.body.classList.toggle("sumula-full", full);
+    try { localStorage.setItem("sumula_full", full ? "1" : "0"); } catch (_) {}
+    return () => document.body.classList.remove("sumula-full");
+  }, [full]);
+  const toggleFull = () => {
+    const on = !full;
+    setFull(on);
+    try {
+      if (on && !document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+      if (!on && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    } catch (_) {}
+  };
   // Starting five lives outside the draft: it's edited without the scoring lock
   // and must show live on every device (incl. the scorer holding the lock).
   const [startingFive, setStartingFive] = useState({});
@@ -233,6 +249,9 @@ export default function Sumula({ me }) {
           <div className="gh-sub">{draft.info.time} · Court {draft.info.court} · Best of {draft.info.bestOf}</div>
         </div>
         <div className="gh-actions">
+          <button className="btn sm" onClick={toggleFull} title={full ? "Show the menu again" : "Hide the menu — more room for the score sheet"}>
+            {full ? "✕ Exit full screen" : "⛶ Full screen"}
+          </button>
           <button className="btn sm" onClick={copyOverlay} title="Copy the live scoreboard link for this game (OBS/vMix browser source)">📺 Broadcast link</button>
           {isAdmin && !archived && (
             <button className="btn danger sm" onClick={resetThis} title="Clear only this game report">Reset this report</button>

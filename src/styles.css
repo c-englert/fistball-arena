@@ -1085,3 +1085,7 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .training-slot.booked .ts-team { font-weight: 700; }
 .training-slot .ts-actions { display: flex; gap: 4px; }
 @media (max-width: 560px) { .training-slot { grid-template-columns: 80px 1fr auto; } .training-slot .ts-place { display: none; } }
+
+/* Súmula full screen: no left menu, no top bar */
+body.sumula-full .shell { grid-template-columns: minmax(0, 1fr); }
+body.sumula-full .sidebar, body.sumula-full .sb-scrim, body.sumula-full .appbar { display: none !important; }
