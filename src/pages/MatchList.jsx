@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { subscribeGames, subscribeReports, subscribeResults, subscribeTeamKits, adminUnlock, runAdvancementAll } from "../cloud.js";
+import { subscribeGames, subscribeReports, subscribeResults, subscribeTeamKits, adminUnlock, runAdvancementAll, purgePublicStartingFive } from "../cloud.js";
 import { PALETTE } from "../schedule/ScheduleGrid.jsx";
 import { resolveKit, teamKitsFor } from "../kits.js";
 import { KitSwatch } from "../KitSwatch.jsx";
@@ -22,7 +22,7 @@ function dayLabel(s) {
 
 export default function MatchList({ me }) {
   const nav = useNavigate();
-  const { eventId, event, isAdmin, archived } = useEvent();
+  const { eventId, event, isAdmin, archived, canScore } = useEvent();
   const base = `/e/${eventId}`;
   const [games, setGames] = useState([]);
   const [reports, setReports] = useState({});
@@ -35,6 +35,12 @@ export default function MatchList({ me }) {
   const pickView = (v) => { setView(v); try { localStorage.setItem("fb_games_view", v); } catch (_) { /* private mode */ } };
   const [results, setResults] = useState({});
   useEffect(() => subscribeResults((list) => setResults(Object.fromEntries(list.map((r) => [r.id, r])))), [eventId]);
+  // Starting fives are internal: remove any that older versions published.
+  useEffect(() => {
+    if (!canScore || archived) return;
+    const leaked = Object.values(results).filter((r) => r.startingFive);
+    if (leaked.length) purgePublicStartingFive(leaked).catch(() => {});
+  }, [results, canScore, archived]);
   useEffect(() => subscribeTeamKits(setTeamKits), [eventId]);
 
   // Short names come from the game (if published with one) or the event's team

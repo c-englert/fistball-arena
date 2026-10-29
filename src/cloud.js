@@ -1151,10 +1151,23 @@ export async function saveReport(gameId, me, patch) {
 // { [position]: { nr, name, first } }. Saved on its own — by any official or
 // admin, even without the scoring lock (the referee fills it with the coach on
 // another device) — and mirrored to the public result so media can view it.
+// INTERNAL ONLY: stays on the (members-only) report and is never written to
+// the public result — teams must not see each other's starting five before the
+// game. Media read it in Arena with viewer access.
 export async function saveStartingFive(gameId, side, five) {
   await updateDoc(edoc("reports", gameId), { [`startingFive.${side}`]: five });
-  try { await updateDoc(edoc("results", gameId), { [`startingFive.${side}`]: five }); }
-  catch (_) { await setDoc(edoc("results", gameId), { startingFive: { [side]: five } }, { merge: true }); }
+  // Remove what older versions mirrored to the public result.
+  try { await updateDoc(edoc("results", gameId), { startingFive: deleteField() }); } catch (_) { /* no result yet */ }
+}
+// Wipe starting fives older versions published on public results (run by an
+// official/admin from the games list). Returns how many results were cleaned.
+export async function purgePublicStartingFive(results) {
+  let n = 0;
+  for (const r of results || []) {
+    if (!r?.id || !r.startingFive) continue;
+    try { await updateDoc(edoc("results", r.id), { startingFive: deleteField() }); n++; } catch (_) { /* no permission */ }
+  }
+  return n;
 }
 
 export async function submitReport(gameId, me) {

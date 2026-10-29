@@ -9,7 +9,7 @@ import {
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
-import { overlayUrl, gamePageUrl } from "../broadcast.js";
+import { overlayUrl } from "../broadcast.js";
 
 const SECTIONS = [
   ["info", "Info"],
@@ -28,7 +28,10 @@ export default function Sumula({ me }) {
   const [draft, setDraft] = useState(null);
   const [lockedBy, setLockedBy] = useState(null);
   const [submitted, setSubmitted] = useState(false);
-  const [section, setSection] = useState("info");
+  const [section, setSection] = useState(() => {
+    const t = new URLSearchParams(location.hash.split("?")[1] || "").get("tab");
+    return ["info", "lineup", "sfA", "sfB", "score", "refs", "finish"].includes(t) ? t : "info";
+  });
   const [team, setTeam] = useState("teamA");
   const [saving, setSaving] = useState(false);
   // Starting five lives outside the draft: it's edited without the scoring lock
@@ -177,10 +180,12 @@ export default function Sumula({ me }) {
     setStartingFive((cur) => ({ ...cur, [side]: five }));
     saveStartingFive(id, side, five).catch((e) => alert("Couldn't save the starting five: " + (e?.code || e?.message || e)));
   };
+  // Media see the starting five in Arena only (viewer access, login) — never
+  // on the public Fistball Live. The link opens this game's Starting 5 tab.
   async function copyStartLink() {
-    const url = gamePageUrl(eventId, id, "#starting5");
-    try { await navigator.clipboard.writeText(url); alert("View-only link for media copied:\n" + url); }
-    catch (_) { window.prompt("View-only link for media (copy it):", url); }
+    const link = `${location.origin}${location.pathname}#/e/${eventId}/game/${id}?tab=sfA`;
+    try { await navigator.clipboard.writeText(link); alert("Link for media copied (they need viewer access to this event in Arena):\n" + link); }
+    catch (_) { window.prompt("Link for media — they need viewer access in Arena:", link); }
   }
 
   async function copyOverlay() {
@@ -353,11 +358,11 @@ function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink }) {
     <div className="card">
       <div className="row-between">
         <h2 style={{ margin: 0 }}>Starting 5 — {short(team.name)}</h2>
-        <button className="btn sm" onClick={onCopyLink} title="View-only page for media & communication (no login)">🔗 Link for media</button>
+        <button className="btn sm" onClick={onCopyLink} title="Link to this tab in Arena for media — they need viewer access to the event">🔗 Link for media</button>
       </div>
       <p className="muted-sm">
         {canEdit
-          ? "Fill in with the coach before the game: who starts and in which position. Saved instantly and shown read-only to media on Fistball Live."
+          ? "Fill in with the coach before the game: who starts and in which position. Saved instantly. Internal only — never shown on Fistball Live; media see it here with viewer access."
           : "Read only — the referee or the event head fills this in."}
         {" "}{filled}/5 positions set.
       </p>
