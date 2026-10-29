@@ -1089,3 +1089,17 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 /* Súmula full screen: no left menu, no top bar */
 body.sumula-full .shell { grid-template-columns: minmax(0, 1fr); }
 body.sumula-full .sidebar, body.sumula-full .sb-scrim, body.sumula-full .appbar { display: none !important; }
+
+/* Súmula: which team is on which side of the tablet */
+.sides-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; font-weight: 700; font-size: 14px; }
+.sides-bar .sb-side { flex: 1; }
+.sides-bar .sb-side:last-child { text-align: right; }
+.decider-pick { margin-bottom: 10px; }
+.decider-pick .cb-actions { margin-top: 8px; }
+.score-big { display: flex; justify-content: center; align-items: baseline; }
+.swapped .score-big > :first-child,
+.swapped .point-buttons > :first-child,
+.swapped .tally > :first-child,
+.swapped .to-panel > :first-child { order: 3; }
+.swapped .score-big > .colon, .swapped .tally > :nth-child(2), .swapped .point-buttons > :nth-child(2), .swapped .to-panel > :nth-child(2) { order: 1; }
+.swapped .score-big > :last-child { order: 0; }

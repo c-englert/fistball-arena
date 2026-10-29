@@ -553,6 +553,18 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
   };
   const removeTimeout = (side, i) => update((n) => n.timeouts[side].splice(i, 1));
 
+  // Which team is on the LEFT of the tablet (as the table sees the court).
+  // Teams change ends every set; the deciding set gets a fresh choice.
+  const left = leftTeam(d, cur);
+  const isDecider = cur === Number(d.info.bestOf) - 1 && d.sets.length > 1;
+  const deciderOpen = isDecider && !d.sides?.decider && !rallies.length;
+  const setLeft = (team) => update((n) => {
+    const sides = (n.sides = { ...(n.sides || {}) });
+    if (isDecider) sides.decider = team;
+    // Flip the set-1 side so that this set ends up with `team` on the left.
+    else if (leftTeam(n, cur) !== team) sides.first = (sides.first || "A") === "A" ? "B" : "A";
+  });
+
   // Build the two paper rows: the scorer's running number, "/" on the other side.
   const rowA = [], rowB = [];
   let ca = 0, cb = 0;
@@ -562,7 +574,7 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
   }
 
   return (
-    <div className="card">
+    <div className={`card ${left === "B" ? "swapped" : ""}`}>
       <div className="set-pills">
         {d.sets.map((s, i) => {
           const sc = setScore(s);
@@ -575,6 +587,21 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
           );
         })}
       </div>
+
+      <div className="sides-bar">
+        <span className="sb-side">◀ {short(d[left === "A" ? "teamA" : "teamB"].name)}</span>
+        {!readOnly && <button className="btn sm" onClick={() => setLeft(left === "A" ? "B" : "A")} title="Swap which team is on the left of the tablet">⇄ Swap sides</button>}
+        <span className="sb-side">{short(d[left === "A" ? "teamB" : "teamA"].name)} ▶</span>
+      </div>
+      {deciderOpen && !readOnly && (
+        <div className="warn-box decider-pick">
+          <b>Deciding set — which team is on the left?</b>
+          <div className="cb-actions">
+            <button className="btn" onClick={() => setLeft("A")}>◀ {short(d.teamA.name)}</button>
+            <button className="btn" onClick={() => setLeft("B")}>◀ {short(d.teamB.name)}</button>
+          </div>
+        </div>
+      )}
 
       <div className="score-big">
         <span className={a > b ? "lead" : ""}>{a}</span>
@@ -778,6 +805,7 @@ function extractDraft(data) {
     sets: data.sets,
     timeouts: data.timeouts || { teamA: [], teamB: [] },
     ballChoice: data.ballChoice || { set1: "", set5: "" },
+    sides: data.sides || {},
     referees: data.referees || { r1: "", r2: "", clerk: "", a1: "", a2: "" },
     remarks: data.remarks || "",
     responsible: data.responsible || "",
@@ -790,7 +818,7 @@ function pickSumula(d) {
   return {
     info: d.info, teamA: d.teamA, teamB: d.teamB, sets: d.sets,
     timeouts: d.timeouts || { teamA: [], teamB: [] },
-    ballChoice: d.ballChoice, referees: d.referees,
+    ballChoice: d.ballChoice, referees: d.referees, sides: d.sides || {},
     remarks: d.remarks, responsible: d.responsible, signatures: d.signatures,
   };
 }
@@ -811,6 +839,14 @@ const fiveKey = (p) => `${p.nr}|${p.name}|${p.first}`;
 
 // The set being played: the last one with points — or the next one once it's
 // over (unless the match is decided). Fresh report → set 1.
+// Team ("A"/"B") on the left of the tablet in set i: set 1 as chosen (A by
+// default), then alternating; the deciding set as chosen there (else it keeps alternating).
+function leftTeam(d, i) {
+  const first = d.sides?.first || "A";
+  if (i === Number(d.info.bestOf) - 1 && d.sides?.decider) return d.sides.decider;
+  return i % 2 === 0 ? first : first === "A" ? "B" : "A";
+}
+
 function currentSet(d) {
   let last = -1;
   d.sets.forEach((s, i) => { if (s.rallies && s.rallies.length) last = i; });
