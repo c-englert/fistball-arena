@@ -121,7 +121,7 @@ export default function Plans() {
                     <td><b>{SLOT_LABEL[d.slot]}</b></td>
                     <td>{d.courts.join(", ")}</td>
                     <td>{d.games.map((g) => (
-                      <div key={g.id}>#{g.nr} <span className="flag">{flagFor(g.teamA?.name)}</span>{shortTeam(g.teamA)} <span className="muted-sm">v</span> <span className="flag">{flagFor(g.teamB?.name)}</span>{shortTeam(g.teamB)}</div>
+                      <div key={g.id}>#{g.nr} {g.category && <b className="plan-cat">{g.category}</b>} <span className="flag">{flagFor(g.teamA?.name)}</span>{shortTeam(g.teamA)} <span className="muted-sm">v</span> <span className="flag">{flagFor(g.teamB?.name)}</span>{shortTeam(g.teamB)}</div>
                     ))}</td>
                     <td>{d.shirts.length ? d.shirts.map((r) => <span key={r.id} className="plan-shirt"><KitSwatch kit={{ colors: [r.shirt] }} size={14} /> {r.name}</span>) : <span className="muted-sm">—</span>}</td>
                   </tr>

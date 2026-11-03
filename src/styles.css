@@ -1103,3 +1103,5 @@ body.sumula-full .sidebar, body.sumula-full .sb-scrim, body.sumula-full .appbar 
 .swapped .to-panel > :first-child { order: 3; }
 .swapped .score-big > .colon, .swapped .tally > :nth-child(2), .swapped .point-buttons > :nth-child(2), .swapped .to-panel > :nth-child(2) { order: 1; }
 .swapped .score-big > :last-child { order: 0; }
+
+.plan-cat { font-size: 12px; margin-right: 4px; }

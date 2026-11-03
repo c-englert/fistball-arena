@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { subscribeGames, subscribeReports, subscribeResults, subscribeTeamKits, adminUnlock, runAdvancementAll, purgePublicStartingFive } from "../cloud.js";
+import { subscribeGames, subscribeReports, subscribeResults, subscribeTeamKits, adminUnlock, runAdvancementAll, purgePublicStartingFive, syncResultShorts } from "../cloud.js";
 import { PALETTE } from "../schedule/ScheduleGrid.jsx";
 import { resolveKit, teamKitsFor } from "../kits.js";
 import { KitSwatch } from "../KitSwatch.jsx";
@@ -51,6 +51,20 @@ export default function MatchList({ me }) {
     return m;
   }, [event]);
   const teamLabel = (t) => String((t?.short || shortOf[t?.name] || t?.name || "")).split(" - ")[0];
+
+  // Repair public short names that drifted from the games (Fistball Live and
+  // Standings show them): e.g. a team swapped into a group kept the old team's.
+  useEffect(() => {
+    if (!isAdmin || archived || !games.length) return;
+    const want = (t) => (t?.short || shortOf[t?.name] || "").trim();
+    const fixes = games.flatMap((g) => {
+      const r = results[g.id];
+      if (!r || r.teamA !== g.teamA?.name || r.teamB !== g.teamB?.name) return [];
+      const a = want(g.teamA), b = want(g.teamB);
+      return (r.teamAShort || "") !== a || (r.teamBShort || "") !== b ? [{ id: g.id, teamAShort: a, teamBShort: b }] : [];
+    });
+    if (fixes.length) syncResultShorts(fixes).catch((e) => console.warn("short names sync failed:", e?.code || e));
+  }, [games, results, shortOf, isAdmin, archived]);
 
   useEffect(() => {
     const u1 = subscribeGames(setGames);

@@ -84,7 +84,7 @@ export default function PlansPDF({ event, teams, officials, rounds = 0, day }) {
                 <Text style={[s.td, O.time]}>{i === 0 ? time : ""}</Text>
                 <Text style={[s.td, s.bold, O.role]}>{SLOT_LABEL[d.slot]}</Text>
                 <Text style={[s.td, O.court]}>{d.courts.join(", ")}</Text>
-                <Text style={[s.td, O.game]}>{d.games.map((g) => `#${g.nr}  ${short(g.teamA)} v ${short(g.teamB)}`).join("\n")}</Text>
+                <Text style={[s.td, O.game]}>{d.games.map((g) => `#${g.nr}  ${g.category ? g.category + " · " : ""}${short(g.teamA)} v ${short(g.teamB)}`).join("\n")}</Text>
                 <View style={O.shirt}>{d.shirts.length ? d.shirts.map((r) => <Swatch key={r.id} colors={[r.shirt]} label={r.name} />) : <Text style={s.td}>—</Text>}</View>
               </View>
             ))))}

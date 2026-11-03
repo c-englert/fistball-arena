@@ -888,6 +888,7 @@ export async function regroupGames(category, groups, shortOf = {}) {
       if (!to) continue;
       gameUpd[side] = { name: to, short: shortOf[to] || "" };
       resUpd[side] = to;
+      resUpd[`${side}Short`] = shortOf[to] || ""; // never keep the old team's short name
       if (g.kit?.[k]) { gameUpd[`kit.${k}`] = ""; resUpd[`kit.${k}`] = ""; } // the uniform belonged to the old team
     }
     if (!Object.keys(gameUpd).length) continue;
@@ -926,8 +927,9 @@ export async function renameTeamInGames(fromName, toName, category = "") {
     const rep = await getDoc(edoc("reports", d.id));
     const roster = await getRoster(toName, g.category);
     for (const s of sides) {
-      gameUpd[s] = { ...g[s], name: toName };
+      gameUpd[s] = { ...g[s], name: toName, short: "" };
       resUpd[s] = toName;
+      resUpd[`${s}Short`] = ""; // the old short name was for the old team; resynced from the entries
       if (rep.exists()) {
         const cur = rep.data()[s] || {};
         repUpd[s] = (cur.players || []).length || !roster
@@ -1195,6 +1197,16 @@ export async function saveStartingFive(gameId, side, five) {
 }
 // Wipe starting fives older versions published on public results (run by an
 // official/admin from the games list). Returns how many results were cleaned.
+// Public results carry the display (short) name of each team. Bring them in
+// line with the games / event entries (e.g. after a team moved group).
+export async function syncResultShorts(updates) {
+  for (let i = 0; i < updates.length; i += 400) {
+    const batch = writeBatch(db);
+    updates.slice(i, i + 400).forEach(({ id, teamAShort, teamBShort }) => batch.update(edoc("results", id), { teamAShort, teamBShort }));
+    await batch.commit();
+  }
+  return updates.length;
+}
 export async function purgePublicStartingFive(results) {
   let n = 0;
   for (const r of results || []) {
