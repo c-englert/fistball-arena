@@ -69,14 +69,16 @@ export function officialPlans(games, refs, refKits, date) {
   return { rounds, plans };
 }
 
-// refSchedule(games, date) → [{ time, games }] — the day's games by round
-// (time slot), in court order, for the referees' day schedule.
-export function refSchedule(games, date) {
+// refSchedule(games, date, court) → [{ date, time, games }] — games by round
+// (day + time slot), in court order, for the referees' schedule. date / court
+// "all" (or empty court) = every day / every court.
+export function refSchedule(games, date, court = "all") {
   const rounds = new Map();
-  for (const g of [...games].filter((x) => x.date === date).sort(byTime)) {
-    const t = timeKey(g.time);
-    if (!rounds.has(t)) rounds.set(t, []);
-    rounds.get(t).push(g);
+  const pick = (x) => (date === "all" || x.date === date) && (!court || court === "all" || String(x.court ?? "") === String(court));
+  for (const g of [...games].filter(pick).sort(byTime)) {
+    const k = `${g.date}|${timeKey(g.time)}`;
+    if (!rounds.has(k)) rounds.set(k, { date: g.date, time: timeKey(g.time), games: [] });
+    rounds.get(k).games.push(g);
   }
-  return [...rounds.entries()].map(([time, list]) => ({ time, games: list }));
+  return [...rounds.values()];
 }

@@ -48,19 +48,22 @@ const Head = ({ event, title, sub }) => (
 );
 const Foot = () => <Text style={s.foot} fixed>Fistball Arena  ·  created {new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</Text>;
 
-export default function PlansPDF({ event, teams, officials, rounds = 0, day, schedule, hasR2 }) {
+export default function PlansPDF({ event, teams, officials, rounds = 0, day, schedule, hasR2, title, allDays }) {
   return (
     <Document>
       {schedule && (
         <Page size="A4" orientation="landscape" style={s.page}>
-          <Head event={event} title="Referees — day schedule" sub={`${dayLong(day)}  ·  ${schedule.reduce((n, r) => n + r.games.length, 0)} games in ${schedule.length} rounds`} />
+          <Head event={event} title={`Referees — ${title || ""}`} sub={`${schedule.reduce((n, r) => n + r.games.length, 0)} games in ${schedule.length} rounds`} />
           <View style={s.thead} fixed>
             <Text style={[s.th, S.nr]}>#</Text><Text style={[s.th, S.time]}>Time</Text><Text style={[s.th, S.court]}>Court</Text>
             <Text style={[s.th, S.match]}>Match</Text><Text style={[s.th, S.ref]}>{hasR2 ? "Referee 1" : "Referee"}</Text>
             {hasR2 ? <Text style={[s.th, S.ref]}>Referee 2</Text> : null}
             <Text style={[s.th, S.cat]}>Category</Text><Text style={[s.th, S.round]}>Round</Text><Text style={[s.th, S.bo]}>Best of</Text>
           </View>
-          {schedule.map(({ time, games }) => games.map((g, i) => (
+          {schedule.map(({ date, time, games }, ri) => [
+            allDays && schedule[ri - 1]?.date !== date
+              ? <View key={"d" + date} style={[s.tr, { backgroundColor: LIGHT }]} wrap={false}><Text style={[s.td, s.bold]}>{dayLong(date)}</Text></View> : null,
+            ...games.map((g, i) => (
             <View key={g.id} style={[s.tr, i === 0 ? { borderTopWidth: 1, borderColor: PURPLE } : null]} wrap={false}>
               <Text style={[s.td, S.nr]}>#{g.nr}</Text>
               <Text style={[s.td, s.bold, S.time]}>{i === 0 ? time : ""}</Text>
@@ -72,7 +75,8 @@ export default function PlansPDF({ event, teams, officials, rounds = 0, day, sch
               <Text style={[s.td, S.round]}>{g.round}{g.group ? ` · Group ${g.group}` : ""}</Text>
               <Text style={[s.td, S.bo]}>{g.bestOf}</Text>
             </View>
-          )))}
+            )),
+          ])}
           <Foot />
         </Page>
       )}

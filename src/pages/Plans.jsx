@@ -28,6 +28,7 @@ export default function Plans() {
   const [view, setView] = useState(() => (["teams", "officials", "schedule"].includes(params.get("view")) ? params.get("view") : "teams"));
   const [who, setWho] = useState("all");
   const [day, setDay] = useState(() => params.get("day") || "");
+  const [court, setCourt] = useState(() => params.get("court") || "all");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => subscribeGames(setGames), []);
@@ -37,9 +38,13 @@ export default function Plans() {
 
   const days = useMemo(() => planDays(games), [games]);
   const theDay = days.includes(day) ? day : days[0] || "";
+  // The referees' schedule can also span all days (e.g. everything on court 3).
+  const schedDay = day === "all" ? "all" : theDay;
+  const courts = useMemo(() => [...new Set(games.map((g) => String(g.court ?? "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [games]);
+  const schedTitle = [schedDay === "all" ? "All days" : dayLabel(schedDay), court !== "all" ? `Court ${court}` : ""].filter(Boolean).join(" · ");
   const teams = useMemo(() => teamPlans(games, teamKits), [games, teamKits]);
   const officials = useMemo(() => officialPlans(games, refs, refKits, theDay), [games, refs, refKits, theDay]);
-  const schedule = useMemo(() => refSchedule(games, theDay), [games, theDay]);
+  const schedule = useMemo(() => refSchedule(games, schedDay, court), [games, schedDay, court]);
   const hasR2 = schedule.some((r) => r.games.some((g) => String(g.refs?.r2 ?? "").trim()));
 
   const list = view === "teams" ? teams : view === "officials" ? officials.plans : [];
@@ -51,11 +56,11 @@ export default function Plans() {
       const doc = view === "teams"
         ? <PlansPDF event={event} teams={shown} />
         : view === "schedule"
-          ? <PlansPDF event={event} schedule={schedule} hasR2={hasR2} day={theDay} />
+          ? <PlansPDF event={event} schedule={schedule} hasR2={hasR2} title={schedTitle} allDays={schedDay === "all"} />
           : <PlansPDF event={event} officials={shown} rounds={officials.rounds.length} day={theDay} />;
       const blob = await pdf(doc).toBlob();
       const one = view !== "schedule" && who !== "all" && shown[0] ? (view === "teams" ? `${shown[0].name}-${shown[0].category}` : shown[0].name) : "";
-      const name = ["Plan", event?.name, view === "teams" ? "uniforms" : `${view === "schedule" ? "referees" : "officials"}-${theDay.replace(/\//g, "-")}`, one].map(fileSafe).filter(Boolean).join("_");
+      const name = ["Plan", event?.name, view === "teams" ? "uniforms" : view === "schedule" ? `referees-${schedDay === "all" ? "all-days" : schedDay.replace(/\//g, "-")}${court !== "all" ? `-court-${court}` : ""}` : `officials-${theDay.replace(/\//g, "-")}`, one].map(fileSafe).filter(Boolean).join("_");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = `${name}.pdf`;
@@ -79,8 +84,15 @@ export default function Plans() {
           {list.map((x) => <option key={x.key} value={x.key}>{view === "teams" ? `${shortTeam(x)}${x.category ? ` — ${x.category}` : ""}` : x.name}</option>)}
         </select>}
         {view !== "teams" && (
-          <select className="ag-role" value={theDay} onChange={(e) => setDay(e.target.value)} aria-label="Day">
+          <select className="ag-role" value={view === "schedule" ? schedDay : theDay} onChange={(e) => setDay(e.target.value)} aria-label="Day">
+            {view === "schedule" && <option value="all">All days</option>}
             {days.map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
+          </select>
+        )}
+        {view === "schedule" && (
+          <select className="ag-role" value={court} onChange={(e) => setCourt(e.target.value)} aria-label="Court">
+            <option value="all">All courts</option>
+            {courts.map((c) => <option key={c} value={c}>Court {c}</option>)}
           </select>
         )}
         <button className="btn sm" onClick={() => window.print()}>Print</button>
@@ -89,19 +101,22 @@ export default function Plans() {
       <p className="muted-sm no-print">{view === "teams"
         ? "Which uniform each team wears in which game (set on the Uniforms page). Print / PDF: one page per team."
         : view === "schedule"
-          ? "The day's games round by round with their referees — to tell the teams when and where their referee is needed."
+          ? "Games round by round with their referees — to tell the teams when and where their referee is needed. Pick a day (or all days) and a court."
           : "Every round of the day for each official: role, court, game and referee shirt colour — or free. Print / PDF: one page per official."}</p>
 
-      {shown.length === 0 && <div className="empty">{view === "teams" ? "No games with teams yet." : view === "schedule" ? "No games this day." : "No officials yet."}</div>}
+      {shown.length === 0 && <div className="empty">{view === "teams" ? "No games with teams yet." : view === "schedule" ? "No games for this day / court." : "No officials yet."}</div>}
 
       {view === "schedule" && shown.length > 0 && (
         <section className="card plan-card">
-          <h3 className="plan-title">Referees · {dayLabel(theDay)}</h3>
+          <h3 className="plan-title">Referees · {schedTitle}</h3>
           <div className="grid-scroll">
             <table className="ref-grid plan-table">
               <thead><tr><th>#</th><th>Time</th><th>Court</th><th>Match</th><th>Referee{hasR2 ? " 1" : ""}</th>{hasR2 && <th>Referee 2</th>}<th>Category</th><th>Round</th><th>Best of</th></tr></thead>
               <tbody>
-                {schedule.map(({ time, games: list }) => list.map((g, i) => (
+                {schedule.map(({ date, time, games: list }, ri) => [
+                  schedDay === "all" && schedule[ri - 1]?.date !== date
+                    ? <tr key={"d" + date} className="plan-dayrow"><td colSpan={hasR2 ? 9 : 8}><b>{dayLabel(date)}</b></td></tr> : null,
+                  ...list.map((g, i) => (
                   <tr key={g.id} className={i === 0 ? "plan-round" : ""}>
                     <td>#{g.nr}</td>
                     <td>{i === 0 ? <b>{time}</b> : ""}</td>
@@ -113,7 +128,8 @@ export default function Plans() {
                     <td>{g.round}{g.group ? ` · Group ${g.group}` : ""}</td>
                     <td>{g.bestOf}</td>
                   </tr>
-                )))}
+                  )),
+                ])}
               </tbody>
             </table>
           </div>

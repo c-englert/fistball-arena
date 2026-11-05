@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { teamPlans, officialPlans, planDays } from "./plans.js";
+import { teamPlans, officialPlans, planDays, refSchedule } from "./plans.js";
 
 const D1 = "12/09/26", D2 = "13/09/26";
 let nr = 0;
@@ -42,4 +42,13 @@ test("officialPlans: every round of the day, free rounds, one line for a court m
   const cm = plans[1].rows[0].duties;
   assert.equal(cm.length, 1);
   assert.deepEqual(cm[0].courts, [1, 2]);
+});
+
+test("refSchedule: by day + round, filtered by day and/or court", () => {
+  const gs = [game("A", "B", D1, "10:00", 3), game("C", "D", D1, "10:00", 1), game("E", "F", D1, "09:00", 3), game("G", "H", D2, "09:00", 3)];
+  const day1 = refSchedule(gs, D1);
+  assert.deepEqual(day1.map((r) => [r.time, r.games.map((g) => g.court)]), [["09:00", [3]], ["10:00", [1, 3]]]);
+  const court3 = refSchedule(gs, "all", "3");
+  assert.deepEqual(court3.map((r) => [r.date, r.time]), [[D1, "09:00"], [D1, "10:00"], [D2, "09:00"]]);
+  assert.equal(refSchedule(gs, D2, "1").length, 0);
 });
