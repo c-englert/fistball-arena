@@ -1105,3 +1105,4 @@ body.sumula-full .sidebar, body.sumula-full .sb-scrim, body.sumula-full .appbar 
 .swapped .score-big > :last-child { order: 0; }
 
 .plan-cat { font-size: 12px; margin-right: 4px; }
+.plan-round td { border-top: 2px solid var(--accent, #3a2d6b); }

@@ -23,6 +23,7 @@ const s = StyleSheet.create({
 });
 // Team columns / official columns.
 const T = { day: { width: 108 }, time: { width: 40 }, court: { width: 40 }, game: { width: 130 }, opp: { flex: 1 }, kit: { width: 90 } };
+const S = { nr: { width: 30 }, time: { width: 40 }, court: { width: 38 }, match: { flex: 1.6 }, ref: { flex: 1 }, cat: { width: 120 }, round: { width: 110 }, bo: { width: 40 } };
 const O = { time: { width: 40 }, role: { width: 80 }, court: { width: 46 }, game: { flex: 1 }, shirt: { width: 90 } };
 
 const dayLong = (v) => {
@@ -47,9 +48,34 @@ const Head = ({ event, title, sub }) => (
 );
 const Foot = () => <Text style={s.foot} fixed>Fistball Arena  ·  created {new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</Text>;
 
-export default function PlansPDF({ event, teams, officials, rounds = 0, day }) {
+export default function PlansPDF({ event, teams, officials, rounds = 0, day, schedule, hasR2 }) {
   return (
     <Document>
+      {schedule && (
+        <Page size="A4" orientation="landscape" style={s.page}>
+          <Head event={event} title="Referees — day schedule" sub={`${dayLong(day)}  ·  ${schedule.reduce((n, r) => n + r.games.length, 0)} games in ${schedule.length} rounds`} />
+          <View style={s.thead} fixed>
+            <Text style={[s.th, S.nr]}>#</Text><Text style={[s.th, S.time]}>Time</Text><Text style={[s.th, S.court]}>Court</Text>
+            <Text style={[s.th, S.match]}>Match</Text><Text style={[s.th, S.ref]}>{hasR2 ? "Referee 1" : "Referee"}</Text>
+            {hasR2 ? <Text style={[s.th, S.ref]}>Referee 2</Text> : null}
+            <Text style={[s.th, S.cat]}>Category</Text><Text style={[s.th, S.round]}>Round</Text><Text style={[s.th, S.bo]}>Best of</Text>
+          </View>
+          {schedule.map(({ time, games }) => games.map((g, i) => (
+            <View key={g.id} style={[s.tr, i === 0 ? { borderTopWidth: 1, borderColor: PURPLE } : null]} wrap={false}>
+              <Text style={[s.td, S.nr]}>#{g.nr}</Text>
+              <Text style={[s.td, s.bold, S.time]}>{i === 0 ? time : ""}</Text>
+              <Text style={[s.td, S.court]}>{g.court}</Text>
+              <Text style={[s.td, S.match]}>{short(g.teamA)} v {short(g.teamB)}</Text>
+              <Text style={[s.td, s.bold, S.ref]}>{g.refs?.r1 || "—"}</Text>
+              {hasR2 ? <Text style={[s.td, S.ref]}>{g.refs?.r2 || "—"}</Text> : null}
+              <Text style={[s.td, S.cat]}>{g.category}</Text>
+              <Text style={[s.td, S.round]}>{g.round}{g.group ? ` · Group ${g.group}` : ""}</Text>
+              <Text style={[s.td, S.bo]}>{g.bestOf}</Text>
+            </View>
+          )))}
+          <Foot />
+        </Page>
+      )}
       {(teams || []).map((t) => (
         <Page key={t.key} size="A4" style={s.page}>
           <Head event={event} title={short(t)} sub={`${t.category ? t.category + "  ·  " : ""}Uniforms  ·  ${t.rows.length} game${t.rows.length === 1 ? "" : "s"}`} />

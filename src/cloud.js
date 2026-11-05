@@ -758,6 +758,18 @@ export async function saveGameRefs(gameId, refs, auto) {
   const patch = { refs };
   if (auto) patch.refsAuto = Object.fromEntries(["r1", "r2", "clerk", "clerk2", "a1", "a2", "cm"].map((s) => [s, !!auto[s]]));
   await setDoc(edoc("games", gameId), patch, { merge: true });
+  // Referee 1 and 2 are public (Fistball Live → Referees tab).
+  await setDoc(edoc("results", gameId), { referees: publicRefs(refs) }, { merge: true });
+}
+export const publicRefs = (refs) => ({ r1: String(refs?.r1 ?? "").trim(), r2: String(refs?.r2 ?? "").trim() });
+// Bring the public referee names in line with the games (admin, best-effort).
+export async function syncResultRefs(updates) {
+  for (let i = 0; i < updates.length; i += 400) {
+    const batch = writeBatch(db);
+    updates.slice(i, i + 400).forEach(({ id, referees }) => batch.set(edoc("results", id), { referees }, { merge: true }));
+    await batch.commit();
+  }
+  return updates.length;
 }
 
 // Uniform a team wears in a game (referees decide per day, sometimes per game).

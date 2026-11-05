@@ -66,6 +66,14 @@ export default function MatchList({ me }) {
     if (fixes.length) syncResultShorts(fixes).catch((e) => console.warn("short names sync failed:", e?.code || e));
   }, [games, results, shortOf, isAdmin, archived]);
 
+  // Self-heal the bracket: whenever a game finishes, an admin's open Games page
+  // fills the knockout slots it feeds (covers submits that couldn't advance).
+  const finishedKey = useMemo(() => Object.values(results).filter((r) => r.status === "Finished").map((r) => r.id).sort().join(","), [results]);
+  useEffect(() => {
+    if (!isAdmin || archived || !finishedKey) return;
+    runAdvancementAll();
+  }, [finishedKey, isAdmin, archived]);
+
   useEffect(() => {
     const u1 = subscribeGames(setGames);
     const u2 = subscribeReports(setReports);

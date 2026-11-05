@@ -89,6 +89,10 @@ service cloud.firestore {
       match /games/{gameId} {
         allow read: if isOrgAdmin() || isMember(eventId);
         allow write: if isOrgAdmin() || (isEventAdmin(eventId) && isActive(eventId));
+        // Officials submitting a report advance the bracket: they may fill a
+        // later game's team slots (winner/loser/seed) — nothing else.
+        allow update: if isActive(eventId) && canWriteReports(eventId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teamA', 'teamB']);
       }
       match /rosters/{rosterId} {
         allow read: if isOrgAdmin() || isMember(eventId);

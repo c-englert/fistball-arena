@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
 import { subscribeGames, subscribeReferees, subscribeTeamKits, subscribeRefKits } from "../cloud.js";
 import { KitSwatch } from "../KitSwatch.jsx";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 import { SLOT_LABEL } from "../officials/rules.js";
-import { teamPlans, officialPlans, planDays } from "../officials/plans.js";
+import { teamPlans, officialPlans, planDays, refSchedule } from "../officials/plans.js";
 import PlansPDF from "../pdf/PlansPDF.jsx";
 
 // Plans for handing out: which uniform each team wears in which game, and
@@ -23,9 +24,10 @@ export default function Plans() {
   const [refs, setRefs] = useState([]);
   const [teamKits, setTeamKits] = useState({});
   const [refKits, setRefKits] = useState([]);
-  const [view, setView] = useState("teams");
+  const [params] = useSearchParams();
+  const [view, setView] = useState(() => (["teams", "officials", "schedule"].includes(params.get("view")) ? params.get("view") : "teams"));
   const [who, setWho] = useState("all");
-  const [day, setDay] = useState("");
+  const [day, setDay] = useState(() => params.get("day") || "");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => subscribeGames(setGames), []);
@@ -37,19 +39,23 @@ export default function Plans() {
   const theDay = days.includes(day) ? day : days[0] || "";
   const teams = useMemo(() => teamPlans(games, teamKits), [games, teamKits]);
   const officials = useMemo(() => officialPlans(games, refs, refKits, theDay), [games, refs, refKits, theDay]);
+  const schedule = useMemo(() => refSchedule(games, theDay), [games, theDay]);
+  const hasR2 = schedule.some((r) => r.games.some((g) => String(g.refs?.r2 ?? "").trim()));
 
-  const list = view === "teams" ? teams : officials.plans;
-  const shown = who === "all" ? list : list.filter((x) => x.key === who);
+  const list = view === "teams" ? teams : view === "officials" ? officials.plans : [];
+  const shown = view === "schedule" ? schedule : who === "all" ? list : list.filter((x) => x.key === who);
 
   const downloadPdf = async () => {
     setBusy(true);
     try {
       const doc = view === "teams"
         ? <PlansPDF event={event} teams={shown} />
-        : <PlansPDF event={event} officials={shown} rounds={officials.rounds.length} day={theDay} />;
+        : view === "schedule"
+          ? <PlansPDF event={event} schedule={schedule} hasR2={hasR2} day={theDay} />
+          : <PlansPDF event={event} officials={shown} rounds={officials.rounds.length} day={theDay} />;
       const blob = await pdf(doc).toBlob();
-      const one = who !== "all" && shown[0] ? (view === "teams" ? `${shown[0].name}-${shown[0].category}` : shown[0].name) : "";
-      const name = ["Plan", event?.name, view === "teams" ? "uniforms" : `officials-${theDay.replace(/\//g, "-")}`, one].map(fileSafe).filter(Boolean).join("_");
+      const one = view !== "schedule" && who !== "all" && shown[0] ? (view === "teams" ? `${shown[0].name}-${shown[0].category}` : shown[0].name) : "";
+      const name = ["Plan", event?.name, view === "teams" ? "uniforms" : `${view === "schedule" ? "referees" : "officials"}-${theDay.replace(/\//g, "-")}`, one].map(fileSafe).filter(Boolean).join("_");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = `${name}.pdf`;
@@ -66,12 +72,13 @@ export default function Plans() {
         <span className="filter-pill-group">
           <button className={`filter-pill ${view === "teams" ? "active" : ""}`} onClick={() => { setView("teams"); setWho("all"); }}>Teams — uniforms</button>
           <button className={`filter-pill ${view === "officials" ? "active" : ""}`} onClick={() => { setView("officials"); setWho("all"); }}>Officials — day plan</button>
+          <button className={`filter-pill ${view === "schedule" ? "active" : ""}`} onClick={() => { setView("schedule"); setWho("all"); }}>Referees — day schedule</button>
         </span>
-        <select className="ag-role" value={who} onChange={(e) => setWho(e.target.value)} aria-label={view === "teams" ? "Team" : "Official"}>
+        {view !== "schedule" && <select className="ag-role" value={who} onChange={(e) => setWho(e.target.value)} aria-label={view === "teams" ? "Team" : "Official"}>
           <option value="all">{view === "teams" ? "All teams" : "All officials"}</option>
           {list.map((x) => <option key={x.key} value={x.key}>{view === "teams" ? `${shortTeam(x)}${x.category ? ` — ${x.category}` : ""}` : x.name}</option>)}
-        </select>
-        {view === "officials" && (
+        </select>}
+        {view !== "teams" && (
           <select className="ag-role" value={theDay} onChange={(e) => setDay(e.target.value)} aria-label="Day">
             {days.map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
           </select>
@@ -81,9 +88,37 @@ export default function Plans() {
       </div>
       <p className="muted-sm no-print">{view === "teams"
         ? "Which uniform each team wears in which game (set on the Uniforms page). Print / PDF: one page per team."
-        : "Every round of the day for each official: role, court, game and referee shirt colour — or free. Print / PDF: one page per official."}</p>
+        : view === "schedule"
+          ? "The day's games round by round with their referees — to tell the teams when and where their referee is needed."
+          : "Every round of the day for each official: role, court, game and referee shirt colour — or free. Print / PDF: one page per official."}</p>
 
-      {shown.length === 0 && <div className="empty">{view === "teams" ? "No games with teams yet." : "No officials yet."}</div>}
+      {shown.length === 0 && <div className="empty">{view === "teams" ? "No games with teams yet." : view === "schedule" ? "No games this day." : "No officials yet."}</div>}
+
+      {view === "schedule" && shown.length > 0 && (
+        <section className="card plan-card">
+          <h3 className="plan-title">Referees · {dayLabel(theDay)}</h3>
+          <div className="grid-scroll">
+            <table className="ref-grid plan-table">
+              <thead><tr><th>#</th><th>Time</th><th>Court</th><th>Match</th><th>Referee{hasR2 ? " 1" : ""}</th>{hasR2 && <th>Referee 2</th>}<th>Category</th><th>Round</th><th>Best of</th></tr></thead>
+              <tbody>
+                {schedule.map(({ time, games: list }) => list.map((g, i) => (
+                  <tr key={g.id} className={i === 0 ? "plan-round" : ""}>
+                    <td>#{g.nr}</td>
+                    <td>{i === 0 ? <b>{time}</b> : ""}</td>
+                    <td>{g.court}</td>
+                    <td><span className="flag">{flagFor(g.teamA?.name)}</span>{shortTeam(g.teamA)} <span className="muted-sm">v</span> <span className="flag">{flagFor(g.teamB?.name)}</span>{shortTeam(g.teamB)}</td>
+                    <td><b>{g.refs?.r1 || <span className="muted-sm">—</span>}</b></td>
+                    {hasR2 && <td>{g.refs?.r2 || <span className="muted-sm">—</span>}</td>}
+                    <td>{g.category}</td>
+                    <td>{g.round}{g.group ? ` · Group ${g.group}` : ""}</td>
+                    <td>{g.bestOf}</td>
+                  </tr>
+                )))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {view === "teams" && shown.map((t) => (
         <section key={t.key} className="card plan-card">

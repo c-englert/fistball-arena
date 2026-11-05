@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { subscribeGames, subscribeReferees, saveGameRefs, saveGameRank, subscribeTeamKits, subscribeRefKits, updateEventFields } from "../cloud.js";
+import { subscribeGames, subscribeReferees, subscribeResults, syncResultRefs, publicRefs, saveGameRefs, saveGameRank, subscribeTeamKits, subscribeRefKits, updateEventFields } from "../cloud.js";
 import { resolveKit, teamKitsFor } from "../kits.js";
 import { KitSwatch } from "../KitSwatch.jsx";
 import { useEvent } from "../eventContext.js";
@@ -39,6 +39,21 @@ export default function Referees() {
   const [refKits, setRefKits] = useState([]);
   useEffect(() => subscribeTeamKits(setTeamKits), []);
   useEffect(() => subscribeRefKits(setRefKits), []);
+  // Keep the public referee names (Fistball Live → Referees) in line with the
+  // games — covers games assigned before they were published.
+  const [results, setResults] = useState(null);
+  useEffect(() => subscribeResults(setResults), []);
+  useEffect(() => {
+    if (!isAdmin || archived || !results || !games.length) return;
+    const byId = Object.fromEntries(results.map((r) => [r.id, r]));
+    const fixes = games.flatMap((g) => {
+      const r = byId[g.id];
+      if (!r) return [];
+      const want = publicRefs(g.refs);
+      return (r.referees?.r1 || "") !== want.r1 || (r.referees?.r2 || "") !== want.r2 ? [{ id: g.id, referees: want }] : [];
+    });
+    if (fixes.length) syncResultRefs(fixes).catch((e) => console.warn("referee names sync failed:", e?.code || e));
+  }, [games, results, isAdmin, archived]);
 
   const sortedRefs = useMemo(() => [...refs].sort((a, b) => refName(a).localeCompare(refName(b))), [refs]);
   const teamNations = useMemo(() => [...new Set((event?.entries || []).map((e) => teamMeta(event.entries, e.name).country).filter(Boolean))].sort(), [event]);
@@ -202,6 +217,7 @@ export default function Referees() {
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <button className="btn primary sm" onClick={() => setAutoOpen(true)} disabled={!refs.length} title={refs.length ? "" : "Add officials first"}>Auto-assign…</button>
           <button className="btn sm" onClick={() => clearAssignments(true)} title={`Remove the auto-assigned officials (${day === "all" ? "all days" : dayLabel(day)}); officials set by hand stay`}>Clear auto-assigned…</button>
+          <button className="btn sm" onClick={() => nav(`/e/${eventId}/plans?view=schedule${day !== "all" ? `&day=${encodeURIComponent(day)}` : ""}`)} title="Day schedule with the referees of each game — print or PDF">🖨 Day schedule</button>
           <button className="btn sm" onClick={() => clearAssignments(false)} title={`Remove all officials (${day === "all" ? "all days" : dayLabel(day)})`}>Clear all…</button>
         </div>
       )}

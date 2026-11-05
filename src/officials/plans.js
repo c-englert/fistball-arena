@@ -68,3 +68,15 @@ export function officialPlans(games, refs, refKits, date) {
   });
   return { rounds, plans };
 }
+
+// refSchedule(games, date) → [{ time, games }] — the day's games by round
+// (time slot), in court order, for the referees' day schedule.
+export function refSchedule(games, date) {
+  const rounds = new Map();
+  for (const g of [...games].filter((x) => x.date === date).sort(byTime)) {
+    const t = timeKey(g.time);
+    if (!rounds.has(t)) rounds.set(t, []);
+    rounds.get(t).push(g);
+  }
+  return [...rounds.entries()].map(([time, list]) => ({ time, games: list }));
+}
