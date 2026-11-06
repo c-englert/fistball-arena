@@ -644,7 +644,31 @@ export async function updateGameSlots(updates) {
       batch.set(edoc("results", id), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
     });
     await batch.commit();
+    // A súmula already opened keeps a copy of day/time/court — move it too, or
+    // its next save would put the old slot back on the public result.
+    await Promise.all(updates.slice(i, i + 200).map((u) => moveReportSlot(u.id || `g${u.nr}`, { date: u.date || "", time: u.time || "", court: u.court || "" })));
   }
+}
+async function moveReportSlot(id, slot) {
+  try {
+    const rep = await getDoc(edoc("reports", id));
+    if (!rep.exists()) return;
+    const info = rep.data().info || {};
+    const patch = {};
+    for (const k of Object.keys(slot)) if (slot[k] !== undefined && String(info[k] ?? "") !== String(slot[k] ?? "")) patch[`info.${k}`] = slot[k];
+    if (Object.keys(patch).length) await updateDoc(edoc("reports", id), patch);
+  } catch (e) { console.warn("report slot not moved:", id, e?.code || e); }
+}
+// Repair public results (and opened súmulas) whose number/day/time/court
+// drifted from the games — Fistball Live reads the results. Admin.
+export async function syncResultSlots(updates) {
+  for (let i = 0; i < updates.length; i += 400) {
+    const batch = writeBatch(db);
+    updates.slice(i, i + 400).forEach(({ id, ...slot }) => batch.set(edoc("results", id), slot, { merge: true }));
+    await batch.commit();
+  }
+  await Promise.all(updates.map(({ id, ...slot }) => moveReportSlot(id, slot)));
+  return updates.length;
 }
 
 // Renumber games #1..N in chronological order (day · time · court), touching
@@ -1367,8 +1391,9 @@ function deriveResult(rep) {
   };
   // The set being played isn't won yet — don't count it in setsA/setsB either.
   if (playing) { setsA = live.liveSetsA; setsB = live.liveSetsB; }
+  // nr/date/time/court are NOT taken from the report: its info is a snapshot
+  // from when it was opened and may be stale — the schedule owns them.
   return {
-    nr: i.nr, date: i.date, time: i.time, court: i.court,
     round: i.round, category: i.category, group: i.group || "", bestOf: i.bestOf,
     teamA: rep.teamA?.name || "", teamB: rep.teamB?.name || "",
     setsA, setsB, pointsA, pointsB, sets, status, ...live,

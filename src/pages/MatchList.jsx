@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { subscribeGames, subscribeReports, subscribeResults, subscribeTeamKits, adminUnlock, runAdvancementAll, purgePublicStartingFive, syncResultShorts } from "../cloud.js";
+import { subscribeGames, subscribeReports, subscribeResults, subscribeTeamKits, adminUnlock, runAdvancementAll, purgePublicStartingFive, syncResultShorts, syncResultSlots } from "../cloud.js";
 import { PALETTE } from "../schedule/ScheduleGrid.jsx";
 import { resolveKit, teamKitsFor } from "../kits.js";
 import { KitSwatch } from "../KitSwatch.jsx";
@@ -65,6 +65,20 @@ export default function MatchList({ me }) {
     });
     if (fixes.length) syncResultShorts(fixes).catch((e) => console.warn("short names sync failed:", e?.code || e));
   }, [games, results, shortOf, isAdmin, archived]);
+
+  // Repair public results whose number/day/time/court drifted from the games
+  // (Fistball Live reads the results): e.g. a súmula opened before a court
+  // change wrote its old court back.
+  useEffect(() => {
+    if (!isAdmin || archived || !games.length) return;
+    const fixes = games.flatMap((g) => {
+      const r = results[g.id];
+      if (!r) return [];
+      const want = { nr: g.nr, date: g.date || "", time: g.time || "", court: g.court ?? "" };
+      return Object.keys(want).some((k) => String(r[k] ?? "") !== String(want[k] ?? "")) ? [{ id: g.id, ...want }] : [];
+    });
+    if (fixes.length) syncResultSlots(fixes).then((n) => console.info(`schedule sync: ${n} public result(s) fixed`)).catch((e) => console.warn("schedule sync failed:", e?.code || e));
+  }, [games, results, isAdmin, archived]);
 
   // Self-heal the bracket: whenever a game finishes, an admin's open Games page
   // fills the knockout slots it feeds (covers submits that couldn't advance).
