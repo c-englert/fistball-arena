@@ -1113,3 +1113,11 @@ body.sumula-full .sidebar, body.sumula-full .sb-scrim, body.sumula-full .appbar 
 .plan-cat { font-size: 12px; margin-right: 4px; }
 .plan-dayrow td { background: #eceef3; }
 .plan-round td { border-top: 2px solid var(--accent, #3a2d6b); }
+
+/* Finish: cards the captains sign */
+.finish-card-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.finish-card-row:last-child { border-bottom: none; }
+.fc-team { min-width: 120px; font-weight: 700; }
+.fc-who { flex: 1; min-width: 160px; }
+.fc-kinds { display: flex; gap: 6px; }
+.fc-chip { height: 30px; min-width: 0; font-size: 13px; cursor: default; }

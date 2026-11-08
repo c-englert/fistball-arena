@@ -1,6 +1,6 @@
 import {
   collection, collectionGroup, doc, getDoc, getDocs, setDoc, onSnapshot,
-  runTransaction, serverTimestamp, updateDoc, writeBatch, deleteDoc, deleteField, arrayUnion, query, where,
+  runTransaction, serverTimestamp, updateDoc, writeBatch, deleteDoc, deleteField, arrayUnion, arrayRemove, query, where,
 } from "firebase/firestore";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { db, auth, googleProvider } from "./firebase.js";
@@ -1209,6 +1209,13 @@ export async function reopenReport(gameId, me, reason) {
 }
 
 /* ----------------- saving ----------------- */
+// Suspended players of a report: { teamA: ["nr|name|first", …], teamB: […] },
+// a field of its own that only an event admin can change (firestore.rules) —
+// the scorer's saves never write it. Works even while a scorer holds the lock.
+export async function setSuspension(gameId, side, key, on) {
+  await updateDoc(edoc("reports", gameId), { [`suspensions.${side}`]: on ? arrayUnion(key) : arrayRemove(key) });
+}
+
 export async function saveReport(gameId, me, patch) {
   await updateDoc(edoc("reports", gameId), {
     ...patch,

@@ -131,7 +131,9 @@ service cloud.firestore {
         allow update: if isActive(eventId) && (isOrgAdmin() || isEventAdmin(eventId)
           || (canWriteReports(eventId)
               && resource.data.get('status', '') != 'submitted'
-              && resource.data.get('amending', false) != true));
+              && resource.data.get('amending', false) != true
+              // suspended players: only an event admin sets or lifts them
+              && request.resource.data.get('suspensions', {}) == resource.data.get('suspensions', {})));
         allow delete: if isActive(eventId) && (isOrgAdmin() || isEventAdmin(eventId));
       }
 

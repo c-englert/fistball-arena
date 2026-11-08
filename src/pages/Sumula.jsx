@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
 import {
   ensureReport, subscribeReport, acquireLock, releaseLock, heartbeat,
-  adminUnlock, reopenReport, saveReport, submitReport, fetchTeamRosters, buildReportSeed,
+  adminUnlock, reopenReport, saveReport, submitReport, setSuspension, fetchTeamRosters, buildReportSeed,
   subscribeReferees, resetReport, saveStartingFive,
 } from "../cloud.js";
 import SumulaPDF from "../pdf/SumulaPDF.jsx";
@@ -56,6 +56,10 @@ export default function Sumula({ me }) {
   // Starting five lives outside the draft: it's edited without the scoring lock
   // and must show live on every device (incl. the scorer holding the lock).
   const [startingFive, setStartingFive] = useState({});
+  const [suspensions, setSuspensions] = useState({});
+  // Suspended: listed in the report's admin-only `suspensions` field (or the
+  // older per-player flag, moved there when an admin opens the report).
+  const isSusp = (side, p) => !!p && ((suspensions[side] || []).includes(fiveKey(p)) || !!p.suspended);
   const holdRef = useRef(false);
   const draftRef = useRef(null);
   const saveTimer = useRef(null);
@@ -96,6 +100,7 @@ export default function Sumula({ me }) {
         }
         setLockedBy(data.lockedBy || null);
         setStartingFive(data.startingFive || {});
+        setSuspensions(data.suspensions || {});
         const done = data.status === "submitted";
         setSubmitted(done);
         const holding = !!data.lockedBy && data.lockedBy.uid === me.uid;
@@ -147,12 +152,9 @@ export default function Sumula({ me }) {
       for (const side of ["teamA", "teamB"]) {
         const r = map[n[side].name];
         if (!r) continue;
-        // Suspensions set by the event head survive a roster reload.
-        const susp = new Set((n[side].players || []).filter((p) => p.suspended).map(fiveKey));
         n[side].players = (r.players || []).map((p) => ({
           nr: p.nr, name: p.name, first: p.first, photo: p.photo || "",
           captain: false, onCourt: false, cards: { y: false, yr: false, r: false },
-          ...(susp.has(fiveKey(p)) ? { suspended: true } : {}),
         }));
         n[side].staff = (r.staff || []).map((s) => ({
           role: s.role, name: s.name, first: s.first, photo: s.photo || "",
@@ -163,7 +165,8 @@ export default function Sumula({ me }) {
   }
 
   async function downloadPDF() {
-    const blob = await pdf(<SumulaPDF draft={draft} branding={branding} event={event} />).toBlob();
+    const mark = (side) => ({ ...draft[side], players: draft[side].players.map((p) => ({ ...p, suspended: isSusp(side, p) })) });
+    const blob = await pdf(<SumulaPDF draft={{ ...draft, teamA: mark("teamA"), teamB: mark("teamB") }} branding={branding} event={event} />).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -217,7 +220,7 @@ export default function Sumula({ me }) {
       const players = draft[side].players || [];
       players.forEach((p, i) => {
         const k = fiveKey(p);
-        if (p.suspended) return; // never put a suspended player on court
+        if (isSusp(side, p)) return; // never put a suspended player on court
         if (before === undefined) {
           if (now.has(k) && !p.onCourt && !players.some((x) => x.onCourt)) changes.push([side, i, true]);
         } else if (now.has(k) && !before.has(k) && !p.onCourt) changes.push([side, i, true]);
@@ -226,7 +229,36 @@ export default function Sumula({ me }) {
     }
     if (changes.length) update((n) => changes.forEach(([side, i, on]) => { if (n[side].players[i]) n[side].players[i].onCourt = on; }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startingFive, readOnly, !!draft]);
+  }, [startingFive, suspensions, readOnly, !!draft]);
+
+  // Move older per-player suspension flags into the admin-only field.
+  const legacyMoved = useRef(false);
+  useEffect(() => {
+    if (!draft || !isAdmin || archived || legacyMoved.current) return;
+    const legacy = ["teamA", "teamB"].flatMap((side) => (draft[side].players || []).filter((p) => p.suspended).map((p) => [side, fiveKey(p)]));
+    if (!legacy.length) return;
+    legacyMoved.current = true;
+    Promise.all(legacy.map(([side, k]) => setSuspension(id, side, k, true))).then(() => {
+      if (!readOnly) update((n) => ["teamA", "teamB"].forEach((side) => n[side].players.forEach((p) => { delete p.suspended; })));
+    }).catch((e) => console.warn("suspension move failed:", e?.code || e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, isAdmin, archived, readOnly]);
+  // Whoever holds the report takes a newly suspended player off court / captaincy.
+  useEffect(() => {
+    if (!draft || readOnly) return;
+    const clash = ["teamA", "teamB"].some((side) => (draft[side].players || []).some((p) => isSusp(side, p) && (p.onCourt || p.captain)));
+    if (clash) update((n) => ["teamA", "teamB"].forEach((side) => n[side].players.forEach((p) => { if (isSusp(side, p)) { p.onCourt = false; p.captain = false; } })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suspensions, draft, readOnly]);
+  const toggleSuspension = async (side, p) => {
+    const on = !isSusp(side, p);
+    if (on && !window.confirm(`Mark #${p.nr} ${p.first || ""} ${p.name} as SUSPENDED for this game? He can't be on court or captain.`)) return;
+    try {
+      await setSuspension(id, side, fiveKey(p), on);
+      if (!on && p.suspended && !readOnly) update((n) => n[side].players.forEach((q) => { if (fiveKey(q) === fiveKey(p)) delete q.suspended; }));
+      if (on && !readOnly) update((n) => n[side].players.forEach((q) => { if (fiveKey(q) === fiveKey(p)) { q.onCourt = false; q.captain = false; } }));
+    } catch (e) { alert("Couldn't save the suspension: " + (e?.code || e?.message || e)); }
+  };
 
   // Media see the starting five in Arena only (viewer access, login) — never
   // on the public Fistball Live. The link opens this game's Starting 5 tab.
@@ -300,18 +332,18 @@ export default function Sumula({ me }) {
         {section === "info" && <InfoSection d={draft} />}
         {section === "lineup" && (
           <LineupSection d={draft} team={team} setTeam={setTeam} update={update} loadRoster={loadRoster} readOnly={readOnly}
-            canSuspend={isAdmin && !archived && !readOnly}
+            canSuspend={isAdmin && !archived} isSusp={isSusp} onToggleSusp={toggleSuspension}
             onFixNames={isAdmin && !archived ? () => nav(`/e/${eventId}/roster`) : null} />
         )}
         {(section === "sfA" || section === "sfB") && (() => {
           const side = section === "sfA" ? "teamA" : "teamB";
-          return <StartingFiveSection team={draft[side]} five={startingFive[side] || {}} canEdit={canEditFive}
+          return <StartingFiveSection team={draft[side]} five={startingFive[side] || {}} canEdit={canEditFive} isSusp={(p) => isSusp(side, p)}
             onChange={(f) => setFive(side, f)} onCopyLink={copyStartLink} />;
         })()}
         {section === "score" && <ScoreSection d={draft} scoring={scoring} update={update} readOnly={readOnly}
           cur={scoreSet} setCur={setScoreSet} />}
         {section === "refs" && <RefsSection d={draft} update={update} refNames={refNames} />}
-        {section === "finish" && <FinishSection d={draft} scoring={scoring} update={update} onPdf={downloadPDF} />}
+        {section === "finish" && <FinishSection d={draft} scoring={scoring} update={update} onPdf={downloadPDF} isSusp={isSusp} />}
       </div>
 
       <div className="bottombar">
@@ -375,7 +407,7 @@ const FIVE_POSITIONS = [
   ["DL", "Defender left"], ["DR", "Defender right"],
 ];
 
-function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink }) {
+function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink, isSusp }) {
   const players = team.players || [];
   const keyOf = (p) => `${p.nr}|${p.name}|${p.first}`;
   const takenElsewhere = (pos) => new Set(Object.entries(five).filter(([k, v]) => k !== pos && v).map(([, v]) => keyOf(v)));
@@ -398,13 +430,13 @@ function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink }) {
           <select value={v ? keyOf(v) : ""} onChange={(e) => pick(pos, e.target.value)} aria-label={label}>
             <option value="">—</option>
             {players.map((p) => (
-              <option key={keyOf(p)} value={keyOf(p)} disabled={taken.has(keyOf(p)) || p.suspended}>#{p.nr} {p.name} {p.first}{p.suspended ? " — suspended" : ""}</option>
+              <option key={keyOf(p)} value={keyOf(p)} disabled={taken.has(keyOf(p)) || isSusp(p)}>#{p.nr} {p.name} {p.first}{isSusp(p) ? " — suspended" : ""}</option>
             ))}
           </select>
         ) : v ? (
           <div className="sf-player"><b>#{v.nr}</b> {v.name} {v.first}</div>
         ) : <div className="sf-player muted-sm">—</div>}
-        {v && players.some((p) => keyOf(p) === keyOf(v) && p.suspended) ? <div className="susp-badge">⛔ Suspended — pick another player</div> : null}
+        {v && players.some((p) => keyOf(p) === keyOf(v) && isSusp(p)) ? <div className="susp-badge">⛔ Suspended — pick another player</div> : null}
       </div>
     );
   };
@@ -432,18 +464,15 @@ function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink }) {
   );
 }
 
-function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNames, canSuspend }) {
+function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNames, canSuspend, isSusp, onToggleSusp }) {
   const t = d[team];
+  const susp = (p) => isSusp(team, p);
   const toggleCaptain = (i) =>
-    update((n) => n[team].players.forEach((p, j) => (p.captain = j === i && !p.suspended ? !p.captain : false)));
-  const toggleOC = (i) => update((n) => { const p = n[team].players[i]; p.onCourt = !p.suspended && !p.onCourt; });
+    update((n) => n[team].players.forEach((p, j) => (p.captain = j === i && !susp(p) ? !p.captain : false)));
+  const toggleOC = (i) => update((n) => { const p = n[team].players[i]; p.onCourt = !susp(p) && !p.onCourt; });
   // Event head (admin) marks a player suspended (e.g. sent off last game): he
   // stays on the list but can't be captain, on court or in the starting five.
-  const toggleSuspended = (i) => {
-    const p = t.players[i];
-    if (!p.suspended && !window.confirm(`Mark #${p.nr} ${p.first || ""} ${p.name} as SUSPENDED for this game? He can't be on court or captain.`)) return;
-    update((n) => { const q = n[team].players[i]; q.suspended = !q.suspended; if (q.suspended) { q.onCourt = false; q.captain = false; } });
-  };
+  const toggleSuspended = (i) => onToggleSusp(team, t.players[i]);
   const toggleCard = (list, i, kind) =>
     update((n) => (n[team][list][i].cards[kind] = !n[team][list][i].cards[kind]));
 
@@ -474,23 +503,23 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNa
           </div>
         )}
         {t.players.map((p, i) => (
-          <div className={`player ${p.suspended ? "suspended" : ""}`} key={i}>
+          <div className={`player ${susp(p) ? "suspended" : ""}`} key={i}>
             <div className="player-id">
               <PlayerAvatar src={p.photo} name={p.name} />
               <div className="pnr">{p.nr}</div>
               <div className="pname">
                 <div className="sur">{p.name}</div>
                 <div className="giv">{p.first}</div>
-                {p.suspended && <div className="susp-badge">⛔ Suspended</div>}
+                {susp(p) && <div className="susp-badge">⛔ Suspended</div>}
               </div>
             </div>
             <div className="player-controls">
               {canSuspend && (
-                <button className={`chip susp ${p.suspended ? "on" : ""}`} onClick={() => toggleSuspended(i)}
-                  title={p.suspended ? "Lift the suspension" : "Mark as suspended for this game (event head)"}>{p.suspended ? "Unsuspend" : "Suspend"}</button>
+                <button className={`chip susp ${susp(p) ? "on" : ""}`} onClick={() => toggleSuspended(i)}
+                  title={susp(p) ? "Lift the suspension" : "Mark as suspended for this game (event head)"}>{susp(p) ? "Unsuspend" : "Suspend"}</button>
               )}
-              <button className={`chip cap ${p.captain ? "on" : ""}`} disabled={p.suspended} onClick={() => toggleCaptain(i)}>C</button>
-              <button className={`chip oc ${p.onCourt ? "on" : ""}`} disabled={p.suspended} onClick={() => toggleOC(i)}>OC</button>
+              <button className={`chip cap ${p.captain ? "on" : ""}`} disabled={susp(p)} onClick={() => toggleCaptain(i)}>C</button>
+              <button className={`chip oc ${p.onCourt ? "on" : ""}`} disabled={susp(p)} onClick={() => toggleOC(i)}>OC</button>
               <div className="card-chips">
                 {["y", "yr", "r"].map((k) => (
                   <button key={k} className={`chip ${k} ${p.cards[k] ? "on" : ""}`} onClick={() => toggleCard("players", i, k)}>
@@ -744,8 +773,15 @@ function RefsSection({ d, update, refNames = [] }) {
   );
 }
 
-function FinishSection({ d, scoring, update, onPdf }) {
+const CARD_LABEL = { y: "Yellow", yr: "Yellow-red", r: "Red" };
+function FinishSection({ d, scoring, update, onPdf, isSusp }) {
   const sign = (k) => update((n) => (n.signatures[k] = !n.signatures[k]));
+  // Everything the captains sign besides the score: cards and suspensions.
+  const carded = ["teamA", "teamB"].flatMap((side) => [
+    ...(d[side].players || []).map((p) => ({ side, p, staff: false })),
+    ...(d[side].staff || []).map((p) => ({ side, p, staff: true })),
+  ]).map((x) => ({ ...x, kinds: ["y", "yr", "r"].filter((k) => x.p.cards?.[k]) })).filter((x) => x.kinds.length);
+  const suspended = ["teamA", "teamB"].flatMap((side) => (d[side].players || []).filter((p) => isSusp(side, p)).map((p) => ({ side, p })));
   return (
     <>
       <div className="card">
@@ -756,6 +792,24 @@ function FinishSection({ d, scoring, update, onPdf }) {
         <p style={{ color: "var(--muted)" }}>
           {d.sets.map((s) => { const { a, b } = setScore(s); return a + b ? `${a}:${b}` : null; }).filter(Boolean).join("  ·  ") || "No sets recorded yet"}
         </p>
+      </div>
+
+      <div className="card">
+        <h2>Cards</h2>
+        {carded.length === 0 ? <p className="muted-sm">No cards in this game.</p> : (
+          <div className="finish-cards">
+            {carded.map(({ side, p, staff, kinds }, i) => (
+              <div className="finish-card-row" key={i}>
+                <span className="fc-team"><span className="flag">{flagFor(d[side].name)}</span>{short(d[side].name)}</span>
+                <span className="fc-who">{staff ? <span className="muted-sm">{p.role || "Staff"}</span> : <b>#{p.nr}</b>} {p.first} {p.name}</span>
+                <span className="fc-kinds">{kinds.map((k) => <span key={k} className={`chip ${k} on fc-chip`}>{CARD_LABEL[k]}</span>)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {suspended.length > 0 && (
+          <p style={{ marginTop: 10 }}>⛔ <b>Suspended</b> (did not play): {suspended.map(({ side, p }) => `#${p.nr} ${p.first || ""} ${p.name} (${short(d[side].name)})`).join(" · ")}</p>
+        )}
       </div>
 
       {(d.amendments || []).length > 0 && (
