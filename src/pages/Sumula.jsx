@@ -147,9 +147,12 @@ export default function Sumula({ me }) {
       for (const side of ["teamA", "teamB"]) {
         const r = map[n[side].name];
         if (!r) continue;
+        // Suspensions set by the event head survive a roster reload.
+        const susp = new Set((n[side].players || []).filter((p) => p.suspended).map(fiveKey));
         n[side].players = (r.players || []).map((p) => ({
           nr: p.nr, name: p.name, first: p.first, photo: p.photo || "",
           captain: false, onCourt: false, cards: { y: false, yr: false, r: false },
+          ...(susp.has(fiveKey(p)) ? { suspended: true } : {}),
         }));
         n[side].staff = (r.staff || []).map((s) => ({
           role: s.role, name: s.name, first: s.first, photo: s.photo || "",
@@ -214,6 +217,7 @@ export default function Sumula({ me }) {
       const players = draft[side].players || [];
       players.forEach((p, i) => {
         const k = fiveKey(p);
+        if (p.suspended) return; // never put a suspended player on court
         if (before === undefined) {
           if (now.has(k) && !p.onCourt && !players.some((x) => x.onCourt)) changes.push([side, i, true]);
         } else if (now.has(k) && !before.has(k) && !p.onCourt) changes.push([side, i, true]);
@@ -296,6 +300,7 @@ export default function Sumula({ me }) {
         {section === "info" && <InfoSection d={draft} />}
         {section === "lineup" && (
           <LineupSection d={draft} team={team} setTeam={setTeam} update={update} loadRoster={loadRoster} readOnly={readOnly}
+            canSuspend={isAdmin && !archived && !readOnly}
             onFixNames={isAdmin && !archived ? () => nav(`/e/${eventId}/roster`) : null} />
         )}
         {(section === "sfA" || section === "sfB") && (() => {
@@ -393,12 +398,13 @@ function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink }) {
           <select value={v ? keyOf(v) : ""} onChange={(e) => pick(pos, e.target.value)} aria-label={label}>
             <option value="">—</option>
             {players.map((p) => (
-              <option key={keyOf(p)} value={keyOf(p)} disabled={taken.has(keyOf(p))}>#{p.nr} {p.name} {p.first}</option>
+              <option key={keyOf(p)} value={keyOf(p)} disabled={taken.has(keyOf(p)) || p.suspended}>#{p.nr} {p.name} {p.first}{p.suspended ? " — suspended" : ""}</option>
             ))}
           </select>
         ) : v ? (
           <div className="sf-player"><b>#{v.nr}</b> {v.name} {v.first}</div>
         ) : <div className="sf-player muted-sm">—</div>}
+        {v && players.some((p) => keyOf(p) === keyOf(v) && p.suspended) ? <div className="susp-badge">⛔ Suspended — pick another player</div> : null}
       </div>
     );
   };
@@ -426,11 +432,18 @@ function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink }) {
   );
 }
 
-function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNames }) {
+function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNames, canSuspend }) {
   const t = d[team];
   const toggleCaptain = (i) =>
-    update((n) => n[team].players.forEach((p, j) => (p.captain = j === i ? !p.captain : false)));
-  const toggleOC = (i) => update((n) => (n[team].players[i].onCourt = !n[team].players[i].onCourt));
+    update((n) => n[team].players.forEach((p, j) => (p.captain = j === i && !p.suspended ? !p.captain : false)));
+  const toggleOC = (i) => update((n) => { const p = n[team].players[i]; p.onCourt = !p.suspended && !p.onCourt; });
+  // Event head (admin) marks a player suspended (e.g. sent off last game): he
+  // stays on the list but can't be captain, on court or in the starting five.
+  const toggleSuspended = (i) => {
+    const p = t.players[i];
+    if (!p.suspended && !window.confirm(`Mark #${p.nr} ${p.first || ""} ${p.name} as SUSPENDED for this game? He can't be on court or captain.`)) return;
+    update((n) => { const q = n[team].players[i]; q.suspended = !q.suspended; if (q.suspended) { q.onCourt = false; q.captain = false; } });
+  };
   const toggleCard = (list, i, kind) =>
     update((n) => (n[team][list][i].cards[kind] = !n[team][list][i].cards[kind]));
 
@@ -461,18 +474,23 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNa
           </div>
         )}
         {t.players.map((p, i) => (
-          <div className="player" key={i}>
+          <div className={`player ${p.suspended ? "suspended" : ""}`} key={i}>
             <div className="player-id">
               <PlayerAvatar src={p.photo} name={p.name} />
               <div className="pnr">{p.nr}</div>
               <div className="pname">
                 <div className="sur">{p.name}</div>
                 <div className="giv">{p.first}</div>
+                {p.suspended && <div className="susp-badge">⛔ Suspended</div>}
               </div>
             </div>
             <div className="player-controls">
-              <button className={`chip cap ${p.captain ? "on" : ""}`} onClick={() => toggleCaptain(i)}>C</button>
-              <button className={`chip oc ${p.onCourt ? "on" : ""}`} onClick={() => toggleOC(i)}>OC</button>
+              {canSuspend && (
+                <button className={`chip susp ${p.suspended ? "on" : ""}`} onClick={() => toggleSuspended(i)}
+                  title={p.suspended ? "Lift the suspension" : "Mark as suspended for this game (event head)"}>{p.suspended ? "Unsuspend" : "Suspend"}</button>
+              )}
+              <button className={`chip cap ${p.captain ? "on" : ""}`} disabled={p.suspended} onClick={() => toggleCaptain(i)}>C</button>
+              <button className={`chip oc ${p.onCourt ? "on" : ""}`} disabled={p.suspended} onClick={() => toggleOC(i)}>OC</button>
               <div className="card-chips">
                 {["y", "yr", "r"].map((k) => (
                   <button key={k} className={`chip ${k} ${p.cards[k] ? "on" : ""}`} onClick={() => toggleCard("players", i, k)}>

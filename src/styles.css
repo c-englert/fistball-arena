@@ -316,6 +316,12 @@ details.adv-tool[open] > summary { margin-bottom: 6px; }
 .chip.on { color: #fff; }
 .chip.cap.on { background: var(--brand); border-color: var(--brand); }
 .chip.oc.on { background: var(--accent); border-color: var(--accent); }
+.chip:disabled { opacity: .35; cursor: not-allowed; }
+.chip.susp { font-size: 13px; color: #c62828; border-color: #f2b8b8; }
+.chip.susp.on { background: #c62828; border-color: #c62828; color: #fff; }
+.player.suspended { background: #fdecec; }
+.player.suspended .pname .sur, .player.suspended .pnr { text-decoration: line-through; color: #c62828; }
+.susp-badge { display: inline-block; margin-top: 2px; font-size: 12px; font-weight: 800; color: #c62828; text-transform: uppercase; letter-spacing: .03em; }
 .card-chips { display: flex; gap: 6px; flex: none; }
 .chip.y.on { background: var(--y); color: #3a2e0a; border-color: var(--y); }
 .chip.yr.on { background: var(--yr); color: #fff; border-color: transparent; }

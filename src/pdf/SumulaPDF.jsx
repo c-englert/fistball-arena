@@ -95,7 +95,7 @@ function TeamColumn({ team, side }) {
         <View style={s.pRow} key={i}>
           <Text style={s.pC}>{p.captain ? "C" : ""}</Text>
           <Text style={s.pNr}>{p.nr}</Text>
-          <Text style={s.pName}>{p.name}{p.first ? ", " + p.first : ""}</Text>
+          <Text style={s.pName}>{p.name}{p.first ? ", " + p.first : ""}{p.suspended ? "  (SUSPENDED)" : ""}</Text>
           <View style={s.pOC}>{p.onCourt ? <View style={s.pOCdot} /> : null}</View>
           <Card kind="y" on={p.cards?.y} />
           <Card kind="yr" on={p.cards?.yr} />
