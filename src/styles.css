@@ -1146,3 +1146,6 @@ tr.fr-skip td { opacity: .45; }
   .fr-doc h2 { break-after: avoid; }
   .fr-table, .fr-rank { break-inside: avoid; }
 }
+
+/* Súmula language picker */
+.lang-pick { font: inherit; font-size: 13px; font-weight: 700; padding: 5px 6px; border-radius: 8px; border: 1px solid var(--line, #d6d9e0); background: var(--card, #fff); color: inherit; cursor: pointer; }

@@ -35,6 +35,7 @@ function fmtStamp(iso) {
 
 const fromEvent = (ev) => ({
   name: ev?.name || "", place: ev?.place || "", address: ev?.address || "", startDate: ev?.startDate || "", endDate: ev?.endDate || "",
+  reportLanguage: ev?.reportLanguage || "", // second official language of the game report PDF ("" = English only)
   categoryBuilder: ev?.categoryBuilder || { types: [], sexes: [], ages: [] },
   entries: ev?.entries || [], // [{ name, cats: [categoryName…] }]
   formatOverrides: ev?.formatOverrides || {}, // { [category]: { [matchId]: { a?, b? } } }
@@ -415,6 +416,17 @@ export default function Settings({ me }) {
               <input type="date" disabled={archived} min={details.startDate || undefined} value={details.endDate} onChange={(e) => edit((d) => ({ ...d, endDate: e.target.value }))} /></div>
           </div>
           {(details.startDate || details.endDate) && <p className="muted-sm">{formatRange(details.startDate, details.endDate)}</p>}
+          <div className="field"><span>Official languages (game report PDF)</span>
+            <select value={details.reportLanguage} disabled={archived} onChange={(e) => {
+              const v = e.target.value;
+              edit((d) => ({ ...d, reportLanguage: v }));
+              updateEventFields({ reportLanguage: v }).then(() => setStatus("Official languages saved.")).catch((err) => setStatus("Save failed: " + (err?.message || err)));
+            }}>
+              <option value="">English</option>
+              <option value="es">English + Español (e.g. PAFA)</option>
+              <option value="de">English + Deutsch (e.g. IFA)</option>
+              <option value="pt">English + Português</option>
+            </select></div>
           {!archived && <button className="btn primary" onClick={saveDetails}>Save details</button>}
         </Step>
 

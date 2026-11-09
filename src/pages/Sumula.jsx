@@ -10,6 +10,7 @@ import SumulaPDF from "../pdf/SumulaPDF.jsx";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 import { overlayUrl } from "../broadcast.js";
+import { LANGS, makeT, tRound, useLang, localeOf } from "../i18n.js";
 
 const SECTIONS = [
   ["info", "Info"],
@@ -25,6 +26,11 @@ export default function Sumula({ me }) {
   const { id } = useParams();
   const nav = useNavigate();
   const { eventId, event, canScore, isAdmin, branding, archived } = useEvent();
+  const [lang, setLang] = useLang();
+  const t = makeT(lang);
+  // PDF: English plus the event's second official language (Settings), or as picked here.
+  const [pdfLang, setPdfLang] = useState(null);
+  const pdfSecond = pdfLang ?? (event?.reportLanguage || "");
   const [draft, setDraft] = useState(null);
   const [lockedBy, setLockedBy] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -147,7 +153,7 @@ export default function Sumula({ me }) {
     if (readOnly) return;
     const cur = draftRef.current;
     const map = await fetchTeamRosters([cur.teamA.name, cur.teamB.name], cur.info?.category);
-    if (!Object.keys(map).length) { alert("No roster found for these teams. Import players in the Teams page first."); return; }
+    if (!Object.keys(map).length) { alert(t("No roster found for these teams. Import players in the Teams page first.")); return; }
     update((n) => {
       for (const side of ["teamA", "teamB"]) {
         const r = map[n[side].name];
@@ -166,7 +172,7 @@ export default function Sumula({ me }) {
 
   async function downloadPDF() {
     const mark = (side) => ({ ...draft[side], players: draft[side].players.map((p) => ({ ...p, suspended: isSusp(side, p) })) });
-    const blob = await pdf(<SumulaPDF draft={{ ...draft, teamA: mark("teamA"), teamB: mark("teamB") }} branding={branding} event={event} />).toBlob();
+    const blob = await pdf(<SumulaPDF draft={{ ...draft, teamA: mark("teamA"), teamB: mark("teamB") }} branding={branding} event={event} second={pdfSecond} />).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -191,11 +197,11 @@ export default function Sumula({ me }) {
 
   // Admin-only amendment of a submitted report (e.g. a card removed after review).
   async function reopenToAmend() {
-    const reason = window.prompt("Reason for amending this submitted report (e.g. “Yellow card #7 removed after review”):", "");
+    const reason = window.prompt(t("Reason for amending this submitted report (e.g. “Yellow card #7 removed after review”):"), "");
     if (reason === null) return;
-    if (!reason.trim()) { alert("Please give a reason — it is logged on the report."); return; }
+    if (!reason.trim()) { alert(t("Please give a reason — it is logged on the report.")); return; }
     try { await reopenReport(id, me, reason.trim()); await acquireLock(id, me); }
-    catch (e) { alert("Could not reopen: " + (e?.message || e)); }
+    catch (e) { alert(t("Could not reopen: ") + (e?.message || e)); }
   }
 
   // Referee or event head (official/admin) edits the starting five; after
@@ -203,7 +209,7 @@ export default function Sumula({ me }) {
   const canEditFive = canScore && !archived && (!submitted || isAdmin);
   const setFive = (side, five) => {
     setStartingFive((cur) => ({ ...cur, [side]: five }));
-    saveStartingFive(id, side, five).catch((e) => alert("Couldn't save the starting five: " + (e?.code || e?.message || e)));
+    saveStartingFive(id, side, five).catch((e) => alert(t("Couldn't save the starting five: ") + (e?.code || e?.message || e)));
   };
   // Starting 5 → OC in the line-up: players put in (or taken out of) the five
   // get OC switched on (off). Only changes are applied, so later substitutions
@@ -252,12 +258,12 @@ export default function Sumula({ me }) {
   }, [suspensions, draft, readOnly]);
   const toggleSuspension = async (side, p) => {
     const on = !isSusp(side, p);
-    if (on && !window.confirm(`Mark #${p.nr} ${p.first || ""} ${p.name} as SUSPENDED for this game? He can't be on court or captain.`)) return;
+    if (on && !window.confirm(t("Mark #{nr} {name} as SUSPENDED for this game? He can't be on court or captain.", { nr: p.nr, name: `${p.first || ""} ${p.name}`.trim() }))) return;
     try {
       await setSuspension(id, side, fiveKey(p), on);
       if (!on && p.suspended && !readOnly) update((n) => n[side].players.forEach((q) => { if (fiveKey(q) === fiveKey(p)) delete q.suspended; }));
       if (on && !readOnly) update((n) => n[side].players.forEach((q) => { if (fiveKey(q) === fiveKey(p)) { q.onCourt = false; q.captain = false; } }));
-    } catch (e) { alert("Couldn't save the suspension: " + (e?.code || e?.message || e)); }
+    } catch (e) { alert(t("Couldn't save the suspension: ") + (e?.code || e?.message || e)); }
   };
 
   // Media see the starting five in Arena only (viewer access, login) — never
@@ -274,23 +280,26 @@ export default function Sumula({ me }) {
     catch (_) { window.prompt("Broadcast link (copy it):", url); }
   }
 
-  if (!draft) return <div className="empty">Loading…</div>;
+  if (!draft) return <div className="empty">{t("Loading…")}</div>;
 
   return (
     <>
       <div className="page-h game-h">
-        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>‹ Games</button>
+        <button className="iconbtn" onClick={() => nav(`/e/${eventId}`)}>{t("‹ Games")}</button>
         <div>
-          <div className="gh-title">#{draft.info.nr} · {short(draft.teamA.name)} vs {short(draft.teamB.name)}</div>
-          <div className="gh-sub">{draft.info.time} · Court {draft.info.court} · Best of {draft.info.bestOf}</div>
+          <div className="gh-title">#{draft.info.nr} · {short(draft.teamA.name)} {t("vs")} {short(draft.teamB.name)}</div>
+          <div className="gh-sub">{draft.info.time} · {t("Court {c}", { c: draft.info.court })} · {t("Best of {n}", { n: draft.info.bestOf })}</div>
         </div>
         <div className="gh-actions">
-          <button className="btn sm" onClick={toggleFull} title={full ? "Show the menu again" : "Hide the menu — more room for the score sheet"}>
-            {full ? "✕ Exit full screen" : "⛶ Full screen"}
+          <select className="lang-pick" value={lang} onChange={(e) => setLang(e.target.value)} title={t("Language")} aria-label={t("Language")}>
+            {LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+          </select>
+          <button className="btn sm" onClick={toggleFull} title={t(full ? "Show the menu again" : "Hide the menu — more room for the score sheet")}>
+            {t(full ? "✕ Exit full screen" : "⛶ Full screen")}
           </button>
-          <button className="btn sm" onClick={copyOverlay} title="Copy the live scoreboard link for this game (OBS/vMix browser source)">📺 Broadcast link</button>
+          <button className="btn sm" onClick={copyOverlay} title={t("Copy the live scoreboard link for this game (OBS/vMix browser source)")}>{t("📺 Broadcast link")}</button>
           {isAdmin && !archived && (
-            <button className="btn danger sm" onClick={resetThis} title="Clear only this game report">Reset this report</button>
+            <button className="btn danger sm" onClick={resetThis} title={t("Clear only this game report")}>{t("Reset this report")}</button>
           )}
         </div>
       </div>
@@ -299,23 +308,23 @@ export default function Sumula({ me }) {
         <div className="lockbar">
           <span>
             {submitted
-              ? `✓ This report was submitted — read only.${isAdmin ? "" : " Only an event admin can amend it."}`
+              ? `${t("✓ This report was submitted — read only.")}${isAdmin ? "" : " " + t("Only an event admin can amend it.")}`
               : archived
-                ? "📦 This event is archived — read only. Re-activate it in Settings → Event status to score."
+                ? t("📦 This event is archived — read only. Re-activate it in Settings → Event status to score.")
                 : !canScore
-                  ? "👁 Read only — you don’t have scoring access for this event."
+                  ? t("👁 Read only — you don’t have scoring access for this event.")
                   : lockedBy && lockedBy.uid !== me.uid
-                    ? `🔒 Being scored by ${lockedBy?.name || "another official"} — read only.`
-                    : "🔓 Read only — reload the page to start scoring (the lock wasn’t acquired)."}
+                    ? t("🔒 Being scored by {name} — read only.", { name: lockedBy?.name || t("another official") })
+                    : t("🔓 Read only — reload the page to start scoring (the lock wasn’t acquired).")}
           </span>
           {me.admin && !submitted && !archived && lockedBy && lockedBy.uid !== me.uid && (
-            <button className="btn danger sm" onClick={() => adminUnlock(id)}>Admin unlock</button>
+            <button className="btn danger sm" onClick={() => adminUnlock(id)}>{t("Admin unlock")}</button>
           )}
           {isAdmin && submitted && !archived && (
-            <button className="btn sm" onClick={reopenToAmend} title="Event admins only — logged with your name and the reason">Reopen to amend</button>
+            <button className="btn sm" onClick={reopenToAmend} title={t("Event admins only — logged with your name and the reason")}>{t("Reopen to amend")}</button>
           )}
           {archived && me.admin && (
-            <button className="btn sm" onClick={() => nav(`/e/${eventId}/settings`)}>Open Settings</button>
+            <button className="btn sm" onClick={() => nav(`/e/${eventId}/settings`)}>{t("Open Settings")}</button>
           )}
         </div>
       )}
@@ -323,38 +332,39 @@ export default function Sumula({ me }) {
       <nav className="steps">
         {SECTIONS.map(([k, label]) => (
           <button key={k} className={`step ${section === k ? "active" : ""}`} onClick={() => setSection(k)}>
-            {k === "sfA" ? `Starting 5 · ${short(draft.teamA.name)}` : k === "sfB" ? `Starting 5 · ${short(draft.teamB.name)}` : label}
+            {k === "sfA" ? t("Starting 5 · {team}", { team: short(draft.teamA.name) }) : k === "sfB" ? t("Starting 5 · {team}", { team: short(draft.teamB.name) }) : t(label)}
           </button>
         ))}
       </nav>
 
       <div>
-        {section === "info" && <InfoSection d={draft} />}
+        {section === "info" && <InfoSection d={draft} t={t} lang={lang} />}
         {section === "lineup" && (
-          <LineupSection d={draft} team={team} setTeam={setTeam} update={update} loadRoster={loadRoster} readOnly={readOnly}
+          <LineupSection t={t} d={draft} team={team} setTeam={setTeam} update={update} loadRoster={loadRoster} readOnly={readOnly}
             canSuspend={isAdmin && !archived} isSusp={isSusp} onToggleSusp={toggleSuspension}
             onFixNames={isAdmin && !archived ? () => nav(`/e/${eventId}/roster`) : null} />
         )}
         {(section === "sfA" || section === "sfB") && (() => {
           const side = section === "sfA" ? "teamA" : "teamB";
-          return <StartingFiveSection team={draft[side]} five={startingFive[side] || {}} canEdit={canEditFive} isSusp={(p) => isSusp(side, p)}
+          return <StartingFiveSection t={t} team={draft[side]} five={startingFive[side] || {}} canEdit={canEditFive} isSusp={(p) => isSusp(side, p)}
             onChange={(f) => setFive(side, f)} onCopyLink={copyStartLink} />;
         })()}
-        {section === "score" && <ScoreSection d={draft} scoring={scoring} update={update} readOnly={readOnly}
+        {section === "score" && <ScoreSection t={t} d={draft} scoring={scoring} update={update} readOnly={readOnly}
           cur={scoreSet} setCur={setScoreSet} />}
-        {section === "refs" && <RefsSection d={draft} update={update} refNames={refNames} />}
-        {section === "finish" && <FinishSection d={draft} scoring={scoring} update={update} onPdf={downloadPDF} isSusp={isSusp} />}
+        {section === "refs" && <RefsSection t={t} d={draft} update={update} refNames={refNames} />}
+        {section === "finish" && <FinishSection t={t} lang={lang} d={draft} scoring={scoring} update={update} onPdf={downloadPDF} isSusp={isSusp}
+          pdfSecond={pdfSecond} setPdfSecond={setPdfLang} />}
       </div>
 
       <div className="bottombar">
         <span className="status">
-          {submitted ? "✓ Submitted" : readOnly ? "Read only" : saving ? "Saving…" : "✓ Saved (live)"}
+          {t(submitted ? "✓ Submitted" : readOnly ? "Read only" : saving ? "Saving…" : "✓ Saved (live)")}
         </span>
         {section !== "finish" ? (
-          <button className="btn primary" onClick={() => setSection(nextSection(section))}>Next ›</button>
+          <button className="btn primary" onClick={() => setSection(nextSection(section))}>{t("Next ›")}</button>
         ) : (
           <button className="btn primary" disabled={readOnly} onClick={() => submitReport(id, me)}>
-            {submitted ? "Submitted" : "Submit report"}
+            {t(submitted ? "Submitted" : "Submit report")}
           </button>
         )}
       </div>
@@ -364,13 +374,13 @@ export default function Sumula({ me }) {
 
 /* ---------------- sections ---------------- */
 
-function InfoSection({ d }) {
+function InfoSection({ d, t, lang }) {
   const rows = [
     ["Match Nr", "#" + d.info.nr],
     ["Date", d.info.date],
     ["Time", d.info.time],
     ["Court", d.info.court],
-    ["Round", d.info.round],
+    ["Round", tRound(lang, d.info.round)],
     ["Category", d.info.category],
     ["Best of", d.info.bestOf],
     ["Team A", d.teamA.name],
@@ -378,17 +388,17 @@ function InfoSection({ d }) {
   ];
   return (
     <div className="card">
-      <h2>Match information</h2>
+      <h2>{t("Match information")}</h2>
       <div className="grid2">
         {rows.map(([k, v]) => (
           <div className="field" key={k}>
-            <label>{k}</label>
+            <label>{t(k)}</label>
             <div className="readonly">{v}</div>
           </div>
         ))}
       </div>
       <p style={{ color: "var(--muted)", fontSize: 14 }}>
-        Round &amp; category come from the schedule; the rest is filled in the next tabs.
+        {t("Round & category come from the schedule; the rest is filled in the next tabs.")}
       </p>
     </div>
   );
@@ -407,7 +417,7 @@ const FIVE_POSITIONS = [
   ["DL", "Defender left"], ["DR", "Defender right"],
 ];
 
-function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink, isSusp }) {
+function StartingFiveSection({ t, team, five, canEdit, onChange, onCopyLink, isSusp }) {
   const players = team.players || [];
   const keyOf = (p) => `${p.nr}|${p.name}|${p.first}`;
   const takenElsewhere = (pos) => new Set(Object.entries(five).filter(([k, v]) => k !== pos && v).map(([, v]) => keyOf(v)));
@@ -425,46 +435,46 @@ function StartingFiveSection({ team, five, canEdit, onChange, onCopyLink, isSusp
     const taken = takenElsewhere(pos);
     return (
       <div className={`sf-slot ${v ? "on" : ""}`} key={pos}>
-        <div className="sf-pos">{label}</div>
+        <div className="sf-pos">{t(label)}</div>
         {canEdit ? (
-          <select value={v ? keyOf(v) : ""} onChange={(e) => pick(pos, e.target.value)} aria-label={label}>
+          <select value={v ? keyOf(v) : ""} onChange={(e) => pick(pos, e.target.value)} aria-label={t(label)}>
             <option value="">—</option>
             {players.map((p) => (
-              <option key={keyOf(p)} value={keyOf(p)} disabled={taken.has(keyOf(p)) || isSusp(p)}>#{p.nr} {p.name} {p.first}{isSusp(p) ? " — suspended" : ""}</option>
+              <option key={keyOf(p)} value={keyOf(p)} disabled={taken.has(keyOf(p)) || isSusp(p)}>#{p.nr} {p.name} {p.first}{isSusp(p) ? " " + t("— suspended") : ""}</option>
             ))}
           </select>
         ) : v ? (
           <div className="sf-player"><b>#{v.nr}</b> {v.name} {v.first}</div>
         ) : <div className="sf-player muted-sm">—</div>}
-        {v && players.some((p) => keyOf(p) === keyOf(v) && isSusp(p)) ? <div className="susp-badge">⛔ Suspended — pick another player</div> : null}
+        {v && players.some((p) => keyOf(p) === keyOf(v) && isSusp(p)) ? <div className="susp-badge">{t("⛔ Suspended — pick another player")}</div> : null}
       </div>
     );
   };
   return (
     <div className="card">
       <div className="row-between">
-        <h2 style={{ margin: 0 }}>Starting 5 — {short(team.name)}</h2>
-        <button className="btn sm" onClick={onCopyLink} title="Link to this tab in Arena for media — they need viewer access to the event">🔗 Link for media</button>
+        <h2 style={{ margin: 0 }}>{t("Starting 5 — {team}", { team: short(team.name) })}</h2>
+        <button className="btn sm" onClick={onCopyLink} title={t("Link to this tab in Arena for media — they need viewer access to the event")}>{t("🔗 Link for media")}</button>
       </div>
       <p className="muted-sm">
         {canEdit
-          ? "Fill in with the coach before the game: who starts and in which position. Saved instantly. Internal only — never shown on Fistball Live; media see it here with viewer access."
-          : "Read only — the referee or the event head fills this in."}
-        {" "}{filled}/5 positions set.
+          ? t("Fill in with the coach before the game: who starts and in which position. Saved instantly. Internal only — never shown on Fistball Live; media see it here with viewer access.")
+          : t("Read only — the referee or the event head fills this in.")}
+        {" "}{t("{n}/5 positions set.", { n: filled })}
       </p>
-      {canEdit && !players.length && <div className="warn-box">No line-up loaded for this team yet — load the roster in Line-ups first.</div>}
+      {canEdit && !players.length && <div className="warn-box">{t("No line-up loaded for this team yet — load the roster in Line-ups first.")}</div>}
       <div className="sf-court">
-        <div className="sf-net">NET</div>
+        <div className="sf-net">{t("NET")}</div>
         <div className="sf-row">{slot("AL", "Attacker left")}{slot("AR", "Attacker right")}</div>
         <div className="sf-row center">{slot("C", "Centre")}</div>
         <div className="sf-row">{slot("DL", "Defender left")}{slot("DR", "Defender right")}</div>
       </div>
-      {canEdit && filled > 0 && <button className="btn sm" style={{ marginTop: 10 }} onClick={() => onChange({})}>Clear all</button>}
+      {canEdit && filled > 0 && <button className="btn sm" style={{ marginTop: 10 }} onClick={() => onChange({})}>{t("Clear all")}</button>}
     </div>
   );
 }
 
-function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNames, canSuspend, isSusp, onToggleSusp }) {
+function LineupSection({ t: tr, d, team, setTeam, update, loadRoster, readOnly, onFixNames, canSuspend, isSusp, onToggleSusp }) {
   const t = d[team];
   const susp = (p) => isSusp(team, p);
   const toggleCaptain = (i) =>
@@ -489,17 +499,17 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNa
 
       <div className="card">
         <div className="row-between">
-          <h2 style={{ margin: 0 }}>Players — tap C (captain), OC (on court), or a card</h2>
-          {!readOnly && <button className="btn sm" onClick={loadRoster} title="Fill both line-ups from the Teams registry">↻ Load roster</button>}
+          <h2 style={{ margin: 0 }}>{tr("Players — tap C (captain), OC (on court), or a card")}</h2>
+          {!readOnly && <button className="btn sm" onClick={loadRoster} title={tr("Fill both line-ups from the Teams registry")}>{tr("↻ Load roster")}</button>}
         </div>
         <div style={{ height: 12 }} />
         {t.players.length === 0 && (
           <div className="warn-box" style={{ marginBottom: 10 }}>
-            ⚠️ No line-up loaded for {short(t.name)}.{" "}
+            {tr("⚠️ No line-up loaded for {team}.", { team: short(t.name) })}{" "}
             {readOnly
-              ? "Read-only access — the roster couldn't be loaded (event archived or you're not a member of this event)."
-              : <>Players are found by the team's <b>exact</b> name — “{t.name}” must be spelled the same in Players &amp; staff ({d.info?.category}). Import the squads or fix the name, then tap ↻ Load roster.</>}
-            {onFixNames && <div style={{ marginTop: 8 }}><button className="btn sm" onClick={onFixNames}>Fix team names in Players &amp; staff →</button></div>}
+              ? tr("Read-only access — the roster couldn't be loaded (event archived or you're not a member of this event).")
+              : tr("Players are found by the team's exact name — “{name}” must be spelled the same in Players & staff ({cat}). Import the squads or fix the name, then tap ↻ Load roster.", { name: t.name, cat: d.info?.category || "" })}
+            {onFixNames && <div style={{ marginTop: 8 }}><button className="btn sm" onClick={onFixNames}>{tr("Fix team names in Players & staff →")}</button></div>}
           </div>
         )}
         {t.players.map((p, i) => (
@@ -510,20 +520,20 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNa
               <div className="pname">
                 <div className="sur">{p.name}</div>
                 <div className="giv">{p.first}</div>
-                {susp(p) && <div className="susp-badge">⛔ Suspended</div>}
+                {susp(p) && <div className="susp-badge">{tr("⛔ Suspended")}</div>}
               </div>
             </div>
             <div className="player-controls">
               {canSuspend && (
                 <button className={`chip susp ${susp(p) ? "on" : ""}`} onClick={() => toggleSuspended(i)}
-                  title={susp(p) ? "Lift the suspension" : "Mark as suspended for this game (event head)"}>{susp(p) ? "Unsuspend" : "Suspend"}</button>
+                  title={tr(susp(p) ? "Lift the suspension" : "Mark as suspended for this game (event head)")}>{tr(susp(p) ? "Unsuspend" : "Suspend")}</button>
               )}
-              <button className={`chip cap ${p.captain ? "on" : ""}`} disabled={susp(p)} onClick={() => toggleCaptain(i)}>C</button>
-              <button className={`chip oc ${p.onCourt ? "on" : ""}`} disabled={susp(p)} onClick={() => toggleOC(i)}>OC</button>
+              <button className={`chip cap ${p.captain ? "on" : ""}`} disabled={susp(p)} onClick={() => toggleCaptain(i)} title={tr("Captain")}>{tr("C")}</button>
+              <button className={`chip oc ${p.onCourt ? "on" : ""}`} disabled={susp(p)} onClick={() => toggleOC(i)} title={tr("On court")}>{tr("OC")}</button>
               <div className="card-chips">
                 {["y", "yr", "r"].map((k) => (
-                  <button key={k} className={`chip ${k} ${p.cards[k] ? "on" : ""}`} onClick={() => toggleCard("players", i, k)}>
-                    {k.toUpperCase()}
+                  <button key={k} className={`chip ${k} ${p.cards[k] ? "on" : ""}`} onClick={() => toggleCard("players", i, k)} title={tr(CARD_LABEL[k])}>
+                    {tr(k.toUpperCase())}
                   </button>
                 ))}
               </div>
@@ -531,7 +541,7 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNa
           </div>
         ))}
 
-        {t.staff.length > 0 && <div className="subhead">Staff</div>}
+        {t.staff.length > 0 && <div className="subhead">{tr("Staff")}</div>}
         {t.staff.map((s, i) => (
           <div className="player" key={i}>
             <div className="player-id">
@@ -545,8 +555,8 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNa
             <div className="player-controls">
               <div className="card-chips">
                 {["y", "yr", "r"].map((k) => (
-                  <button key={k} className={`chip ${k} ${s.cards[k] ? "on" : ""}`} onClick={() => toggleCard("staff", i, k)}>
-                    {k.toUpperCase()}
+                  <button key={k} className={`chip ${k} ${s.cards[k] ? "on" : ""}`} onClick={() => toggleCard("staff", i, k)} title={tr(CARD_LABEL[k])}>
+                    {tr(k.toUpperCase())}
                   </button>
                 ))}
               </div>
@@ -558,7 +568,7 @@ function LineupSection({ d, team, setTeam, update, loadRoster, readOnly, onFixNa
   );
 }
 
-function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
+function ScoreSection({ t: tr, d, scoring, update, readOnly, cur: picked, setCur }) {
   // First time on the tab: open the set being played, then stay on it (also
   // across tab switches) until another set is tapped.
   const cur = picked ?? currentSet(d);
@@ -591,7 +601,7 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
   const usedTimeout = (side) => (d.timeouts?.[side] || []).some((t) => (t.set ?? 0) === cur);
   const addTimeout = (side) => {
     if (usedTimeout(side)) {
-      alert(`No time-out left: ${short(d[side].name)} already took its time-out in set ${cur + 1}.`);
+      alert(tr("No time-out left: {team} already took its time-out in set {n}.", { team: short(d[side].name), n: cur + 1 }));
       return;
     }
     update((n) => {
@@ -631,7 +641,7 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
           const played = sc.a + sc.b > 0;
           return (
             <button key={i} className={`set-pill ${i === cur ? "active" : ""}`} onClick={() => setCur(i)}>
-              <span className="sp-label">Set {i + 1}</span>
+              <span className="sp-label">{tr("Set {n}", { n: i + 1 })}</span>
               <span className="sp-score">{played ? `${sc.a}:${sc.b}` : "–"}</span>
             </button>
           );
@@ -640,12 +650,12 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
 
       <div className="sides-bar">
         <span className="sb-side">◀ {short(d[left === "A" ? "teamA" : "teamB"].name)}</span>
-        {!readOnly && <button className="btn sm" onClick={() => setLeft(left === "A" ? "B" : "A")} title="Swap which team is on the left of the tablet">⇄ Swap sides</button>}
+        {!readOnly && <button className="btn sm" onClick={() => setLeft(left === "A" ? "B" : "A")} title={tr("Swap which team is on the left of the tablet")}>{tr("⇄ Swap sides")}</button>}
         <span className="sb-side">{short(d[left === "A" ? "teamB" : "teamA"].name)} ▶</span>
       </div>
       {deciderOpen && !readOnly && (
         <div className="warn-box decider-pick">
-          <b>Deciding set — which team is on the left?</b>
+          <b>{tr("Deciding set — which team is on the left?")}</b>
           <div className="cb-actions">
             <button className="btn" onClick={() => setLeft("A")}>◀ {short(d.teamA.name)}</button>
             <button className="btn" onClick={() => setLeft("B")}>◀ {short(d.teamB.name)}</button>
@@ -680,17 +690,17 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
         </div>
       </div>
       {rallies.length > 0 && selCol == null && (
-        <p className="hint">Tapped the wrong side? Tap that point in the record to fix it.</p>
+        <p className="hint">{tr("Tapped the wrong side? Tap that point in the record to fix it.")}</p>
       )}
 
       {selCol != null && (
         <div className="correct-bar">
-          <span className="cb-label">Rally {selCol + 1} — who scored?</span>
+          <span className="cb-label">{tr("Rally {n} — who scored?", { n: selCol + 1 })}</span>
           <div className="cb-actions">
             <button className="btn" onClick={() => setRally(selCol, "A")}>{short(d.teamA.name)}</button>
             <button className="btn" onClick={() => setRally(selCol, "B")}>{short(d.teamB.name)}</button>
-            <button className="btn danger" onClick={() => removeRally(selCol)}>✕ Remove</button>
-            <button className="btn ghost" onClick={() => setSelCol(null)}>Cancel</button>
+            <button className="btn danger" onClick={() => removeRally(selCol)}>{tr("✕ Remove")}</button>
+            <button className="btn ghost" onClick={() => setSelCol(null)}>{tr("Cancel")}</button>
           </div>
         </div>
       )}
@@ -698,49 +708,49 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
       <div className="point-buttons">
         <button className="pt a" onClick={() => addPoint("A")}>
           <span className="pt-team">{short(d.teamA.name)}</span>
-          <span className="pt-plus">+ point</span>
+          <span className="pt-plus">{tr("+ point")}</span>
         </button>
         <button className="pt b" onClick={() => addPoint("B")}>
           <span className="pt-team">{short(d.teamB.name)}</span>
-          <span className="pt-plus">+ point</span>
+          <span className="pt-plus">{tr("+ point")}</span>
         </button>
       </div>
-      <button className="btn undo" onClick={undo} disabled={!rallies.length}>↶ Undo last point</button>
+      <button className="btn undo" onClick={undo} disabled={!rallies.length}>{tr("↶ Undo last point")}</button>
 
       <div className="tally">
-        <div className={`t ${scoring.setsA > scoring.setsB ? "lead" : ""}`}><div className="n">{scoring.setsA}</div><div>sets</div></div>
-        <div className={`t ${scoring.setsB > scoring.setsA ? "lead" : ""}`}><div className="n">{scoring.setsB}</div><div>sets</div></div>
+        <div className={`t ${scoring.setsA > scoring.setsB ? "lead" : ""}`}><div className="n">{scoring.setsA}</div><div>{tr("sets")}</div></div>
+        <div className={`t ${scoring.setsB > scoring.setsA ? "lead" : ""}`}><div className="n">{scoring.setsB}</div><div>{tr("sets")}</div></div>
       </div>
       {scoring.winner && (
         <p style={{ textAlign: "center", fontWeight: 800, color: "var(--win)" }}>
-          Winner: {short(scoring.winner === "A" ? d.teamA.name : d.teamB.name)}
+          {tr("Winner: {team}", { team: short(scoring.winner === "A" ? d.teamA.name : d.teamB.name) })}
         </p>
       )}
 
-      <div className="subhead">Time-outs <span className="muted-sm" style={{ fontWeight: 400 }}>(one per team per set · records the set &amp; score at the moment)</span></div>
+      <div className="subhead">{tr("Time-outs")} <span className="muted-sm" style={{ fontWeight: 400 }}>{tr("(one per team per set · records the set & score at the moment)")}</span></div>
       <div className="to-panel">
         {["teamA", "teamB"].map((side) => (
           <div className="to-team" key={side}>
             <div className="to-head">
               <span className="to-name">{short(d[side].name)}</span>
               {!readOnly && (usedTimeout(side)
-                ? <button className="btn sm to-used" onClick={() => addTimeout(side)} title="One time-out per team per set">No time-out left (set {cur + 1})</button>
-                : <button className="btn sm" onClick={() => addTimeout(side)}>+ Time-out</button>)}
+                ? <button className="btn sm to-used" onClick={() => addTimeout(side)} title={tr("One time-out per team per set")}>{tr("No time-out left (set {n})", { n: cur + 1 })}</button>
+                : <button className="btn sm" onClick={() => addTimeout(side)}>{tr("+ Time-out")}</button>)}
             </div>
             <div className="to-chips">
               {(d.timeouts?.[side] || []).map((t, i) => (
                 <span className="to-chip" key={i}>S{(t.set ?? 0) + 1} · {t.a}:{t.b}{!readOnly && <button className="to-x" onClick={() => removeTimeout(side, i)}>✕</button>}</span>
               ))}
-              {!(d.timeouts?.[side] || []).length && <span className="muted-sm">none</span>}
+              {!(d.timeouts?.[side] || []).length && <span className="muted-sm">{tr("none")}</span>}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="subhead">Choice of ball / serve</div>
+      <div className="subhead">{tr("Choice of ball / serve")}</div>
       {["set1", "set5"].map((w) => (
         <div className="field" key={w}>
-          <label>{w === "set1" ? "1st set" : "Deciding set"}</label>
+          <label>{tr(w === "set1" ? "1st set" : "Deciding set")}</label>
           <div className="seg">
             <button className={d.ballChoice[w] === "A" ? "on" : ""} onClick={() => setBall(w, "A")}>{short(d.teamA.name)}</button>
             <button className={d.ballChoice[w] === "B" ? "on" : ""} onClick={() => setBall(w, "B")}>{short(d.teamB.name)}</button>
@@ -751,24 +761,24 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
   );
 }
 
-function RefsSection({ d, update, refNames = [] }) {
+function RefsSection({ t, d, update, refNames = [] }) {
   const fields = [
     ["r1", "Referee 1"], ["r2", "Referee 2"], ["clerk", "Recording Clerk"],
     ["a1", "Assistant 1"], ["a2", "Assistant 2"],
   ];
   return (
     <div className="card">
-      <h2>Referee team</h2>
-      <p className="muted-sm" style={{ marginTop: -6 }}>Pre-filled from the referees assigned to this game (Referees screen). Pick from the list or type a name.</p>
+      <h2>{t("Referee team")}</h2>
+      <p className="muted-sm" style={{ marginTop: -6 }}>{t("Pre-filled from the referees assigned to this game (Referees screen). Pick from the list or type a name.")}</p>
       <datalist id="sumula-ref-names">{refNames.map((n) => <option key={n} value={n} />)}</datalist>
       {fields.map(([k, label]) => (
         <div className="field" key={k}>
-          <label>{label}</label>
+          <label>{t(label)}</label>
           <input
             list="sumula-ref-names"
             value={d.referees[k]}
             onChange={(e) => update((n) => (n.referees[k] = e.target.value))}
-            placeholder="Name"
+            placeholder={t("Name")}
           />
         </div>
       ))}
@@ -777,7 +787,7 @@ function RefsSection({ d, update, refNames = [] }) {
 }
 
 const CARD_LABEL = { y: "Yellow", yr: "Yellow-red", r: "Red" };
-function FinishSection({ d, scoring, update, onPdf, isSusp }) {
+function FinishSection({ t, lang, d, scoring, update, onPdf, isSusp, pdfSecond, setPdfSecond }) {
   const sign = (k) => update((n) => (n.signatures[k] = !n.signatures[k]));
   // Everything the captains sign besides the score: cards and suspensions.
   const carded = ["teamA", "teamB"].flatMap((side) => [
@@ -788,78 +798,85 @@ function FinishSection({ d, scoring, update, onPdf, isSusp }) {
   return (
     <>
       <div className="card">
-        <h2>Summary</h2>
+        <h2>{t("Summary")}</h2>
         <p style={{ fontSize: 18, fontWeight: 700 }}>
           {short(d.teamA.name)} {scoring.setsA} × {scoring.setsB} {short(d.teamB.name)}
         </p>
         <p style={{ color: "var(--muted)" }}>
-          {d.sets.map((s) => { const { a, b } = setScore(s); return a + b ? `${a}:${b}` : null; }).filter(Boolean).join("  ·  ") || "No sets recorded yet"}
+          {d.sets.map((s) => { const { a, b } = setScore(s); return a + b ? `${a}:${b}` : null; }).filter(Boolean).join("  ·  ") || t("No sets recorded yet")}
         </p>
       </div>
 
       <div className="card">
-        <h2>Cards</h2>
-        {carded.length === 0 ? <p className="muted-sm">No cards in this game.</p> : (
+        <h2>{t("Cards")}</h2>
+        {carded.length === 0 ? <p className="muted-sm">{t("No cards in this game.")}</p> : (
           <div className="finish-cards">
             {carded.map(({ side, p, staff, kinds }, i) => (
               <div className="finish-card-row" key={i}>
                 <span className="fc-team"><span className="flag">{flagFor(d[side].name)}</span>{short(d[side].name)}</span>
-                <span className="fc-who">{staff ? <span className="muted-sm">{p.role || "Staff"}</span> : <b>#{p.nr}</b>} {p.first} {p.name}</span>
-                <span className="fc-kinds">{kinds.map((k) => <span key={k} className={`chip ${k} on fc-chip`}>{CARD_LABEL[k]}</span>)}</span>
+                <span className="fc-who">{staff ? <span className="muted-sm">{p.role || t("Staff")}</span> : <b>#{p.nr}</b>} {p.first} {p.name}</span>
+                <span className="fc-kinds">{kinds.map((k) => <span key={k} className={`chip ${k} on fc-chip`}>{t(CARD_LABEL[k])}</span>)}</span>
               </div>
             ))}
           </div>
         )}
         {suspended.length > 0 && (
-          <p style={{ marginTop: 10 }}>⛔ <b>Suspended</b> (did not play): {suspended.map(({ side, p }) => `#${p.nr} ${p.first || ""} ${p.name} (${short(d[side].name)})`).join(" · ")}</p>
+          <p style={{ marginTop: 10 }}>⛔ <b>{t("Suspended")}</b> {t("(did not play)")}: {suspended.map(({ side, p }) => `#${p.nr} ${p.first || ""} ${p.name} (${short(d[side].name)})`).join(" · ")}</p>
         )}
       </div>
 
       {(d.amendments || []).length > 0 && (
         <div className="card">
-          <h2>Amended after submission</h2>
+          <h2>{t("Amended after submission")}</h2>
           {d.amendments.map((a, i) => (
             <p key={i} style={{ margin: "4px 0" }}>
-              <strong>{new Date(a.at).toLocaleString()}</strong> · {a.by} — {a.reason || "—"}
+              <strong>{new Date(a.at).toLocaleString(localeOf(lang))}</strong> · {a.by} — {a.reason || "—"}
             </p>
           ))}
         </div>
       )}
 
       <div className="card">
-        <h2>Remarks / extraordinary events</h2>
+        <h2>{t("Remarks / extraordinary events")}</h2>
         <div className="field">
-          <textarea rows={3} value={d.remarks} onChange={(e) => update((n) => (n.remarks = e.target.value))} placeholder="Protests, incidents, notes…" />
+          <textarea rows={3} value={d.remarks} onChange={(e) => update((n) => (n.remarks = e.target.value))} placeholder={t("Protests, incidents, notes…")} />
         </div>
         <div className="field">
-          <label>Responsible person</label>
-          <input value={d.responsible} onChange={(e) => update((n) => (n.responsible = e.target.value))} placeholder="Name" />
+          <label>{t("Responsible person")}</label>
+          <input value={d.responsible} onChange={(e) => update((n) => (n.responsible = e.target.value))} placeholder={t("Name")} />
         </div>
       </div>
 
       <div className="card">
-        <h2>Signatures (confirm)</h2>
+        <h2>{t("Signatures (confirm)")}</h2>
         {[
-          ["capA", `Captain — ${short(d.teamA.name)}`],
-          ["capB", `Captain — ${short(d.teamB.name)}`],
-          ["referee", "Referee"],
-          ["clerk", `Recording Clerk${d.referees?.clerk ? ` — ${d.referees.clerk}` : ""}`],
+          ["capA", t("Captain — {team}", { team: short(d.teamA.name) })],
+          ["capB", t("Captain — {team}", { team: short(d.teamB.name) })],
+          ["referee", t("Referee")],
+          ["clerk", `${t("Recording Clerk")}${d.referees?.clerk ? ` — ${d.referees.clerk}` : ""}`],
         ].map(([k, label]) => (
           <div className="toggle-row" key={k}>
             <span>{label}</span>
             <button className={`switch ${d.signatures[k] ? "on" : ""}`} onClick={() => sign(k)}>
-              {d.signatures[k] ? "Signed" : "Sign"}
+              {t(d.signatures[k] ? "Signed" : "Sign")}
             </button>
           </div>
         ))}
       </div>
 
       <div className="card">
-        <h2>Game report PDF</h2>
+        <h2>{t("Game report PDF")}</h2>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
-          Generates the full game report (súmula) in the tournament layout — to save, print or e-mail.
+          {t("Generates the full game report (súmula) in the tournament layout — to save, print or e-mail.")}
         </p>
-        <button className="btn primary" style={{ width: "100%" }} onClick={onPdf}>⬇ Download PDF</button>
+        <div className="field">
+          <label>{t("PDF language")}</label>
+          <select value={pdfSecond} onChange={(e) => setPdfSecond(e.target.value)}>
+            <option value="">English</option>
+            {LANGS.filter((l) => l.code !== "en").map((l) => <option key={l.code} value={l.code}>English / {l.name}</option>)}
+          </select>
+        </div>
+        <button className="btn primary" style={{ width: "100%" }} onClick={onPdf}>{t("⬇ Download PDF")}</button>
       </div>
     </>
   );

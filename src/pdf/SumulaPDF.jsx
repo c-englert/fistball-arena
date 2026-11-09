@@ -1,4 +1,5 @@
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
+import { makeBi } from "../i18n.js";
 
 
 const PURPLE = "#3a2d6b";
@@ -87,15 +88,15 @@ function Card({ kind, on }) {
   );
 }
 
-function TeamColumn({ team, side }) {
+function TeamColumn({ team, side, bi }) {
   return (
     <View style={s.col}>
-      <Text style={s.colHead}>Team {side}: {team.name}</Text>
+      <Text style={s.colHead}>{bi("Team {s}", { s: side })}: {team.name}</Text>
       {team.players.map((p, i) => (
         <View style={s.pRow} key={i}>
           <Text style={s.pC}>{p.captain ? "C" : ""}</Text>
           <Text style={s.pNr}>{p.nr}</Text>
-          <Text style={s.pName}>{p.name}{p.first ? ", " + p.first : ""}{p.suspended ? "  (SUSPENDED)" : ""}</Text>
+          <Text style={s.pName}>{p.name}{p.first ? ", " + p.first : ""}{p.suspended ? `  (${bi("SUSPENDED")})` : ""}</Text>
           <View style={s.pOC}>{p.onCourt ? <View style={s.pOCdot} /> : null}</View>
           <Card kind="y" on={p.cards?.y} />
           <Card kind="yr" on={p.cards?.yr} />
@@ -119,14 +120,17 @@ function TeamColumn({ team, side }) {
 
 // Header text comes from this event: the public branding doc (name, dates,
 // place) with the event doc as fallback.
-export default function SumulaPDF({ draft, branding, event }) {
-  return <Document><SumulaPage draft={draft} branding={branding} event={event} /></Document>;
+// `second`: the event's second official language ("es"/"de"/"pt") — labels are
+// printed "English / Second"; empty → English only.
+export default function SumulaPDF({ draft, branding, event, second }) {
+  return <Document><SumulaPage draft={draft} branding={branding} event={event} second={second} /></Document>;
 }
 // Several game reports in one file (e.g. every game of a team).
-export function SumulasPDF({ drafts, branding, event }) {
-  return <Document>{drafts.map((d, i) => <SumulaPage key={i} draft={d} branding={branding} event={event} />)}</Document>;
+export function SumulasPDF({ drafts, branding, event, second }) {
+  return <Document>{drafts.map((d, i) => <SumulaPage key={i} draft={d} branding={branding} event={event} second={second} />)}</Document>;
 }
-function SumulaPage({ draft, branding, event }) {
+function SumulaPage({ draft, branding, event, second }) {
+  const { bi, biRound } = makeBi(second ?? (event?.reportLanguage || ""));
   const evName = branding?.name || event?.name || "";
   const evMeta = [branding?.dates || event?.dates, branding?.place || event?.place].filter(Boolean).join("  ·  ");
   const d = draft;
@@ -138,7 +142,7 @@ function SumulaPage({ draft, branding, event }) {
   const info = [
     ["Match Nr", "#" + d.info.nr], ["Date", d.info.date], ["Time", d.info.time],
     ["Court", d.info.court], ["Best of", String(d.info.bestOf)],
-    ["Round", d.info.round], ["Category", d.info.category],
+    ["Round", biRound(d.info.round)], ["Category", d.info.category],
   ];
 
   return (
@@ -159,22 +163,22 @@ function SumulaPage({ draft, branding, event }) {
             <Text style={s.hEvent}>{evName}</Text>
             {evMeta ? <Text style={s.hMeta}>{evMeta}</Text> : null}
           </View>
-          <Text style={s.hTitle}>Fistball Game Report</Text>
+          <Text style={s.hTitle}>{bi("Fistball Game Report")}</Text>
           <View style={s.row}>
             {info.map(([k, v], i) => (
               <View key={k} style={i === info.length - 1 ? s.infoLast : s.infoCell}>
-                <Text style={s.label}>{k}</Text>
+                <Text style={s.label}>{bi(k)}</Text>
                 <Text style={s.value}>{v}</Text>
               </View>
             ))}
           </View>
           <View style={s.teams}>
             <View style={[s.teamCell, { borderRightWidth: 1, borderColor: LINE }]}>
-              <Text style={s.label}>Team A</Text>
+              <Text style={s.label}>{bi("Team A")}</Text>
               <Text style={s.teamName}>{d.teamA.name}</Text>
             </View>
             <View style={s.teamCell}>
-              <Text style={s.label}>Team B</Text>
+              <Text style={s.label}>{bi("Team B")}</Text>
               <Text style={s.teamName}>{d.teamB.name}</Text>
             </View>
           </View>
@@ -182,14 +186,14 @@ function SumulaPage({ draft, branding, event }) {
 
         {/* points record */}
         <View style={s.section}>
-          <Text style={s.secTitle}>Points record  ·  {short(d.teamA.name)} {setsA} — {setsB} {short(d.teamB.name)}</Text>
-          {played.length === 0 && <Text style={s.small}>No points recorded.</Text>}
+          <Text style={s.secTitle}>{bi("Points record")}  ·  {short(d.teamA.name)} {setsA} — {setsB} {short(d.teamB.name)}</Text>
+          {played.length === 0 && <Text style={s.small}>{bi("No points recorded.")}</Text>}
           {played.map(({ set, i, sc }) => {
             const r = rows(set.rallies || []);
             return (
               <View style={s.setBlock} key={i}>
                 <View style={s.setHead}>
-                  <Text style={s.setLabel}>Set {i + 1}</Text>
+                  <Text style={s.setLabel}>{bi("Set {n}", { n: i + 1 })}</Text>
                   <Text style={s.setLabel}>{sc.a} : {sc.b}</Text>
                 </View>
                 <View style={s.rRow}>
@@ -215,7 +219,7 @@ function SumulaPage({ draft, branding, event }) {
 
         {/* time-outs */}
         <View style={s.section}>
-          <Text style={s.secTitle}>Time-outs  (set · score at the moment)</Text>
+          <Text style={s.secTitle}>{bi("Time-outs")}  {bi("(set · score at the moment)")}</Text>
           <View style={s.twoCol}>
             {["teamA", "teamB"].map((side) => (
               <View key={side} style={{ flex: 1 }}>
@@ -231,23 +235,24 @@ function SumulaPage({ draft, branding, event }) {
 
         {/* team registration */}
         <View style={s.section}>
-          <Text style={s.secTitle}>Team registration  (C = captain · blue dot = on court · Y / YR / R = cautions)</Text>
+          <Text style={s.secTitle}>{bi("Team registration")}</Text>
+          <Text style={[s.small, { marginBottom: 3 }]}>{bi("C = captain · dot = on court · Y / YR / R = cautions")}</Text>
           <View style={s.twoCol}>
-            <TeamColumn team={d.teamA} side="A" />
-            <TeamColumn team={d.teamB} side="B" />
+            <TeamColumn team={d.teamA} side="A" bi={bi} />
+            <TeamColumn team={d.teamB} side="B" bi={bi} />
           </View>
         </View>
 
         {/* referees */}
         <View style={s.section}>
-          <Text style={s.secTitle}>Referee team</Text>
+          <Text style={s.secTitle}>{bi("Referee team")}</Text>
           <View style={s.refGrid}>
             {[["Referee 1", d.referees.r1], ["Referee 2", d.referees.r2], ["Recording Clerk", d.referees.clerk],
               ["Assistant 1", d.referees.a1], ["Assistant 2", d.referees.a2],
-              ["Ball / serve", `1st: ${sideName(d, d.ballChoice.set1)}  ·  Deciding: ${sideName(d, d.ballChoice.set5)}`]]
+              ["Ball / serve: 1st set · deciding set", `${sideName(d, d.ballChoice.set1)}  ·  ${sideName(d, d.ballChoice.set5)}`]]
               .map(([k, v]) => (
                 <View style={s.refCell} key={k}>
-                  <Text style={s.label}>{k}</Text>
+                  <Text style={s.label}>{bi(k)}</Text>
                   <Text style={s.value}>{v || "—"}</Text>
                 </View>
               ))}
@@ -256,23 +261,23 @@ function SumulaPage({ draft, branding, event }) {
 
         {/* extraordinary events + signatures */}
         <View style={s.section}>
-          <Text style={s.secTitle}>Remarks / extraordinary events</Text>
+          <Text style={s.secTitle}>{bi("Remarks / extraordinary events")}</Text>
           <View style={{ borderWidth: 1, borderColor: LINE, padding: 5, minHeight: 30 }}>
             <Text style={s.small}>{d.remarks || "—"}</Text>
-            <Text style={[s.small, { marginTop: 4 }]}>Responsible: {d.responsible || "—"}</Text>
+            <Text style={[s.small, { marginTop: 4 }]}>{bi("Responsible")}: {d.responsible || "—"}</Text>
             {(d.amendments || []).map((a, i) => (
               <Text key={i} style={[s.small, { marginTop: 4 }]}>
-                Amended after submission — {new Date(a.at).toLocaleString("en-GB")} · {a.by}: {a.reason || "—"}
+                {bi("Amended after submission")} — {new Date(a.at).toLocaleString("en-GB")} · {a.by}: {a.reason || "—"}
               </Text>
             ))}
           </View>
           <View style={s.sigRow}>
-            {[[`Captain — ${short(d.teamA.name)}`, d.signatures.capA],
-              [`Captain — ${short(d.teamB.name)}`, d.signatures.capB],
-              ["Referee", d.signatures.referee],
-              ["Recording Clerk", d.signatures.clerk]].map(([k, on]) => (
+            {[[`${bi("Captain")} — ${short(d.teamA.name)}`, d.signatures.capA],
+              [`${bi("Captain")} — ${short(d.teamB.name)}`, d.signatures.capB],
+              [bi("Referee"), d.signatures.referee],
+              [bi("Recording Clerk"), d.signatures.clerk]].map(([k, on]) => (
               <View style={s.sigBox} key={k}>
-                <Text style={s.small}>{on ? "signed" : ""}</Text>
+                <Text style={s.small}>{on ? bi("signed") : ""}</Text>
                 <Text style={[s.label, { textAlign: "center" }]}>{k}</Text>
               </View>
             ))}
