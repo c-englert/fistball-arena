@@ -14,6 +14,7 @@ import Settings from "./pages/Settings.jsx";
 import Standings from "./pages/Standings.jsx";
 import Plans from "./pages/Plans.jsx";
 import Venue from "./pages/Venue.jsx";
+import Reports from "./pages/Reports.jsx";
 
 export default function EventShell({ me, onSignOut }) {
   const { eventId } = useParams();
@@ -57,6 +58,7 @@ export default function EventShell({ me, onSignOut }) {
             <Route path="colors" element={isAdmin ? <Colors /> : <Navigate to=".." replace />} />
             <Route path="venue" element={isAdmin ? <Venue /> : <Navigate to=".." replace />} />
             <Route path="members" element={<Navigate to="../settings" replace />} />
+            <Route path="reports" element={isAdmin ? <Reports /> : <Navigate to=".." replace />} />
             <Route path="settings" element={isAdmin ? <Settings me={me} /> : <Navigate to=".." replace />} />
           </Route>
         </Routes>

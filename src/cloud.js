@@ -1121,6 +1121,17 @@ export async function ensureReport(gameId) {
   catch (e) { console.warn("ensureReport (read-only?):", e?.code || e); }
 }
 
+// Every report (súmula) of the event, read once — for the final report and
+// printing a team's game reports.
+export async function fetchReports() {
+  const snap = await getDocs(ecol("reports"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+// Host / technical delegate / notes typed on the event's final report.
+export async function saveFinalReportFields(fields) {
+  await updateDoc(doc(db, "events", reqEid()), { finalReport: fields });
+}
+
 export function subscribeReport(gameId, cb) {
   const eid = reqEid();
   return onSnapshot(edoc("reports", gameId),

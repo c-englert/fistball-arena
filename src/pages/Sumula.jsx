@@ -578,6 +578,9 @@ function ScoreSection({ d, scoring, update, readOnly, cur: picked, setCur }) {
   const addPoint = (w) => update((n) => {
     if (!n.sets[cur].rallies) n.sets[cur].rallies = [];
     n.sets[cur].rallies.push(w);
+    // Game length for the event's final report: first point → last point.
+    const now = Date.now();
+    n.timing = { start: n.timing?.start || now, end: now };
   });
   const undo = () => update((n) => { if (n.sets[cur].rallies) n.sets[cur].rallies.pop(); });
   const setRally = (i, w) => { update((n) => { n.sets[cur].rallies[i] = w; }); setSelCol(null); };
@@ -884,6 +887,7 @@ function extractDraft(data) {
     signatures: { capA: false, capB: false, referee: false, clerk: false, ...(data.signatures || {}) },
     submittedAt: data.submittedAt || null,
     amendments: data.amendments || [],
+    timing: data.timing || null,
   };
 }
 function pickSumula(d) {
@@ -892,6 +896,7 @@ function pickSumula(d) {
     timeouts: d.timeouts || { teamA: [], teamB: [] },
     ballChoice: d.ballChoice, referees: d.referees, sides: d.sides || {},
     remarks: d.remarks, responsible: d.responsible, signatures: d.signatures,
+    ...(d.timing ? { timing: d.timing } : {}),
   };
 }
 

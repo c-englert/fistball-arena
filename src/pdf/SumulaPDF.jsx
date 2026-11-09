@@ -120,6 +120,13 @@ function TeamColumn({ team, side }) {
 // Header text comes from this event: the public branding doc (name, dates,
 // place) with the event doc as fallback.
 export default function SumulaPDF({ draft, branding, event }) {
+  return <Document><SumulaPage draft={draft} branding={branding} event={event} /></Document>;
+}
+// Several game reports in one file (e.g. every game of a team).
+export function SumulasPDF({ drafts, branding, event }) {
+  return <Document>{drafts.map((d, i) => <SumulaPage key={i} draft={d} branding={branding} event={event} />)}</Document>;
+}
+function SumulaPage({ draft, branding, event }) {
   const evName = branding?.name || event?.name || "";
   const evMeta = [branding?.dates || event?.dates, branding?.place || event?.place].filter(Boolean).join("  ·  ");
   const d = draft;
@@ -135,7 +142,6 @@ export default function SumulaPDF({ draft, branding, event }) {
   ];
 
   return (
-    <Document>
       <Page size="A4" style={s.page}>
         {/* header */}
         <View style={s.hWrap}>
@@ -273,7 +279,6 @@ export default function SumulaPDF({ draft, branding, event }) {
           </View>
         </View>
       </Page>
-    </Document>
   );
 }
 

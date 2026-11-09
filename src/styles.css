@@ -1121,3 +1121,28 @@ body.sumula-full .sidebar, body.sumula-full .sb-scrim, body.sumula-full .appbar 
 .fc-who { flex: 1; min-width: 160px; }
 .fc-kinds { display: flex; gap: 6px; }
 .fc-chip { height: 30px; min-width: 0; font-size: 13px; cursor: default; }
+
+/* ---------- Reports: event final report ---------- */
+.fr-edit { display: grid; gap: 10px; }
+.fr-edit label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+.fr-edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.fr-input { font: inherit; font-weight: 400; padding: 7px 9px; border: 1px solid var(--line, #d6d9e0); border-radius: 8px; background: var(--bg, #fff); color: inherit; width: 100%; box-sizing: border-box; }
+.fr-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fr-actions .spacer { flex: 1; }
+.fr-doc h1 { font-size: 20px; margin: 0 0 10px; }
+.fr-doc h2 { font-size: 15px; margin: 18px 0 6px; }
+.fr-doc h3 { font-size: 13px; margin: 10px 0 4px; }
+.fr-table { border-collapse: collapse; margin: 4px 0 8px; font-size: 13px; }
+.fr-table th, .fr-table td { border: 1px solid var(--line, #d6d9e0); padding: 4px 8px; text-align: left; vertical-align: top; }
+.fr-table th { background: var(--bg-2, #eceef3); font-weight: 700; }
+.fr-table .fr-num { text-align: right; white-space: nowrap; }
+.fr-rank-grid { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.fr-rank { min-width: 220px; }
+.fr-foot { font-size: 12px; opacity: .75; }
+.fr-notes { white-space: pre-wrap; }
+tr.fr-skip td { opacity: .45; }
+@media print {
+  .fr-doc { box-shadow: none; border: 0; padding: 0; color: #000; }
+  .fr-doc h2 { break-after: avoid; }
+  .fr-table, .fr-rank { break-inside: avoid; }
+}

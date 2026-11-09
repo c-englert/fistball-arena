@@ -33,6 +33,7 @@ export default function AppShell({ me, onSignOut }) {
       { key: "referees", label: "Referees", Icon: IconWhistle },
       { key: "colors", label: "Uniforms", Icon: IconShirt },
       { key: "venue", label: "Venue & training", Icon: IconMap },
+      { key: "reports", label: "Reports", Icon: IconStandings },
       { key: "settings", label: "Settings", Icon: IconSettings },
     ] : []),
   ];
