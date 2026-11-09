@@ -3,6 +3,7 @@ import { useParams, Routes, Route, Navigate } from "react-router-dom";
 import { setEvent, subscribeEvent, subscribeMyRole, subscribeBranding } from "./cloud.js";
 import { EventContext } from "./eventContext.js";
 import AppShell from "./AppShell.jsx";
+import { useT } from "./i18n.js";
 import MatchList from "./pages/MatchList.jsx";
 import Sumula from "./pages/Sumula.jsx";
 import Schedule from "./pages/Schedule.jsx";
@@ -17,6 +18,7 @@ import Venue from "./pages/Venue.jsx";
 import Reports from "./pages/Reports.jsx";
 
 export default function EventShell({ me, onSignOut }) {
+  const t = useT();
   const { eventId } = useParams();
   const [event, setEv] = useState(undefined);
   const [myRole, setMyRole] = useState(undefined);
@@ -33,9 +35,9 @@ export default function EventShell({ me, onSignOut }) {
     return () => { u1 && u1(); u2 && u2(); u3 && u3(); };
   }, [eventId]);
 
-  if (event === undefined || myRole === undefined) return <div className="empty">Loading event…</div>;
-  if (event === null) return <NoAccess msg="Event not found." />;
-  if (myRole === null && !me.admin) return <NoAccess msg="You don't have access to this event." />;
+  if (event === undefined || myRole === undefined) return <div className="empty">{t("Loading event…")}</div>;
+  if (event === null) return <NoAccess msg={t("Event not found.")} />;
+  if (myRole === null && !me.admin) return <NoAccess msg={t("You don't have access to this event.")} />;
 
   const archived = event.status === "archived";
   const isAdmin = myRole === "admin" || me.admin;
@@ -68,9 +70,10 @@ export default function EventShell({ me, onSignOut }) {
 }
 
 function NoAccess({ msg }) {
+  const t = useT();
   return (
     <div className="empty">
-      {msg} <a className="btn" href="#/" style={{ marginLeft: 8 }}>Events</a>
+      {msg} <a className="btn" href="#/" style={{ marginLeft: 8 }}>{t("Events")}</a>
     </div>
   );
 }

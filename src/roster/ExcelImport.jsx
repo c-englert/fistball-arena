@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { parseExcelRoster } from "./importExcel.js";
 import { publishRosters, publishReferees, appendImportLog, subscribeImportLog, subscribeRosters, clearRosters } from "../cloud.js";
+import { useT, tNow } from "../i18n.js";
 
 // Normalize a team name for fuzzy matching (case/accents/punctuation-insensitive).
 const strip = (s) =>
@@ -113,6 +114,7 @@ function TeamCombo({ value, options, onChange, placeholder }) {
 // scheduleTeams: { [category]: [team names on that category's games] } — the
 // game reports find players by these exact names, so mismatches are flagged.
 export default function ExcelImport({ me, teamNames = [], categories = [], scheduleTeams = {} }) {
+  const tr = useT(); // not "t": team entries below are named t
   const registered = [...teamNames].filter(Boolean).sort((a, b) => a.localeCompare(b));
   const scheduleFor = (cat) => (cat ? scheduleTeams[cat] || [] : [...new Set(Object.values(scheduleTeams).flat())]);
   const [files, setFiles] = useState([]); // [{ id, filename, category, teams, referees, count, teamCount, refereeCount, warnings, names }]
@@ -127,17 +129,17 @@ export default function ExcelImport({ me, teamNames = [], categories = [], sched
 
   const clearRegistry = async () => {
     if (!registrySize) return;
-    if (!window.confirm(`Delete ALL ${registrySize} rosters currently saved in this event? This only clears the players & staff registry — games and results are untouched. Cannot be undone.`)) return;
-    setStatus("Clearing registry…");
-    try { await clearRosters(); setStatus("Registry cleared."); }
-    catch (e) { setStatus("Clear failed: " + (e?.message || e)); }
+    if (!window.confirm(tNow("Delete ALL {n} rosters currently saved in this event? This only clears the players & staff registry — games and results are untouched. Cannot be undone.", { n: registrySize }))) return;
+    setStatus(tNow("Clearing registry…"));
+    try { await clearRosters(); setStatus(tNow("Registry cleared.")); }
+    catch (e) { setStatus(tNow("Clear failed: {err}", { err: e?.message || e })); }
   };
 
   const onExcel = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setStatus(`Reading ${file.name}…`);
+    setStatus(tNow("Reading {file}…", { file: file.name }));
     try {
       const r = await parseExcelRoster(file);
       const names = {};
@@ -155,7 +157,7 @@ export default function ExcelImport({ me, teamNames = [], categories = [], sched
         refereeCount: r.refereeCount, warnings: r.warnings, names,
       }]);
       setStatus("");
-    } catch (e2) { setStatus("Excel read failed: " + (e2?.message || e2)); }
+    } catch (e2) { setStatus(tNow("Excel read failed: {err}", { err: e2?.message || e2 })); }
   };
 
   const patchFile = (id, patch) => setFiles((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
@@ -175,13 +177,13 @@ export default function ExcelImport({ me, teamNames = [], categories = [], sched
   const totalRefs = files.reduce((s, f) => s + (f.refereeCount || 0), 0);
   const nothingToSave = totalPeople === 0 && totalRefs === 0;
   const saveLabel = [
-    totalPeople ? `${totalPeople} people` : "",
-    totalRefs ? `${totalRefs} referee${totalRefs === 1 ? "" : "s"}` : "",
-  ].filter(Boolean).join(" & ") || "nothing";
+    totalPeople ? tr("{n} people", { n: totalPeople }) : "",
+    totalRefs ? tr(totalRefs === 1 ? "{n} referee" : "{n} referees", { n: totalRefs }) : "",
+  ].filter(Boolean).join(" & ") || tr("nothing");
 
   const saveAll = async () => {
     if (!files.length || dupKeys.size || needCategory) return;
-    setStatus("Saving…");
+    setStatus(tNow("Saving…"));
     try {
       const rosters = {};
       const refs = [];
@@ -224,20 +226,20 @@ export default function ExcelImport({ me, teamNames = [], categories = [], sched
           });
         } catch (_) { /* history is best-effort */ }
       }
-      setStatus(`Saved ${totalPeople} people across ${files.length} file${files.length === 1 ? "" : "s"}.`);
+      setStatus(tNow(files.length === 1 ? "Saved {n} people across {f} file." : "Saved {n} people across {f} files.", { n: totalPeople, f: files.length }));
       setFiles([]);
-    } catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+    } catch (e) { setStatus(tNow("Save failed: {err}", { err: e?.message || e })); }
   };
 
   return (
     <div className="card">
       <div className="row-between">
-        <h2 style={{ margin: 0 }}>Import players &amp; staff from Excel</h2>
-        <button className="btn primary" onClick={() => fileRef.current?.click()}>+ Add file…</button>
+        <h2 style={{ margin: 0 }}>{tr("Import players & staff from Excel")}</h2>
+        <button className="btn primary" onClick={() => fileRef.current?.click()}>{tr("+ Add file…")}</button>
       </div>
       <input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={onExcel} />
-      <p className="muted-sm">One file per category — load each file and assign it to its category.</p>
-      {categories.length === 0 && <div className="warn-box">⚠️ No categories defined yet — set them in step 2 to assign each file.</div>}
+      <p className="muted-sm">{tr("One file per category — load each file and assign it to its category.")}</p>
+      {categories.length === 0 && <div className="warn-box">{tr("⚠️ No categories defined yet — set them in step 2 to assign each file.")}</div>}
 
       {files.map((f) => {
         const rows = Object.entries(f.teams);
@@ -248,14 +250,14 @@ export default function ExcelImport({ me, teamNames = [], categories = [], sched
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {categories.length > 0 && Object.keys(f.teams).length > 0 && (
                   <select className={`cat-select ${f.category ? "" : "cat-missing"}`} value={f.category} onChange={(e) => patchFile(f.id, { category: e.target.value })}>
-                    <option value="">— pick category —</option>
+                    <option value="">{tr("— pick category —")}</option>
                     {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 )}
                 {Object.keys(f.teams).length === 0 && f.refereeCount > 0 && (
-                  <span className="tag" title="Referees are event-wide — no category needed">referees only</span>
+                  <span className="tag" title={tr("Referees are event-wide — no category needed")}>{tr("referees only")}</span>
                 )}
-                <button className="btn danger sm" onClick={() => removeFile(f.id)} title="Remove this file">✕</button>
+                <button className="btn danger sm" onClick={() => removeFile(f.id)} title={tr("Remove this file")}>✕</button>
               </div>
             </div>
             {f.warnings?.length > 0 && <div className="warn-box">{f.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
@@ -272,61 +274,61 @@ export default function ExcelImport({ me, teamNames = [], categories = [], sched
                   <span className="muted-sm" style={{ flex: "0 0 150px", overflow: "hidden", textOverflow: "ellipsis" }} title={orig}>{t.name}</span>
                   <span className="muted-sm">→</span>
                   {registered.length ? (
-                    <TeamCombo value={raw} options={[...new Set([...registered, ...sched])].sort((a, b) => a.localeCompare(b))} placeholder="pick or type a team name"
+                    <TeamCombo value={raw} options={[...new Set([...registered, ...sched])].sort((a, b) => a.localeCompare(b))} placeholder={tr("pick or type a team name")}
                       onChange={(v) => setTeamName(f.id, orig, v)} />
                   ) : (
-                    <input style={{ flex: 1 }} value={raw} placeholder="team name" onChange={(e) => setTeamName(f.id, orig, e.target.value)} />
+                    <input style={{ flex: 1 }} value={raw} placeholder={tr("team name")} onChange={(e) => setTeamName(f.id, orig, e.target.value)} />
                   )}
                   {registered.length > 0 && (
-                    <span className={`tag ${isReg ? "tag-ok" : "tag-warn"}`} title={isReg ? "Matches a registered team" : "Not in your registered teams — will be created as new"}>
-                      {isReg ? "✓" : "new"}
+                    <span className={`tag ${isReg ? "tag-ok" : "tag-warn"}`} title={isReg ? tr("Matches a registered team") : tr("Not in your registered teams — will be created as new")}>
+                      {isReg ? "✓" : tr("new")}
                     </span>
                   )}
-                  <span className="tag" title={`${t.players.length} player${t.players.length === 1 ? "" : "s"} · ${t.staff.length} staff in the file`}>{t.players.length}P · {t.staff.length}S</span>
+                  <span className="tag" title={tr(t.players.length === 1 ? "{p} player · {s} staff in the file" : "{p} players · {s} staff in the file", { p: t.players.length, s: t.staff.length })}>{tr("{p}P · {s}S", { p: t.players.length, s: t.staff.length })}</span>
                   {!inSchedule && (
                     <span className="sched-miss">
-                      <span className="tag tag-warn" title="The game reports look players up by the team's exact name on the games — this one isn't on the schedule">not on the games</span>
-                      {closest && <button className="btn sm" onClick={() => setTeamName(f.id, orig, closest)} title="Use the name the games use">use “{closest}”</button>}
+                      <span className="tag tag-warn" title={tr("The game reports look players up by the team's exact name on the games — this one isn't on the schedule")}>{tr("not on the games")}</span>
+                      {closest && <button className="btn sm" onClick={() => setTeamName(f.id, orig, closest)} title={tr("Use the name the games use")}>{tr("use “{name}”", { name: closest })}</button>}
                     </span>
                   )}
                 </div>
               );
             })}
-            {f.refereeCount > 0 && <p className="muted-sm" style={{ marginTop: 6 }}>+ <b>{f.refereeCount}</b> referees from this file.</p>}
+            {f.refereeCount > 0 && <p className="muted-sm" style={{ marginTop: 6 }}>+ <b>{f.refereeCount}</b> {tr("referees from this file.")}</p>}
           </div>
         );
       })}
 
       {dupKeys.size > 0 && (
         <div className="warn-box" style={{ marginTop: 8 }}>
-          ⚠️ Two teams resolve to the same team+category ({[...dupKeys].join(", ")}) — one roster would overwrite the other.
+          {tr("⚠️ Two teams resolve to the same team+category ({keys}) — one roster would overwrite the other.", { keys: [...dupKeys].join(", ") })}
         </div>
       )}
-      {needCategory && <div className="warn-box" style={{ marginTop: 8 }}>⚠️ Pick a category for every file before saving.</div>}
+      {needCategory && <div className="warn-box" style={{ marginTop: 8 }}>{tr("⚠️ Pick a category for every file before saving.")}</div>}
 
       {files.length > 0 && (
         <button className="btn primary" style={{ width: "100%", marginTop: 10 }} onClick={saveAll} disabled={dupKeys.size > 0 || needCategory || nothingToSave}>
-          Save {saveLabel} from {files.length} file{files.length === 1 ? "" : "s"}
+          {tr(files.length === 1 ? "Save {what} from {n} file" : "Save {what} from {n} files", { what: saveLabel, n: files.length })}
         </button>
       )}
       {status && <p className="muted-sm" style={{ marginTop: 10 }}>{status}</p>}
 
       {registrySize > 0 && (
         <div className="row-between" style={{ marginTop: 12, alignItems: "center" }}>
-          <span className="muted-sm">{registrySize} team roster{registrySize === 1 ? "" : "s"} saved in this event.</span>
-          <button className="btn danger sm" onClick={clearRegistry}>🗑 Clear all rosters</button>
+          <span className="muted-sm">{tr(registrySize === 1 ? "{n} team roster saved in this event." : "{n} team rosters saved in this event.", { n: registrySize })}</span>
+          <button className="btn danger sm" onClick={clearRegistry}>{tr("🗑 Clear all rosters")}</button>
         </div>
       )}
 
       {history.length > 0 && (
         <details className="import-history" style={{ marginTop: 14 }}>
-          <summary>Import history ({history.length})</summary>
+          <summary>{tr("Import history ({n})", { n: history.length })}</summary>
           <ul className="import-log">
             {history.map((h, i) => (
               <li key={i}>
                 <span className="il-when">{fmtWhen(h.at)}</span>
                 <span className="il-what">
-                  {h.people} people · {h.teams} teams{h.category ? ` · ${h.category}` : ""}{h.referees ? ` · ${h.referees} refs` : ""}
+                  {tr("{p} people · {t} teams", { p: h.people, t: h.teams })}{h.category ? ` · ${h.category}` : ""}{h.referees ? ` · ${tr("{n} refs", { n: h.referees })}` : ""}
                 </span>
                 <span className="il-by muted-sm">{h.by}</span>
                 {h.teamNames?.length > 0 && <div className="il-teams muted-sm" title={h.teamNames.join(", ")}>{h.teamNames.join(" · ")}</div>}

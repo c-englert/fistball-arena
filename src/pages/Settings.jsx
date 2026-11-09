@@ -17,6 +17,7 @@ import { formatRange } from "../dates.js";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 import { overlayUrl, resultsJsonUrl } from "../broadcast.js";
+import { useT, useLang, tRound } from "../i18n.js";
 
 // Format variants offered per category in phase 4. The editable bracket (View
 // bracket) still fine-tunes individual knockout matchups on top of these.
@@ -64,6 +65,8 @@ const PAFA_TABLE = [
 
 export default function Settings({ me }) {
   const nav = useNavigate();
+  const tr = useT();
+  const [lang] = useLang();
   const { eventId, event, archived, isAdmin, branding } = useEvent();
   const [live, setLive] = useState(undefined);
   const [status, setStatus] = useState("");
@@ -107,7 +110,7 @@ export default function Settings({ me }) {
     else if (!ov.removed.includes(matchId)) ov.removed.push(matchId);
   });
   const resetFormat = (cat) => edit((d) => { const fo = { ...(d.formatOverrides || {}) }; delete fo[cat]; return { ...d, formatOverrides: fo }; });
-  const saveOverrides = () => { setStatus("Saving format…"); updateEventFields({ formatOverrides: details.formatOverrides }).then(() => afterSave("Format saved.")).catch((e) => setStatus("Save failed: " + (e?.message || e))); };
+  const saveOverrides = () => { setStatus(tr("Saving format…")); updateEventFields({ formatOverrides: details.formatOverrides }).then(() => afterSave(tr("Format saved."))).catch((e) => setStatus(tr("Save failed: ") + (e?.message || e))); };
   const [remote, setRemote] = useState(false); // someone else changed it while editing
 
   // Live sync: pull the event doc into the form whenever it changes remotely,
@@ -131,12 +134,12 @@ export default function Settings({ me }) {
     const flags = FORMAT_VARIANTS.find((x) => x.id === id)?.flags || { double: false, knockout: true };
     const fv = { ...(details.formatVariants || {}), [cat]: { ...(details.formatVariants?.[cat] || {}), ...flags } };
     edit((d) => ({ ...d, formatVariants: fv }));
-    updateEventFields({ formatVariants: fv }).catch((e) => setStatus("Save failed: " + (e?.message || e)));
+    updateEventFields({ formatVariants: fv }).catch((e) => setStatus(tr("Save failed: ") + (e?.message || e)));
   };
   const setVariantField = (cat, patch) => {
     const fv = { ...(details.formatVariants || {}), [cat]: { ...(details.formatVariants?.[cat] || {}), ...patch } };
     edit((d) => ({ ...d, formatVariants: fv }));
-    updateEventFields({ formatVariants: fv }).catch((e) => setStatus("Save failed: " + (e?.message || e)));
+    updateEventFields({ formatVariants: fv }).catch((e) => setStatus(tr("Save failed: ") + (e?.message || e)));
   };
 
   // Several groups per category: count, team → group, qualifiers, placements.
@@ -148,14 +151,14 @@ export default function Settings({ me }) {
   };
 
   const doRegroup = async (cat, groups) => {
-    if (!window.confirm(`Update the published ${cat} group games to the groups shown here? Day, time, court and game numbers stay; teams that changed group swap into those games (their uniform choice for those games is cleared). Use only before these games start.`)) return;
-    setStatus("Updating games…");
+    if (!window.confirm(tr("Update the published {cat} group games to the groups shown here? Day, time, court and game numbers stay; teams that changed group swap into those games (their uniform choice for those games is cleared). Use only before these games start.", { cat }))) return;
+    setStatus(tr("Updating games…"));
     try {
       const shortOf = Object.fromEntries((details.entries || []).filter((e) => e.short?.trim()).map((e) => [e.name, e.short.trim()]));
       const n = await regroupGames(cat, groups.map((g) => ({ label: g.label, teams: g.teams })), shortOf);
-      setStatus(`${cat}: ${n} game(s) updated to the new groups.`);
-      window.alert(`${cat}: ${n} game(s) updated to the new groups.`);
-    } catch (e) { setStatus("Update failed: " + (e?.message || e)); window.alert("Update failed: " + (e?.message || e)); }
+      setStatus(tr("{cat}: {n} game(s) updated to the new groups.", { cat, n }));
+      window.alert(tr("{cat}: {n} game(s) updated to the new groups.", { cat, n }));
+    } catch (e) { setStatus(tr("Update failed: ") + (e?.message || e)); window.alert(tr("Update failed: ") + (e?.message || e)); }
   };
 
   const cb = details.categoryBuilder;
@@ -165,10 +168,10 @@ export default function Settings({ me }) {
   const previewCats = expandBuilder(cb);
   const afterSave = (msg) => { setDirty(false); setRemote(false); lastEvent.current = event; setStatus(msg); };
   const saveCategories = () => {
-    setStatus("Saving…");
+    setStatus(tr("Saving…"));
     updateEventFields({ categoryBuilder: details.categoryBuilder })
-      .then(() => { afterSave(`Saved — ${previewCats.length} categor${previewCats.length === 1 ? "y" : "ies"} defined.`); setOpenStep(3); })
-      .catch((e) => setStatus("Save failed: " + (e?.message || e)));
+      .then(() => { afterSave(previewCats.length === 1 ? tr("Saved — {n} category defined.", { n: previewCats.length }) : tr("Saved — {n} categories defined.", { n: previewCats.length })); setOpenStep(3); })
+      .catch((e) => setStatus(tr("Save failed: ") + (e?.message || e)));
   };
 
   // Team-entry matrix (rows = clubs/nations, columns = categories).
@@ -199,26 +202,26 @@ export default function Settings({ me }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !logoFor.current) return;
-    setStatus("Uploading team logo…");
-    try { await setTeamLogo(logoFor.current, await fileToLogoDataUrl(file, 128)); setStatus(`Logo saved for ${logoFor.current}.`); }
-    catch (e2) { setStatus("Logo upload failed: " + (e2?.message || e2)); }
+    setStatus(tr("Uploading team logo…"));
+    try { await setTeamLogo(logoFor.current, await fileToLogoDataUrl(file, 128)); setStatus(tr("Logo saved for {name}.", { name: logoFor.current })); }
+    catch (e2) { setStatus(tr("Logo upload failed: ") + (e2?.message || e2)); }
   };
   const removeTeamLogo = async (name) => {
-    try { await setTeamLogo(name, null); setStatus(`Logo removed for ${name}.`); }
-    catch (e2) { setStatus("Failed: " + (e2?.message || e2)); }
+    try { await setTeamLogo(name, null); setStatus(tr("Logo removed for {name}.", { name })); }
+    catch (e2) { setStatus(tr("Failed: ") + (e2?.message || e2)); }
   };
 
   const saveTeams = () => {
-    setStatus("Saving teams…");
+    setStatus(tr("Saving teams…"));
     updateEventFields({ entries: details.entries })
-      .then(() => { afterSave(`Saved ${(details.entries || []).length} team(s).`); setOpenStep(4); })
-      .catch((e) => setStatus("Save failed: " + (e?.message || e)));
+      .then(() => { afterSave(tr("Saved {n} team(s).", { n: (details.entries || []).length })); setOpenStep(4); })
+      .catch((e) => setStatus(tr("Save failed: ") + (e?.message || e)));
   };
 
   const saveDetails = async () => {
-    setStatus("Saving event…");
-    try { await updateEventDetails({ name: details.name, place: details.place, address: details.address.trim(), startDate: details.startDate, endDate: details.endDate, dates: formatRange(details.startDate, details.endDate) }); afterSave("Event details saved."); setOpenStep(2); }
-    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+    setStatus(tr("Saving event…"));
+    try { await updateEventDetails({ name: details.name, place: details.place, address: details.address.trim(), startDate: details.startDate, endDate: details.endDate, dates: formatRange(details.startDate, details.endDate) }); afterSave(tr("Event details saved.")); setOpenStep(2); }
+    catch (e) { setStatus(tr("Save failed: ") + (e?.message || e)); }
   };
 
   // logo library + this event's selection
@@ -246,19 +249,19 @@ export default function Settings({ me }) {
   const [existingGames, setExistingGames] = useState([]);
   useEffect(() => subscribeGames(setExistingGames), []);
 
-  if (!isAdmin) return <div className="empty">Admins only.</div>;
+  if (!isAdmin) return <div className="empty">{tr("Admins only.")}</div>;
 
   const thisIsLive = !!live?.ids?.has(eventId);
   const otherLive = (live?.events || []).filter((e) => e.eventId !== eventId);
-  const publishLive = async () => { try { await setLiveEvent(event); } catch (e) { setStatus("Failed: " + (e?.message || e)); } };
+  const publishLive = async () => { try { await setLiveEvent(event); } catch (e) { setStatus(tr("Failed: ") + (e?.message || e)); } };
   const stopLive = async () => {
-    if (!window.confirm("Stop showing this event on Fistball Live?")) return;
-    try { await clearLiveEvent(eventId); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+    if (!window.confirm(tr("Stop showing this event on Fistball Live?"))) return;
+    try { await clearLiveEvent(eventId); } catch (e) { setStatus(tr("Failed: ") + (e?.message || e)); }
   };
   const toggleArchive = async () => {
     const next = archived ? "active" : "archived";
-    if (!window.confirm(archived ? "Re-activate this event?" : "Archive this event? It becomes read-only for everyone.")) return;
-    try { await setEventStatus(next, me); } catch (e) { setStatus("Failed: " + (e?.message || e)); }
+    if (!window.confirm(archived ? tr("Re-activate this event?") : tr("Archive this event? It becomes read-only for everyone."))) return;
+    try { await setEventStatus(next, me); } catch (e) { setStatus(tr("Failed: ") + (e?.message || e)); }
   };
   const pt = details.pointTable || [];
   const addPtRow = () => edit((d) => ({ ...d, pointTable: [...(d.pointTable || []), { bestOf: 3, winSets: 2, loseSets: 1, winPts: 2, losePts: 0 }] }));
@@ -266,30 +269,30 @@ export default function Settings({ me }) {
   const delPtRow = (i) => edit((d) => ({ ...d, pointTable: (d.pointTable || []).filter((_, j) => j !== i) }));
   const applyPreset = (rows) => edit((d) => ({ ...d, pointTable: rows.map((r) => ({ ...r })) }));
   const savePoints = async () => {
-    setStatus("Saving points…");
-    try { await saveScoringRules({ pointTable: details.pointTable || [], drawPoints: details.drawPoints ?? 1 }); afterSave("Classification points saved."); }
-    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+    setStatus(tr("Saving points…"));
+    try { await saveScoringRules({ pointTable: details.pointTable || [], drawPoints: details.drawPoints ?? 1 }); afterSave(tr("Classification points saved.")); }
+    catch (e) { setStatus(tr("Save failed: ") + (e?.message || e)); }
   };
 
   const resetAllScores = async () => {
-    if (!window.confirm("Reset ALL game reports? This deletes every game report, sets all scores back to “Not Started”, and clears the knockout bracket (advanced teams go back to their placeholders). Games, schedule, teams and rosters are kept. This cannot be undone.")) return;
-    setStatus("Resetting game reports…");
-    try { const n = await resetScores(); setStatus(`Reset done — ${n} games back to Not Started.`); }
-    catch (e) { setStatus("Reset failed: " + (e?.message || e)); }
+    if (!window.confirm(tr("Reset ALL game reports? This deletes every game report, sets all scores back to “Not Started”, and clears the knockout bracket (advanced teams go back to their placeholders). Games, schedule, teams and rosters are kept. This cannot be undone."))) return;
+    setStatus(tr("Resetting game reports…"));
+    try { const n = await resetScores(); setStatus(tr("Reset done — {n} games back to Not Started.", { n })); }
+    catch (e) { setStatus(tr("Reset failed: ") + (e?.message || e)); }
   };
 
   const onUpload = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setStatus("Uploading logo…");
+    setStatus(tr("Uploading logo…"));
     try {
       const dataUrl = await fileToLogoDataUrl(file);
       await addLogo({ name: file.name.replace(/\.[^.]+$/, ""), dataUrl }, me);
-      setStatus("Logo added to the library.");
+      setStatus(tr("Logo added to the library."));
     } catch (e2) {
       // Shown as an alert too: the status line is hidden behind the library modal.
-      const msg = "Upload failed: " + (e2?.code || e2?.message || e2);
+      const msg = tr("Upload failed: ") + (e2?.code || e2?.message || e2);
       setStatus(msg);
       window.alert(msg);
     }
@@ -299,12 +302,12 @@ export default function Settings({ me }) {
   const removePromoter = (i) => setPromoters((p) => p.filter((_, j) => j !== i));
 
   const saveLogos = async () => {
-    setStatus("Saving branding…");
-    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus("Branding saved."); setOpenStep(8); }
-    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+    setStatus(tr("Saving branding…"));
+    try { await saveBranding({ name: event?.name, eventLogo, promoters }); setStatus(tr("Branding saved.")); setOpenStep(8); }
+    catch (e) { setStatus(tr("Save failed: ") + (e?.message || e)); }
   };
   const setSlots = (next) => edit((d) => ({ ...d, slots: next }));
-  const saveSlots = () => { setStatus("Saving courts…"); updateEventFields({ slots: details.slots }).then(() => { afterSave("Courts & schedule saved."); setOpenStep(6); }).catch((e) => setStatus("Save failed: " + (e?.message || e))); };
+  const saveSlots = () => { setStatus(tr("Saving courts…")); updateEventFields({ slots: details.slots }).then(() => { afterSave(tr("Courts & schedule saved.")); setOpenStep(6); }).catch((e) => setStatus(tr("Save failed: ") + (e?.message || e))); };
   // Derive courts & day windows from the games already scheduled (e.g. imported
   // events) so the user doesn't have to re-enter what's plainly in the schedule.
   const deriveSlotsFromGames = () => {
@@ -322,7 +325,7 @@ export default function Settings({ me }) {
       .map(([date, times]) => { const sorted = [...times].sort(); return { date, start: sorted[0], end: addMin(sorted[sorted.length - 1], dur) }; })
       .sort((a, b) => dISO(a.date).localeCompare(dISO(b.date)));
     setSlots({ ...details.slots, courts, days });
-    setStatus(`Loaded ${courts.length} courts and ${days.length} days from the schedule.`);
+    setStatus(tr("Loaded {c} courts and {d} days from the schedule.", { c: courts.length, d: days.length }));
   };
   const slotsEmpty = !(details.slots?.courts || []).length || !(details.slots?.days || []).length;
 
@@ -343,7 +346,7 @@ export default function Settings({ me }) {
       // Existing games keep their day/court/time; new ones go around them.
       cfg.occupied = existingGames.map((g) => ({ date: g.date, time: g.time, court: String(g.court ?? "") }));
     }
-    if (append && !cfg.categories.length) { setStatus("All categories already have published games — nothing new to add."); setGenResult(null); return; }
+    if (append && !cfg.categories.length) { setStatus(tr("All categories already have published games — nothing new to add.")); setGenResult(null); return; }
     const r = generateSchedule(cfg);
     const shortOf = {};
     (details.entries || []).forEach((e) => { if (e.short && e.short.trim()) shortOf[e.name] = e.short.trim(); });
@@ -354,7 +357,9 @@ export default function Settings({ me }) {
     }));
     r.append = append;
     setGenResult(r);
-    setStatus(`${r.games.length} ${append ? "new " : ""}games generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
+    setStatus(r.unplaced.length
+      ? tr(append ? "{n} new games generated, {u} unplaced." : "{n} games generated, {u} unplaced.", { n: r.games.length, u: r.unplaced.length })
+      : tr(append ? "{n} new games generated." : "{n} games generated.", { n: r.games.length }));
   };
   const doGenerate = () => runGenerate(false);
   const doGenerateAppend = () => runGenerate(true);
@@ -362,16 +367,16 @@ export default function Settings({ me }) {
     if (!genResult?.games.length) return;
     const append = !!genResult.append;
     const msg = append
-      ? `Add ${genResult.games.length} new games to the schedule? Existing games, reports and results are kept.`
-      : `Publish ${genResult.games.length} games? This replaces ALL current games, reports and results for this event.`;
+      ? tr("Add {n} new games to the schedule? Existing games, reports and results are kept.", { n: genResult.games.length })
+      : tr("Publish {n} games? This replaces ALL current games, reports and results for this event.", { n: genResult.games.length });
     if (!window.confirm(msg)) return;
-    setStatus("Publishing…");
+    setStatus(tr("Publishing…"));
     try {
       await publishGames(genResult.games, { replaceAll: !append });
       setPublished(true);
-      setStatus(`${append ? "Added" : "Published"} ${genResult.games.length} games. See the games list / Fistball Live.`);
+      setStatus(tr(append ? "Added {n} games. See the games list / Fistball Live." : "Published {n} games. See the games list / Fistball Live.", { n: genResult.games.length }));
       setOpenStep(7);
-    } catch (e) { setStatus("Publish failed: " + (e?.message || e)); }
+    } catch (e) { setStatus(tr("Publish failed: ") + (e?.message || e)); }
   };
 
   // Guided-setup step state: which are done, and which are still locked.
@@ -393,96 +398,96 @@ export default function Settings({ me }) {
 
   return (
     <>
-      <h2 className="page-h">Event settings{archived && <span className="arch-badge">Archived</span>}</h2>
+      <h2 className="page-h">{tr("Event settings")}{archived && <span className="arch-badge">{tr("Archived")}</span>}</h2>
       <div>
         {remote && (
           <div className="sync-banner">
-            <span>Another admin just changed this event.</span>
-            <button className="btn sm" onClick={reloadFromEvent}>Load latest</button>
+            <span>{tr("Another admin just changed this event.")}</span>
+            <button className="btn sm" onClick={reloadFromEvent}>{tr("Load latest")}</button>
           </div>
         )}
         {/* ---- 1. Event details ---- */}
-        <Step n={1} title="Event details" sub={done[0] ? details.name : ""} done={done[0]} locked={locked[0]} open={openStep === 1} onToggle={() => openOrToggle(1)}>
-          <div className="field"><span>Name</span>
+        <Step n={1} title={tr("Event details")} sub={done[0] ? details.name : ""} done={done[0]} locked={locked[0]} open={openStep === 1} onToggle={() => openOrToggle(1)}>
+          <div className="field"><span>{tr("Name")}</span>
             <input value={details.name} disabled={archived} onChange={(e) => edit((d) => ({ ...d, name: e.target.value }))} /></div>
-          <div className="field"><span>Place</span>
-            <input value={details.place} disabled={archived} onChange={(e) => edit((d) => ({ ...d, place: e.target.value }))} placeholder="City · Country" /></div>
-          <div className="field"><span>Venue address</span>
-            <input value={details.address} disabled={archived} onChange={(e) => edit((d) => ({ ...d, address: e.target.value }))} placeholder="Street, number, city — shown on Fistball Live with directions" /></div>
+          <div className="field"><span>{tr("Place")}</span>
+            <input value={details.place} disabled={archived} onChange={(e) => edit((d) => ({ ...d, place: e.target.value }))} placeholder={tr("City · Country")} /></div>
+          <div className="field"><span>{tr("Venue address")}</span>
+            <input value={details.address} disabled={archived} onChange={(e) => edit((d) => ({ ...d, address: e.target.value }))} placeholder={tr("Street, number, city — shown on Fistball Live with directions")} /></div>
           <div className="grid2">
-            <div className="field"><span>Starts</span>
+            <div className="field"><span>{tr("Starts")}</span>
               <input type="date" disabled={archived} value={details.startDate} onChange={(e) => edit((d) => ({ ...d, startDate: e.target.value, endDate: d.endDate && d.endDate < e.target.value ? e.target.value : d.endDate }))} /></div>
-            <div className="field"><span>Ends</span>
+            <div className="field"><span>{tr("Ends")}</span>
               <input type="date" disabled={archived} min={details.startDate || undefined} value={details.endDate} onChange={(e) => edit((d) => ({ ...d, endDate: e.target.value }))} /></div>
           </div>
           {(details.startDate || details.endDate) && <p className="muted-sm">{formatRange(details.startDate, details.endDate)}</p>}
-          <div className="field"><span>Official languages (game report PDF)</span>
+          <div className="field"><span>{tr("Official languages (game report PDF)")}</span>
             <select value={details.reportLanguage} disabled={archived} onChange={(e) => {
               const v = e.target.value;
               edit((d) => ({ ...d, reportLanguage: v }));
-              updateEventFields({ reportLanguage: v }).then(() => setStatus("Official languages saved.")).catch((err) => setStatus("Save failed: " + (err?.message || err)));
+              updateEventFields({ reportLanguage: v }).then(() => setStatus(tr("Official languages saved."))).catch((err) => setStatus(tr("Save failed: ") + (err?.message || err)));
             }}>
-              <option value="">English</option>
-              <option value="es">English + Español (e.g. PAFA)</option>
-              <option value="de">English + Deutsch (e.g. IFA)</option>
-              <option value="pt">English + Português</option>
+              <option value="">{tr("English")}</option>
+              <option value="es">{tr("English + Español (e.g. PAFA)")}</option>
+              <option value="de">{tr("English + Deutsch (e.g. IFA)")}</option>
+              <option value="pt">{tr("English + Português")}</option>
             </select></div>
-          {!archived && <button className="btn primary" onClick={saveDetails}>Save details</button>}
+          {!archived && <button className="btn primary" onClick={saveDetails}>{tr("Save details")}</button>}
         </Step>
 
         {/* ---- 2. Categories (chip builder) ---- */}
-        <Step n={2} title="Categories" sub={done[1] ? `${previewCats.length} categories` : ""} done={done[1]} locked={locked[1]} open={openStep === 2} onToggle={() => openOrToggle(2)}>
-          <p className="muted-sm">Mark the chips and the app creates every category (type × age × sex).</p>
+        <Step n={2} title={tr("Categories")} sub={done[1] ? tr("{n} categories", { n: previewCats.length }) : ""} done={done[1]} locked={locked[1]} open={openStep === 2} onToggle={() => openOrToggle(2)}>
+          <p className="muted-sm">{tr("Mark the chips and the app creates every category (type × age × sex).")}</p>
 
           <div className="chip-row">
-            <span className="chip-row-label">Type</span>
+            <span className="chip-row-label">{tr("Type")}</span>
             {TYPES.map((t) => (
               <button key={t.id} disabled={archived} className={`selchip ${(cb.types || []).includes(t.id) ? "on" : ""}`} onClick={() => toggleIn("types", t.id)}>{t.label}</button>
             ))}
           </div>
 
           <div className="chip-row">
-            <span className="chip-row-label">Gender</span>
-            <button disabled={archived} className={`selchip ${(cb.sexes || []).includes("men") ? "on men" : ""}`} onClick={() => toggleIn("sexes", "men")}>♂ Men</button>
-            <button disabled={archived} className={`selchip ${(cb.sexes || []).includes("women") ? "on women" : ""}`} onClick={() => toggleIn("sexes", "women")}>♀ Women</button>
+            <span className="chip-row-label">{tr("Gender")}</span>
+            <button disabled={archived} className={`selchip ${(cb.sexes || []).includes("men") ? "on men" : ""}`} onClick={() => toggleIn("sexes", "men")}>{tr("♂ Men")}</button>
+            <button disabled={archived} className={`selchip ${(cb.sexes || []).includes("women") ? "on women" : ""}`} onClick={() => toggleIn("sexes", "women")}>{tr("♀ Women")}</button>
           </div>
 
           <div className="chip-row">
-            <span className="chip-row-label">Ages <span className="muted-sm" style={{ fontWeight: 400 }}>(optional)</span></span>
+            <span className="chip-row-label">{tr("Ages")} <span className="muted-sm" style={{ fontWeight: 400 }}>{tr("(optional)")}</span></span>
             {[...COMMON_AGES, ...(cb.ages || []).filter((a) => !COMMON_AGES.includes(a))].map((a) => (
               <button key={a} disabled={archived} className={`selchip ${(cb.ages || []).includes(a) ? "on" : ""}`} onClick={() => toggleIn("ages", a)}>{a}</button>
             ))}
             {!archived && (
               <input className="age-input" value={ageInput} onChange={(e) => setAgeInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addAge(ageInput)} placeholder="+ custom" />
+                onKeyDown={(e) => e.key === "Enter" && addAge(ageInput)} placeholder={tr("+ custom")} />
             )}
           </div>
 
           <div className="cat-preview-box">
             {previewCats.length ? (
               <>
-                <div className="subhead">Creates {previewCats.length} categor{previewCats.length === 1 ? "y" : "ies"}</div>
+                <div className="subhead">{previewCats.length === 1 ? tr("Creates {n} category", { n: previewCats.length }) : tr("Creates {n} categories", { n: previewCats.length })}</div>
                 <div className="chips">{previewCats.map((n) => <span className="team-chip" key={n}>{n}</span>)}</div>
               </>
-            ) : <p className="muted-sm" style={{ margin: 0 }}>Pick a type and a sex to see the categories.</p>}
+            ) : <p className="muted-sm" style={{ margin: 0 }}>{tr("Pick a type and a sex to see the categories.")}</p>}
           </div>
 
-          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveCategories} disabled={!previewCats.length}>Save categories</button>}
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveCategories} disabled={!previewCats.length}>{tr("Save categories")}</button>}
         </Step>
 
         {/* ---- 3. Team-entry matrix (teams × categories) ---- */}
-        <Step n={3} title="Teams & categories" sub={done[2] ? `${nTeams} teams` : ""} done={done[2]} locked={locked[2]} open={openStep === 3} onToggle={() => openOrToggle(3)}>
+        <Step n={3} title={tr("Teams & categories")} sub={done[2] ? tr("{n} teams", { n: nTeams }) : ""} done={done[2]} locked={locked[2]} open={openStep === 3} onToggle={() => openOrToggle(3)}>
           <div>
-            <p className="muted-sm">Add each club / national team and tick the categories it plays. This is what the schedule uses.</p>
+            <p className="muted-sm">{tr("Add each club / national team and tick the categories it plays. This is what the schedule uses.")}</p>
             {!archived && (
               <div className="add-row">
                 <input value={teamInput} onChange={(e) => setTeamInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addTeam(teamInput)} placeholder="Add club / national team" />
-                <button className="btn sm" onClick={() => addTeam(teamInput)}>Add</button>
+                  onKeyDown={(e) => e.key === "Enter" && addTeam(teamInput)} placeholder={tr("Add club / national team")} />
+                <button className="btn sm" onClick={() => addTeam(teamInput)}>{tr("Add")}</button>
               </div>
             )}
             {!(details.entries || []).length ? (
-              <p className="muted-sm" style={{ marginTop: 10 }}>No teams yet.</p>
+              <p className="muted-sm" style={{ marginTop: 10 }}>{tr("No teams yet.")}</p>
             ) : (
               (() => {
                 const cols = buildColumns(cb);
@@ -492,15 +497,15 @@ export default function Settings({ me }) {
                     <table className="matrix">
                       <thead>
                         <tr>
-                          <th className="mx-team" rowSpan={headRows}>Team</th>
+                          <th className="mx-team" rowSpan={headRows}>{tr("Team")}</th>
                           {cols.types.map((t, ti) => (
                             <th key={ti} className="mx-type" colSpan={cols.sexes.length * cols.agesList.length}>{t}</th>
                           ))}
-                          <th rowSpan={headRows} aria-label="Remove" />
+                          <th rowSpan={headRows} aria-label={tr("Remove")} />
                         </tr>
                         <tr>
                           {cols.types.map((t, ti) => cols.sexes.map((s) => (
-                            <th key={ti + s} className={`mx-sex mx-sex-${s}`} colSpan={cols.agesList.length}>{s === "women" ? "♀ Women" : "♂ Men"}</th>
+                            <th key={ti + s} className={`mx-sex mx-sex-${s}`} colSpan={cols.agesList.length}>{s === "women" ? tr("♀ Women") : tr("♂ Men")}</th>
                           )))}
                         </tr>
                         {cols.hasAges && (
@@ -515,20 +520,20 @@ export default function Settings({ me }) {
                         {(details.entries || []).map((t, i) => (
                           <tr key={i}>
                             <td className="mx-team"><span className="mx-team-cell">{teamLogos[t.name]
-                              ? <span className="mx-logo"><img src={teamLogos[t.name]} alt="" title="Change logo" onClick={() => !archived && pickLogo(t.name)} />{!archived && <button className="mx-logo-x" onClick={() => removeTeamLogo(t.name)} aria-label="Remove logo" title="Remove logo">✕</button>}</span>
-                              : !archived && <button className="mx-logo-add" onClick={() => pickLogo(t.name)} title="Add team logo (shown on the broadcast scoreboard)">+ logo</button>}<span className="flag">{flagFor(t.name)}</span><span className="mx-team-inputs"><input className="mx-team-input" value={t.name} disabled={archived} onChange={(e) => renameTeam(i, e.target.value)} aria-label="Team name" /><input className="mx-team-short" value={t.short || ""} disabled={archived} onChange={(e) => setShort(i, e.target.value)} placeholder="short name for schedule (optional)" aria-label="Short name" /><span className="mx-team-meta"><input className="mx-team-short" value={t.country || ""} disabled={archived} onChange={(e) => setEntryField(i, "country", e.target.value)} placeholder="nation (default: team name)" aria-label="Nation" title="Officials from this nation can't officiate this team" /><input className="mx-team-short" value={t.club || ""} disabled={archived} onChange={(e) => setEntryField(i, "club", e.target.value)} placeholder="club (default: team name)" aria-label="Club" title="Officials from this club can't officiate this team" /></span></span></span></td>
+                              ? <span className="mx-logo"><img src={teamLogos[t.name]} alt="" title={tr("Change logo")} onClick={() => !archived && pickLogo(t.name)} />{!archived && <button className="mx-logo-x" onClick={() => removeTeamLogo(t.name)} aria-label={tr("Remove logo")} title={tr("Remove logo")}>✕</button>}</span>
+                              : !archived && <button className="mx-logo-add" onClick={() => pickLogo(t.name)} title={tr("Add team logo (shown on the broadcast scoreboard)")}>{tr("+ logo")}</button>}<span className="flag">{flagFor(t.name)}</span><span className="mx-team-inputs"><input className="mx-team-input" value={t.name} disabled={archived} onChange={(e) => renameTeam(i, e.target.value)} aria-label={tr("Team name")} /><input className="mx-team-short" value={t.short || ""} disabled={archived} onChange={(e) => setShort(i, e.target.value)} placeholder={tr("short name for schedule (optional)")} aria-label={tr("Short name")} /><span className="mx-team-meta"><input className="mx-team-short" value={t.country || ""} disabled={archived} onChange={(e) => setEntryField(i, "country", e.target.value)} placeholder={tr("nation (default: team name)")} aria-label={tr("Nation")} title={tr("Officials from this nation can't officiate this team")} /><input className="mx-team-short" value={t.club || ""} disabled={archived} onChange={(e) => setEntryField(i, "club", e.target.value)} placeholder={tr("club (default: team name)")} aria-label={tr("Club")} title={tr("Officials from this club can't officiate this team")} /></span></span></span></td>
                             {cols.leaves.map((lf) => (
                               <td key={lf.name} className="mx-cell">
                                 <input type="checkbox" checked={(t.cats || []).includes(lf.name)} disabled={archived} onChange={() => toggleEntry(i, lf.name)} title={lf.name} />
                               </td>
                             ))}
-                            <td>{!archived && <button className="btn danger sm" onClick={() => removeTeam(i)} aria-label="Remove">✕</button>}</td>
+                            <td>{!archived && <button className="btn danger sm" onClick={() => removeTeam(i)} aria-label={tr("Remove")}>✕</button>}</td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
                         <tr>
-                          <td className="mx-team dim">Teams</td>
+                          <td className="mx-team dim">{tr("Teams")}</td>
                           {cols.leaves.map((lf) => <td key={lf.name} className="mx-cell dim">{(details.entries || []).filter((t) => (t.cats || []).includes(lf.name)).length}</td>)}
                           <td />
                         </tr>
@@ -539,17 +544,17 @@ export default function Settings({ me }) {
               })()
             )}
 <input ref={logoInput} type="file" accept="image/*" hidden onChange={onTeamLogo} />
-            {(details.entries || []).length > 0 && <p className="muted-sm" style={{ marginTop: 8 }}>Team logos (“+ logo”) are saved right away and shown on the broadcast scoreboard. A logo is linked to the team name — renaming a team drops it.</p>}
-            {!archived && (details.entries || []).length > 0 && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveTeams}>Save teams</button>}
+            {(details.entries || []).length > 0 && <p className="muted-sm" style={{ marginTop: 8 }}>{tr("Team logos (“+ logo”) are saved right away and shown on the broadcast scoreboard. A logo is linked to the team name — renaming a team drops it.")}</p>}
+            {!archived && (details.entries || []).length > 0 && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveTeams}>{tr("Save teams")}</button>}
           </div>
         </Step>
 
         {/* ---- 4. Format per category (auto by team count) ---- */}
-        <Step n={4} title="Format" sub={done[3] ? `${previewCats.length} categories` : ""} done={done[3]} locked={locked[3]} open={openStep === 4} onToggle={() => openOrToggle(4)}>
+        <Step n={4} title={tr("Format")} sub={done[3] ? tr("{n} categories", { n: previewCats.length }) : ""} done={done[3]} locked={locked[3]} open={openStep === 4} onToggle={() => openOrToggle(4)}>
           <div>
-            <p className="muted-sm">Pick a format for each category. The number of teams comes from the matrix. Split a category into groups (e.g. 2 groups of 6) — each group plays round-robin and the best cross into the knockout. With one group, “View bracket” fine-tunes the knockout matchups.</p>
+            <p className="muted-sm">{tr("Pick a format for each category. The number of teams comes from the matrix. Split a category into groups (e.g. 2 groups of 6) — each group plays round-robin and the best cross into the knockout. With one group, “View bracket” fine-tunes the knockout matchups.")}</p>
             {previewCats.length > 0 && (
-              <button className="btn" style={{ marginBottom: 10 }} onClick={() => setBracketIdx(0)}>👁 Review each bracket →</button>
+              <button className="btn" style={{ marginBottom: 10 }} onClick={() => setBracketIdx(0)}>{tr("👁 Review each bracket →")}</button>
             )}
             {previewCats.map((cat, ci) => {
               const count = (details.entries || []).filter((t) => (t.cats || []).includes(cat)).length;
@@ -571,23 +576,23 @@ export default function Settings({ me }) {
                 && groups.some((g) => { const p = pubGroups[g.label]; return !p || p.size !== g.teams.length || g.teams.some((t) => !p.has(t)); });
               return (
                 <div className="fmt-cat" key={cat}>
-                  <div className="fmt-head"><b>{cat}</b><span className="tag">{count} team{count === 1 ? "" : "s"}</span>
-                    {((nGroups === 1 && count > 0 && d && flags.knockout && formatWarnings(count, details.formatOverrides?.[cat]).length > 0) || gWarn.length > 0) && <span className="tag" style={{ background: "#fff4e5", color: "#8a5a00" }}>⚠️ check</span>}
-                    {((nGroups === 1 && count > 0 && d) || (gd && gd.koSupported)) && flags.knockout && <button className="btn sm" style={{ marginLeft: "auto" }} onClick={() => setBracketIdx(ci)}>View bracket</button>}
+                  <div className="fmt-head"><b>{cat}</b><span className="tag">{count === 1 ? tr("{n} team", { n: count }) : tr("{n} teams", { n: count })}</span>
+                    {((nGroups === 1 && count > 0 && d && flags.knockout && formatWarnings(count, details.formatOverrides?.[cat]).length > 0) || gWarn.length > 0) && <span className="tag" style={{ background: "#fff4e5", color: "#8a5a00" }}>{tr("⚠️ check")}</span>}
+                    {((nGroups === 1 && count > 0 && d) || (gd && gd.koSupported)) && flags.knockout && <button className="btn sm" style={{ marginLeft: "auto" }} onClick={() => setBracketIdx(ci)}>{tr("View bracket")}</button>}
                   </div>
                   {count > 0 && (
                     <>
                       <select className="fmt-variant" value={variantId(v)} disabled={archived} onChange={(e) => applyVariant(cat, e.target.value)}>
-                        {FORMAT_VARIANTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                        {FORMAT_VARIANTS.map((o) => <option key={o.id} value={o.id}>{tr(o.label)}</option>)}
                       </select>
                       <div className="fmt-bestof">
-                        <label>Group best of
+                        <label>{tr("Group best of")}
                           <select value={Number(v?.bestOf) || 3} disabled={archived} onChange={(e) => setVariantField(cat, { bestOf: Number(e.target.value) })}>
                             {[1, 3, 5, 7].map((n) => <option key={n} value={n}>{n}</option>)}
                           </select>
                         </label>
                         {flags.knockout && (
-                          <label>Finals best of
+                          <label>{tr("Finals best of")}
                             <select value={Number(v?.bestOfKo) || Number(v?.bestOf) || 3} disabled={archived} onChange={(e) => setVariantField(cat, { bestOfKo: Number(e.target.value) })}>
                               {[1, 3, 5, 7].map((n) => <option key={n} value={n}>{n}</option>)}
                             </select>
@@ -595,38 +600,38 @@ export default function Settings({ me }) {
                         )}
                       </div>
                       <div className="fmt-bestof">
-                        <label>Groups
+                        <label>{tr("Groups")}
                           <select value={nGroups} disabled={archived || count < 4} onChange={(e) => setGroupCount(cat, Number(e.target.value))}>
-                            {Array.from({ length: Math.max(1, Math.min(8, Math.floor(count / 2))) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n === 1 ? "1 (all play all)" : n}</option>)}
+                            {Array.from({ length: Math.max(1, Math.min(8, Math.floor(count / 2))) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n === 1 ? tr("1 (all play all)") : n}</option>)}
                           </select>
                         </label>
                         {gd && flags.knockout && (QUALIFIER_OPTIONS[nGroups] || []).length > 0 && (
-                          <label>Qualify per group
+                          <label>{tr("Qualify per group")}
                             <select value={gd.qualifiers} disabled={archived} onChange={(e) => setVariantField(cat, { qualifiers: Number(e.target.value) })}>
                               {QUALIFIER_OPTIONS[nGroups].filter((q) => q <= minSize).map((q) => <option key={q} value={q}>{q}</option>)}
                             </select>
                           </label>
                         )}
                         {gd && flags.knockout && (hasQF || nGroups === 2) && (
-                          <label><input type="checkbox" checked={v?.placements !== false} disabled={archived} onChange={(e) => setVariantField(cat, { placements: e.target.checked })} /> Placement games (5th place and below)</label>
+                          <label><input type="checkbox" checked={v?.placements !== false} disabled={archived} onChange={(e) => setVariantField(cat, { placements: e.target.checked })} /> {tr("Placement games (5th place and below)")}</label>
                         )}
                       </div>
                       {gd && (
                         <>
                         {groupsOutOfDate && (
                           <div className="warn-box" style={{ marginBottom: 8 }}>
-                            ⚠️ The published games still use other groups ({Object.entries(pubGroups).sort().map(([l, t]) => `Group ${l}: ${[...t].sort().join(", ")}`).join(" · ")}).
-                            {!archived && <div style={{ marginTop: 6 }}><button className="btn sm primary" onClick={() => doRegroup(cat, groups)}>Update the published games to these groups</button></div>}
+                            {tr("⚠️ The published games still use other groups ({list}).", { list: Object.entries(pubGroups).sort().map(([l, t]) => tr("Group {g}: {teams}", { g: l, teams: [...t].sort().join(", ") })).join(" · ") })}
+                            {!archived && <div style={{ marginTop: 6 }}><button className="btn sm primary" onClick={() => doRegroup(cat, groups)}>{tr("Update the published games to these groups")}</button></div>}
                           </div>
                         )}
                         <div className="fmt-group-grid">
                           {groups.map((g) => (
                             <div className="fmt-group" key={g.label}>
-                              <div className="fmt-group-h">Group {g.label} <span className="muted-sm">· {g.teams.length} teams</span></div>
+                              <div className="fmt-group-h">{tr("Group {g}", { g: g.label })} <span className="muted-sm">· {tr("{n} teams", { n: g.teams.length })}</span></div>
                               {g.teams.map((t) => (
                                 <div className="fmt-group-team" key={t}>
                                   <span className="flag">{flagFor(t)}</span><span className="fmt-group-name">{t}</span>
-                                  <select value={g.label} disabled={archived} onChange={(e) => moveTeam(cat, groups, t, e.target.value)} aria-label={`Group for ${t}`}>
+                                  <select value={g.label} disabled={archived} onChange={(e) => moveTeam(cat, groups, t, e.target.value)} aria-label={tr("Group for {team}", { team: t })}>
                                     {groups.map((x) => <option key={x.label} value={x.label}>{x.label}</option>)}
                                   </select>
                                 </div>
@@ -639,132 +644,132 @@ export default function Settings({ me }) {
                     </>
                   )}
                   {!count ? (
-                    <p className="muted-sm" style={{ margin: "2px 0 0" }}>No teams ticked yet.</p>
+                    <p className="muted-sm" style={{ margin: "2px 0 0" }}>{tr("No teams ticked yet.")}</p>
                   ) : gd ? (
                     <>
                       {gd.groups.map((g) => (
-                        <div className="fmt-line" key={g.label}><span className="fmt-round">Group {g.label}</span> {g.teams} teams · {flags.double ? "double round-robin" : "round-robin"} · {g.games} games</div>
+                        <div className="fmt-line" key={g.label}><span className="fmt-round">{tr("Group {g}", { g: g.label })}</span> {tr("{n} teams", { n: g.teams })} · {flags.double ? tr("double round-robin") : tr("round-robin")} · {tr("{n} games", { n: g.games })}</div>
                       ))}
                       {gd.rounds.map((r, i) => (
-                        <div className="fmt-line" key={i}><span className="fmt-round">{r.round}</span> {r.matches.join(" · ")}</div>
+                        <div className="fmt-line" key={i}><span className="fmt-round">{tRound(lang, r.round)}</span> {r.matches.join(" · ")}</div>
                       ))}
-                      {flags.knockout && !gd.koSupported && <div className="fmt-line muted-sm">No automatic knockout for {nGroups} groups — use 2, 4 or 8 groups, or a “round-robin only” variant.</div>}
-                      {!flags.knockout && <div className="fmt-line muted-sm">No playoffs — final standings from the groups.</div>}
-                      <div className="muted-sm" style={{ marginTop: 4 }}>Total <b>{gd.total}</b> games · group best of {Number(v?.bestOf) || 3}{flags.knockout ? ` · finals best of ${Number(v?.bestOfKo) || Number(v?.bestOf) || 3}` : ""}</div>
+                      {flags.knockout && !gd.koSupported && <div className="fmt-line muted-sm">{tr("No automatic knockout for {n} groups — use 2, 4 or 8 groups, or a “round-robin only” variant.", { n: nGroups })}</div>}
+                      {!flags.knockout && <div className="fmt-line muted-sm">{tr("No playoffs — final standings from the groups.")}</div>}
+                      <div className="muted-sm" style={{ marginTop: 4 }}>{tr("Total")} <b>{gd.total}</b> {tr("games · group best of {n}", { n: Number(v?.bestOf) || 3 })}{flags.knockout ? ` · ${tr("finals best of {n}", { n: Number(v?.bestOfKo) || Number(v?.bestOf) || 3 })}` : ""}</div>
                     </>
                   ) : d ? (
                     <>
-                      <div className="fmt-line"><span className="fmt-round">Qualification Round</span> one group · {flags.double ? "double round-robin" : "round-robin"} · {d.qrGames} games</div>
+                      <div className="fmt-line"><span className="fmt-round">{tRound(lang, "Qualification Round")}</span> {tr("one group")} · {flags.double ? tr("double round-robin") : tr("round-robin")} · {tr("{n} games", { n: d.qrGames })}</div>
                       {d.rounds.map((r, i) => (
-                        <div className="fmt-line" key={i}><span className="fmt-round">{r.round}</span> {r.matches.join(" · ")}</div>
+                        <div className="fmt-line" key={i}><span className="fmt-round">{tRound(lang, r.round)}</span> {r.matches.join(" · ")}</div>
                       ))}
-                      {!flags.knockout && <div className="fmt-line muted-sm">No playoffs — final standings from the round-robin.</div>}
-                      <div className="muted-sm" style={{ marginTop: 4 }}>Total <b>{d.total}</b> games · group best of {Number(v?.bestOf) || 3}{flags.knockout ? ` · finals best of ${Number(v?.bestOfKo) || Number(v?.bestOf) || 3}` : ""}</div>
+                      {!flags.knockout && <div className="fmt-line muted-sm">{tr("No playoffs — final standings from the round-robin.")}</div>}
+                      <div className="muted-sm" style={{ marginTop: 4 }}>{tr("Total")} <b>{d.total}</b> {tr("games · group best of {n}", { n: Number(v?.bestOf) || 3 })}{flags.knockout ? ` · ${tr("finals best of {n}", { n: Number(v?.bestOfKo) || Number(v?.bestOf) || 3 })}` : ""}</div>
                     </>
                   ) : (
-                    <p className="muted-sm" style={{ margin: "2px 0 0" }}>No knockout preset for {count} teams in one group — split them into groups above, or pick a “round-robin only” variant.</p>
+                    <p className="muted-sm" style={{ margin: "2px 0 0" }}>{tr("No knockout preset for {n} teams in one group — split them into groups above, or pick a “round-robin only” variant.", { n: count })}</p>
                   )}
                 </div>
               );
             })}
           </div>
-          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={() => setOpenStep(5)}>Looks good — continue</button>}
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={() => setOpenStep(5)}>{tr("Looks good — continue")}</button>}
         </Step>
 
         {/* ---- 5. Courts & schedule ---- */}
-        <Step n={5} title="Courts & schedule" sub={done[4] ? `${(details.slots?.courts || []).length} courts · ${(details.slots?.days || []).length} days` : ""} done={done[4]} locked={locked[4]} open={openStep === 5} onToggle={() => openOrToggle(5)}>
-          <p className="muted-sm">Define the courts and each day’s window. The schedule generator uses this to place the games.</p>
+        <Step n={5} title={tr("Courts & schedule")} sub={done[4] ? tr("{c} courts · {d} days", { c: (details.slots?.courts || []).length, d: (details.slots?.days || []).length }) : ""} done={done[4]} locked={locked[4]} open={openStep === 5} onToggle={() => openOrToggle(5)}>
+          <p className="muted-sm">{tr("Define the courts and each day’s window. The schedule generator uses this to place the games.")}</p>
           {!archived && slotsEmpty && existingGames.length > 0 && (
             <div className="info-box" style={{ marginBottom: 10 }}>
-              This event already has a schedule with courts and days.{" "}
-              <button className="btn sm" onClick={deriveSlotsFromGames}>Load from existing schedule</button>
+              {tr("This event already has a schedule with courts and days.")}{" "}
+              <button className="btn sm" onClick={deriveSlotsFromGames}>{tr("Load from existing schedule")}</button>
             </div>
           )}
           <SlotsEditor value={details.slots} onChange={setSlots} disabled={archived} />
-          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveSlots} disabled={!courtsDone}>Save courts &amp; continue</button>}
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveSlots} disabled={!courtsDone}>{tr("Save courts & continue")}</button>}
         </Step>
 
         {/* ---- 6. Generate, arrange & publish schedule ---- */}
-        <Step n={6} title="Generate & publish schedule" sub={done[5] ? "published" : ""} done={done[5]} locked={locked[5]} open={openStep === 6} onToggle={() => openOrToggle(6)}>
-          <p className="muted-sm">Builds all games from your categories, teams, format and courts. Auto-places them on days/courts/times — drag or type to adjust — then publish (they appear on the games list and Fistball Live).</p>
+        <Step n={6} title={tr("Generate & publish schedule")} sub={done[5] ? tr("published") : ""} done={done[5]} locked={locked[5]} open={openStep === 6} onToggle={() => openOrToggle(6)}>
+          <p className="muted-sm">{tr("Builds all games from your categories, teams, format and courts. Auto-places them on days/courts/times — drag or type to adjust — then publish (they appear on the games list and Fistball Live).")}</p>
           {!archived && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button className="btn" onClick={doGenerate}>{genResult && !genResult.append ? "Regenerate (replace all)" : "Generate schedule"}</button>
-              {existingGames.length > 0 && <button className="btn" onClick={doGenerateAppend}>+ Add new categories (keep current)</button>}
+              <button className="btn" onClick={doGenerate}>{genResult && !genResult.append ? tr("Regenerate (replace all)") : tr("Generate schedule")}</button>
+              {existingGames.length > 0 && <button className="btn" onClick={doGenerateAppend}>{tr("+ Add new categories (keep current)")}</button>}
             </div>
           )}
           {existingGames.length > 0 && !genResult && (
-            <p className="muted-sm" style={{ marginTop: 8 }}>This event already has <b>{existingGames.length}</b> published games. “<b>Add new categories</b>” builds only the categories without games yet (e.g. clubs) and numbers them after the existing ones — the current part (e.g. national teams) is left untouched, and the new games avoid its courts and times. Mark days as “No new games” in Courts &amp; schedule to keep them for the existing part.</p>
+            <p className="muted-sm" style={{ marginTop: 8 }}>{tr("This event already has")} <b>{existingGames.length}</b> {tr("published games.")} “<b>{tr("Add new categories")}</b>” {tr("builds only the categories without games yet (e.g. clubs) and numbers them after the existing ones — the current part (e.g. national teams) is left untouched, and the new games avoid its courts and times. Mark days as “No new games” in Courts & schedule to keep them for the existing part.")}</p>
           )}
           {genResult && (
             <>
-              {genResult.append && <div className="warn-box" style={{ marginTop: 10, background: "#eaf6ee", color: "#1c6b3f" }}>➕ Add mode — these are NEW games (numbered from #{maxNr + 1}); publishing keeps the {existingGames.length} existing games.</div>}
+              {genResult.append && <div className="warn-box" style={{ marginTop: 10, background: "#eaf6ee", color: "#1c6b3f" }}>{tr("➕ Add mode — these are NEW games (numbered from #{nr}); publishing keeps the {n} existing games.", { nr: maxNr + 1, n: existingGames.length })}</div>}
               {genResult.warnings?.length > 0 && <div className="warn-box" style={{ marginTop: 10 }}>{genResult.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
-              <p className="muted-sm" style={{ marginTop: 8 }}>Ready: <b>{genResult.games.length}</b> {genResult.append ? "new " : ""}games{genResult.unplaced.length ? ` · ${genResult.unplaced.length} unplaced` : ""}.</p>
-              <div className="subhead">Arrange — set each game’s day · court · time</div>
+              <p className="muted-sm" style={{ marginTop: 8 }}>{tr("Ready:")} <b>{genResult.games.length}</b> {genResult.append ? tr("new games") : tr("games")}{genResult.unplaced.length ? ` · ${tr("{n} unplaced", { n: genResult.unplaced.length })}` : ""}.</p>
+              <div className="subhead">{tr("Arrange — set each game’s day · court · time")}</div>
               <ScheduleGrid games={genResult.games} onChange={(gs) => setGenResult((r) => ({ ...r, games: gs }))} />
               {!archived && (
                 <button className="btn primary" style={{ marginTop: 12, width: "100%" }} onClick={doPublish} disabled={!genResult.games.length}>
-                  {genResult.append ? `Add ${genResult.games.length} games (keep current)` : `Publish ${genResult.games.length} games (replace all)`}
+                  {genResult.append ? tr("Add {n} games (keep current)", { n: genResult.games.length }) : tr("Publish {n} games (replace all)", { n: genResult.games.length })}
                 </button>
               )}
-              {done[5] && <p className="muted-sm">✅ Published. You can keep adjusting above and publish again, or fine-tune later on the Schedule page.</p>}
+              {done[5] && <p className="muted-sm">{tr("✅ Published. You can keep adjusting above and publish again, or fine-tune later on the Schedule page.")}</p>}
             </>
           )}
         </Step>
 
         {/* ---- 7. Event logos ---- */}
-        <Step n={7} title="Event logos" sub={done[6] ? "set" : "optional"} done={done[6]} locked={locked[6]} open={openStep === 7} onToggle={() => openOrToggle(7)}>
+        <Step n={7} title={tr("Event logos")} sub={done[6] ? tr("set") : tr("optional")} done={done[6]} locked={locked[6]} open={openStep === 7} onToggle={() => openOrToggle(7)}>
           <div className="row-between">
-            <span className="muted-sm">Shown on the game report (PDF), the app topbar and Fistball Live.</span>
-            <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>+ Upload logo</button>
+            <span className="muted-sm">{tr("Shown on the game report (PDF), the app topbar and Fistball Live.")}</span>
+            <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>{tr("+ Upload logo")}</button>
           </div>
 
-          <div className="subhead">This event</div>
+          <div className="subhead">{tr("This event")}</div>
           <div className="brand-picks">
             <div className="brand-pick">
-              <div className="brand-pick-label">Event logo</div>
+              <div className="brand-pick-label">{tr("Event logo")}</div>
               {eventLogo
                 ? <div className="logo-chip"><img src={eventLogo.dataUrl} alt="" /><button onClick={() => setEventLogo(null)} disabled={archived}>✕</button></div>
-                : <div className="logo-empty">none</div>}
+                : <div className="logo-empty">{tr("none")}</div>}
             </div>
             <div className="brand-pick">
-              <div className="brand-pick-label">Promoters</div>
+              <div className="brand-pick-label">{tr("Promoters")}</div>
               <div className="chips">
                 {promoters.map((p, i) => (
                   <div className="logo-chip" key={i}><img src={p.dataUrl} alt="" /><button onClick={() => removePromoter(i)} disabled={archived}>✕</button></div>
                 ))}
-                {!promoters.length && <div className="logo-empty">none</div>}
+                {!promoters.length && <div className="logo-empty">{tr("none")}</div>}
               </div>
             </div>
           </div>
-          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveLogos}>Save logos &amp; continue</button>}
+          {!archived && <button className="btn primary" style={{ marginTop: 12 }} onClick={saveLogos}>{tr("Save logos & continue")}</button>}
 
           <button className="btn sm" style={{ marginTop: 12 }} onClick={() => setLibOpen(true)}>
-            📁 Logo library ({logos.length})
+            {tr("📁 Logo library ({n})", { n: logos.length })}
           </button>
         </Step>
 
         {/* ---- 8. Publish to Fistball Live ---- */}
-        <Step n={8} title="Publish to Fistball Live" sub={done[7] ? "On air" : ""} done={done[7]} locked={locked[7]} open={openStep === 8} onToggle={() => openOrToggle(8)}>
+        <Step n={8} title={tr("Publish to Fistball Live")} sub={done[7] ? tr("On air") : ""} done={done[7]} locked={locked[7]} open={openStep === 8} onToggle={() => openOrToggle(8)}>
           <p className="muted-sm">
-            {live === undefined ? "Checking…"
-              : thisIsLive ? "✅ This event is showing on the public scoreboard."
-              : "This event isn't on the public scoreboard yet."}
-            {otherLive.length > 0 && ` Also on Live: ${otherLive.map((e) => `“${e.name || e.eventId}”`).join(", ")} — spectators pick the event in Fistball Live.`}
+            {live === undefined ? tr("Checking…")
+              : thisIsLive ? tr("✅ This event is showing on the public scoreboard.")
+              : tr("This event isn't on the public scoreboard yet.")}
+            {otherLive.length > 0 && ` ${tr("Also on Live: {list} — spectators pick the event in Fistball Live.", { list: otherLive.map((e) => `“${e.name || e.eventId}”`).join(", ") })}`}
           </p>
           {thisIsLive
-            ? <button className="btn danger" onClick={stopLive}>Stop showing</button>
-            : <button className="btn primary" onClick={publishLive}>Publish to Live</button>}
+            ? <button className="btn danger" onClick={stopLive}>{tr("Stop showing")}</button>
+            : <button className="btn primary" onClick={publishLive}>{tr("Publish to Live")}</button>}
           <BroadcastLinks eventId={eventId} games={existingGames} />
         </Step>
 
         {/* ---- 9. Access to this event ---- */}
-        <Step n={9} title="Access to this event" sub={locked[8] ? "" : "who can score & manage"} done={done[8]} locked={locked[8]} open={openStep === 9} onToggle={() => openOrToggle(9)}>
+        <Step n={9} title={tr("Access to this event")} sub={locked[8] ? "" : tr("who can score & manage")} done={done[8]} locked={locked[8]} open={openStep === 9} onToggle={() => openOrToggle(9)}>
           <EventAccess me={me} />
         </Step>
 
-        <div className="tools-divider">Tools (optional)</div>
+        <div className="tools-divider">{tr("Tools (optional)")}</div>
 
         {/* ---- Import players & staff from Excel ---- */}
         {!archived && <ExcelImport me={me} teamNames={(details.entries || []).map((e) => e.name)} categories={previewCats}
@@ -773,24 +778,24 @@ export default function Settings({ me }) {
         {/* ---- Classification points (point table) ---- */}
         <div className="card">
           <div className="row-between">
-            <h2 style={{ margin: 0 }}>Classification points</h2>
-            {!archived && <button className="btn primary sm" onClick={savePoints}>Save points</button>}
+            <h2 style={{ margin: 0 }}>{tr("Classification points")}</h2>
+            {!archived && <button className="btn primary sm" onClick={savePoints}>{tr("Save points")}</button>}
           </div>
-          <p className="muted-sm">How many standings points each result is worth. Empty = <b>IFA</b> (win 2 · loss 0). Set your own rows for other federations (e.g. PAFA).</p>
+          <p className="muted-sm">{tr("How many standings points each result is worth. Empty =")} <b>IFA</b> {tr("(win 2 · loss 0). Set your own rows for other federations (e.g. PAFA).")}</p>
           {!archived && (
             <div style={{ display: "flex", gap: 8, margin: "6px 0" }}>
-              <button className="btn sm" onClick={() => applyPreset(IFA_TABLE)}>Use IFA (2 / 0)</button>
-              <button className="btn sm" onClick={() => applyPreset(PAFA_TABLE)}>Use PAFA</button>
-              <button className="btn sm" onClick={() => applyPreset([])}>Clear</button>
+              <button className="btn sm" onClick={() => applyPreset(IFA_TABLE)}>{tr("Use IFA (2 / 0)")}</button>
+              <button className="btn sm" onClick={() => applyPreset(PAFA_TABLE)}>{tr("Use PAFA")}</button>
+              <button className="btn sm" onClick={() => applyPreset([])}>{tr("Clear")}</button>
               <span style={{ flex: 1 }} />
-              <label className="muted-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>Draw pts
+              <label className="muted-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>{tr("Draw pts")}
                 <input style={{ width: 46 }} type="number" value={details.drawPoints ?? 1} disabled={archived} onChange={(e) => edit((d) => ({ ...d, drawPoints: Number(e.target.value) }))} />
               </label>
             </div>
           )}
           <div className="pt-table">
-            <div className="pt-row pt-head"><span>Best of</span><span>Win sets</span><span>Lose sets</span><span>Win pts</span><span>Lose pts</span><span /></div>
-            {pt.length === 0 && <p className="muted-sm" style={{ margin: "6px 0" }}>No rows — using IFA default (win 2 · loss 0).</p>}
+            <div className="pt-row pt-head"><span>{tr("Best of")}</span><span>{tr("Win sets")}</span><span>{tr("Lose sets")}</span><span>{tr("Win pts")}</span><span>{tr("Lose pts")}</span><span /></div>
+            {pt.length === 0 && <p className="muted-sm" style={{ margin: "6px 0" }}>{tr("No rows — using IFA default (win 2 · loss 0).")}</p>}
             {pt.map((r, i) => (
               <div className="pt-row" key={i}>
                 {["bestOf", "winSets", "loseSets", "winPts", "losePts"].map((k) => (
@@ -799,26 +804,26 @@ export default function Settings({ me }) {
                 {!archived && <button className="btn danger sm" onClick={() => delPtRow(i)}>✕</button>}
               </div>
             ))}
-            {!archived && <button className="btn sm" style={{ marginTop: 6 }} onClick={addPtRow}>+ Add row</button>}
+            {!archived && <button className="btn sm" style={{ marginTop: 6 }} onClick={addPtRow}>{tr("+ Add row")}</button>}
           </div>
         </div>
 
         {/* ---- Status ---- */}
         <div className="card">
           <div className="row-between">
-            <div><h2 style={{ margin: 0 }}>Event status</h2>
-              <p className="muted-sm">{archived ? "Archived — read-only for everyone." : "Active — members can score."}</p></div>
-            <button className={`btn ${archived ? "primary" : "danger"}`} onClick={toggleArchive}>{archived ? "Re-activate" : "Archive"}</button>
+            <div><h2 style={{ margin: 0 }}>{tr("Event status")}</h2>
+              <p className="muted-sm">{archived ? tr("Archived — read-only for everyone.") : tr("Active — members can score.")}</p></div>
+            <button className={`btn ${archived ? "primary" : "danger"}`} onClick={toggleArchive}>{archived ? tr("Re-activate") : tr("Archive")}</button>
           </div>
           {!archived && (
             <div className="row-between" style={{ marginTop: 12, alignItems: "center" }}>
-              <span className="muted-sm">Rehearsed scoring? Clear all game reports and reset the bracket to start the tournament clean (keeps games &amp; rosters). To clear a single game, open it and use “Reset this report”.</span>
-              <button className="btn danger sm" onClick={resetAllScores}>Reset all game reports</button>
+              <span className="muted-sm">{tr("Rehearsed scoring? Clear all game reports and reset the bracket to start the tournament clean (keeps games & rosters). To clear a single game, open it and use “Reset this report”.")}</span>
+              <button className="btn danger sm" onClick={resetAllScores}>{tr("Reset all game reports")}</button>
             </div>
           )}
           {(event?.statusLog || []).length > 0 && (
             <details className="import-history" style={{ marginTop: 10 }}>
-              <summary>Status history ({event.statusLog.length})</summary>
+              <summary>{tr("Status history ({n})", { n: event.statusLog.length })}</summary>
               <ul className="import-log">
                 {event.statusLog.map((h, i) => (
                   <li key={i}>
@@ -860,12 +865,12 @@ export default function Settings({ me }) {
       {libOpen && (
         <div className="modal-overlay" onClick={() => setLibOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <button className="modal-x" onClick={() => setLibOpen(false)} aria-label="Close">✕</button>
-            <h3 className="modal-title" style={{ marginBottom: 2 }}>Logo library ({logos.length})</h3>
-            <p className="muted-sm" style={{ marginTop: 0 }}>Pick a logo to use in this event, or upload a new one.</p>
-            <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>+ Upload logo</button>
-            {/^(Uploading|Logo added|Upload failed)/.test(status) && <p className="muted-sm" style={{ marginTop: 8 }}>{status}</p>}
-            {logos.length === 0 && <p className="muted-sm" style={{ marginTop: 10 }}>No logos yet — upload one above.</p>}
+            <button className="modal-x" onClick={() => setLibOpen(false)} aria-label={tr("Close")}>✕</button>
+            <h3 className="modal-title" style={{ marginBottom: 2 }}>{tr("Logo library ({n})", { n: logos.length })}</h3>
+            <p className="muted-sm" style={{ marginTop: 0 }}>{tr("Pick a logo to use in this event, or upload a new one.")}</p>
+            <button className="btn sm" onClick={() => fileRef.current?.click()} disabled={archived}>{tr("+ Upload logo")}</button>
+            {[tr("Uploading logo…"), tr("Uploading team logo…"), tr("Logo added to the library."), tr("Upload failed: ")].some((p) => status.startsWith(p)) && <p className="muted-sm" style={{ marginTop: 8 }}>{status}</p>}
+            {logos.length === 0 && <p className="muted-sm" style={{ marginTop: 10 }}>{tr("No logos yet — upload one above.")}</p>}
             <div className="logo-grid" style={{ marginTop: 10 }}>
               {logos.map((l) => (
                 <div className="logo-lib" key={l.id}>
@@ -873,9 +878,9 @@ export default function Settings({ me }) {
                   <div className="logo-name">{l.name}</div>
                   {!archived && (
                     <div className="logo-actions">
-                      <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>Event logo</button>
-                      <button className="btn sm" onClick={() => addPromoter(l)}>Add promoter</button>
-                      <button className="btn danger sm" onClick={() => window.confirm(`Delete “${l.name}” from the library?`) && deleteLogo(l.id)}>Delete</button>
+                      <button className="btn sm" onClick={() => setEventLogo(asLogo(l))}>{tr("Event logo")}</button>
+                      <button className="btn sm" onClick={() => addPromoter(l)}>{tr("Add promoter")}</button>
+                      <button className="btn danger sm" onClick={() => window.confirm(tr("Delete “{name}” from the library?", { name: l.name })) && deleteLogo(l.id)}>{tr("Delete")}</button>
                     </div>
                   )}
                 </div>
@@ -894,28 +899,29 @@ export default function Settings({ me }) {
 // Per-court scoreboard overlay links for the TV/stream producer (OBS/vMix
 // browser source). Each follows whatever game is on that court.
 function BroadcastLinks({ eventId, games }) {
+  const tr = useT();
   const courts = [...new Set(games.map((g) => String(g.court || "")).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const copy = async (url) => {
-    try { await navigator.clipboard.writeText(url); } catch (_) { window.prompt("Copy the link:", url); }
+    try { await navigator.clipboard.writeText(url); } catch (_) { window.prompt(tr("Copy the link:"), url); }
   };
   return (
     <div style={{ marginTop: 14 }}>
-      <strong>📺 Broadcast overlay (points &amp; sets)</strong>
-      <p className="muted-sm">Live scoreboard with a transparent background — add it as a <em>Browser source</em> in OBS/vMix (e.g. 1920×1080). One link per court follows the game being played there; each game report also has its own link.</p>
-      {courts.length === 0 && <p className="muted-sm">Publish games first to get the court links.</p>}
+      <strong>{tr("📺 Broadcast overlay (points & sets)")}</strong>
+      <p className="muted-sm">{tr("Live scoreboard with a transparent background — add it as a")} <em>Browser source</em> {tr("in OBS/vMix (e.g. 1920×1080). One link per court follows the game being played there; each game report also has its own link.")}</p>
+      {courts.length === 0 && <p className="muted-sm">{tr("Publish games first to get the court links.")}</p>}
       <p className="muted-sm" style={{ marginTop: 8 }}>
-        Data feed (JSON, for vMix/Singular/TV graphics — all games of this event):{" "}
+        {tr("Data feed (JSON, for vMix/Singular/TV graphics — all games of this event):")}{" "}
         <a href={resultsJsonUrl(eventId)} target="_blank" rel="noreferrer" style={{ wordBreak: "break-all" }}>{resultsJsonUrl(eventId)}</a>
       </p>
       {courts.map((c) => {
         const url = overlayUrl(eventId, { court: c });
         return (
           <div key={c} className="row-between" style={{ gap: 8, marginTop: 6, alignItems: "center" }}>
-            <span style={{ minWidth: 64, fontWeight: 600 }}>Court {c}</span>
+            <span style={{ minWidth: 64, fontWeight: 600 }}>{tr("Court {c}", { c })}</span>
             <input readOnly value={url} onFocus={(e) => e.target.select()} style={{ flex: 1, minWidth: 0, fontSize: 12 }} />
-            <button className="btn sm" onClick={() => copy(url)}>Copy</button>
-            <a className="btn sm" href={url} target="_blank" rel="noreferrer">Open ↗</a>
+            <button className="btn sm" onClick={() => copy(url)}>{tr("Copy")}</button>
+            <a className="btn sm" href={url} target="_blank" rel="noreferrer">{tr("Open ↗")}</a>
           </div>
         );
       })}
@@ -924,6 +930,8 @@ function BroadcastLinks({ eventId, games }) {
 }
 
 function BracketModal({ category, teams, groups, variant, override, onSlot, onRound, onAdd, onRemove, onReset, archived, idx, total, onClose, onNext }) {
+  const tr = useT();
+  const [lang] = useLang();
   const n = teams.length;
   // Several groups: cross-over knockout from the groups; else the preset by team count.
   const matches = groups
@@ -944,16 +952,16 @@ function BracketModal({ category, teams, groups, variant, override, onSlot, onRo
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal bracket-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
+        <button className="modal-x" onClick={onClose} aria-label={tr("Close")}>✕</button>
         <h3 className="modal-title" style={{ marginBottom: 2 }}>{category}</h3>
-        <p className="muted-sm" style={{ marginTop: 0 }}>{n} teams · category {idx + 1} of {total}</p>
+        <p className="muted-sm" style={{ marginTop: 0 }}>{tr("{n} teams · category {i} of {total}", { n, i: idx + 1, total })}</p>
         {!matches.length ? (
-          <p className="muted-sm">{groups ? `No automatic knockout for ${groups.length} groups.` : `No preset for ${n} teams yet.`}</p>
+          <p className="muted-sm">{groups ? tr("No automatic knockout for {n} groups.", { n: groups.length }) : tr("No preset for {n} teams yet.", { n })}</p>
         ) : (
           <>
             {(groups || [{ label: "", teams }]).map((g) => (
               <div className="brk-group" key={g.label}>
-                <div className="brk-col-title">Qualification Round · {g.label ? `Group ${g.label}` : "one group"}</div>
+                <div className="brk-col-title">{tRound(lang, "Qualification Round")} · {g.label ? tr("Group {g}", { g: g.label }) : tr("one group")}</div>
                 <div className="chips">{g.teams.map((t) => <span className="team-chip" key={t}>{t}</span>)}</div>
               </div>
             ))}
@@ -962,30 +970,30 @@ function BracketModal({ category, teams, groups, variant, override, onSlot, onRo
                 <div className="brk-edit-row" key={m.id}>
                   {m.added && !archived
                     ? <select className="brk-erd-sel" value={m.round} onChange={(e) => onRound(m.id, e.target.value)}>
-                        {ROUND_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                        {ROUND_OPTIONS.map((r) => <option key={r} value={r}>{tRound(lang, r)}</option>)}
                       </select>
-                    : <span className="brk-erd">{m.round}</span>}
+                    : <span className="brk-erd">{tRound(lang, m.round)}</span>}
                   <Slot m={m} side="a" /><span className="brk-x">×</span><Slot m={m} side="b" />
-                  {!archived && <button className="brk-del" title="Remove match" onClick={() => onRemove(m.id, m.added)}>✕</button>}
+                  {!archived && <button className="brk-del" title={tr("Remove match")} onClick={() => onRemove(m.id, m.added)}>✕</button>}
                 </div>
               ))}
             </div>
             {!archived && (
               <div className="brk-editnote">
-                <button className="btn sm" onClick={onAdd}>+ Add match</button>
+                <button className="btn sm" onClick={onAdd}>{tr("+ Add match")}</button>
                 {override && normalizeOverride(override) && (normalizeOverride(override).removed.length || normalizeOverride(override).added.length || Object.keys(normalizeOverride(override).edits).length)
-                  ? <button className="btn sm" onClick={onReset}>Reset to preset</button> : null}
+                  ? <button className="btn sm" onClick={onReset}>{tr("Reset to preset")}</button> : null}
               </div>
             )}
             {warnings.length > 0 && (
               <div className="warn-box">{warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>
             )}
-            <p className="muted-sm">Remove a match with ✕, or add one. Placeholders (“Winner SF1”…) fill in automatically as games finish.</p>
+            <p className="muted-sm">{tr("Remove a match with ✕, or add one. Placeholders (“Winner SF1”…) fill in automatically as games finish.")}</p>
           </>
         )}
         <div className="modal-actions">
-          <button className="btn" onClick={onClose}>Close</button>
-          <button className="btn primary" onClick={onNext}>{last ? "Save — done" : "Save — next category"}</button>
+          <button className="btn" onClick={onClose}>{tr("Close")}</button>
+          <button className="btn primary" onClick={onNext}>{last ? tr("Save — done") : tr("Save — next category")}</button>
         </div>
       </div>
     </div>

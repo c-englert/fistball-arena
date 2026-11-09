@@ -8,6 +8,7 @@ import { KitSwatch } from "../KitSwatch.jsx";
 import { flagFor } from "../flags.js";
 import { useEvent } from "../eventContext.js";
 import SchedulePDF from "../pdf/SchedulePDF.jsx";
+import { useT, useLang, tRound, currentLang, localeOf } from "../i18n.js";
 
 function parseDate(s) {
   const [d, m, y] = String(s).split("/").map(Number);
@@ -15,13 +16,16 @@ function parseDate(s) {
 }
 function dayLabel(s) {
   const dt = parseDate(s);
-  const wd = dt.toLocaleDateString("en-US", { weekday: "short" });
-  const mo = dt.toLocaleDateString("en-US", { month: "short" });
+  const loc = currentLang() === "en" ? "en-US" : localeOf(currentLang());
+  const wd = dt.toLocaleDateString(loc, { weekday: "short" });
+  const mo = dt.toLocaleDateString(loc, { month: "short" });
   return `${wd} ${dt.getDate()} ${mo}`;
 }
 
 export default function MatchList({ me }) {
   const nav = useNavigate();
+  const tr = useT();
+  const [lang] = useLang();
   const { eventId, event, isAdmin, archived, canScore } = useEvent();
   const base = `/e/${eventId}`;
   const [games, setGames] = useState([]);
@@ -138,41 +142,41 @@ export default function MatchList({ me }) {
     <>
       <div className="filter-bar">
         <input className="game-search" value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by game # or team…" aria-label="Search games" />
-        {q && <button className="filter-pill" onClick={() => setQ("")}>Clear</button>}
-        <button className="filter-pill" onClick={downloadSchedule} title="Print / save the schedule as PDF">🖨 PDF</button>
+          placeholder={tr("Search by game # or team…")} aria-label={tr("Search games")} />
+        {q && <button className="filter-pill" onClick={() => setQ("")}>{tr("Clear")}</button>}
+        <button className="filter-pill" onClick={downloadSchedule} title={tr("Print / save the schedule as PDF")}>🖨 PDF</button>
         {isAdmin && !archived && (
-          <button className="filter-pill" title="Fill knockout games with the teams that qualified (winners / group ranking)"
+          <button className="filter-pill" title={tr("Fill knockout games with the teams that qualified (winners / group ranking)")}
             onClick={async () => {
-              try { const n = await runAdvancementAll({ silent: false }); alert(n ? `Advanced ${n} game slot(s).` : "Nothing to advance yet — finish the feeding games first."); }
-              catch (e) { alert("Advance failed: " + (e?.code || e?.message || e)); }
-            }}>↻ Advance bracket</button>
+              try { const n = await runAdvancementAll({ silent: false }); alert(n ? tr("Advanced {n} game slot(s).", { n }) : tr("Nothing to advance yet — finish the feeding games first.")); }
+              catch (e) { alert(tr("Advance failed: ") + (e?.code || e?.message || e)); }
+            }}>{tr("↻ Advance bracket")}</button>
         )}
       </div>
 
       <div className="filter-bar">
-        <span className="filter-label">Day</span>
-        <button className={`filter-pill ${day === "all" ? "active" : ""}`} onClick={() => pickDay("all")}>All</button>
+        <span className="filter-label">{tr("Day")}</span>
+        <button className={`filter-pill ${day === "all" ? "active" : ""}`} onClick={() => pickDay("all")}>{tr("All")}</button>
         {days.map((d) => (
           <button key={d} className={`filter-pill ${day === d ? "active" : ""}`} onClick={() => pickDay(d)}>{dayLabel(d)}</button>
         ))}
       </div>
       <div className="filter-bar">
-        <span className="filter-label">Court</span>
-        <button className={`filter-pill ${court === "all" ? "active" : ""}`} onClick={() => pickCourt("all")}>All</button>
+        <span className="filter-label">{tr("Court")}</span>
+        <button className={`filter-pill ${court === "all" ? "active" : ""}`} onClick={() => pickCourt("all")}>{tr("All")}</button>
         {courts.map((c) => (
-          <button key={c} className={`filter-pill ${String(court) === String(c) ? "active" : ""}`} onClick={() => pickCourt(c)}>Court {c}</button>
+          <button key={c} className={`filter-pill ${String(court) === String(c) ? "active" : ""}`} onClick={() => pickCourt(c)}>{tr("Court {c}", { c })}</button>
         ))}
       </div>
 
       <div className="filter-bar">
         <div className="seg">
-          <button className={`seg-btn ${view === "grid" ? "on" : ""}`} onClick={() => pickView("grid")}>Grid</button>
-          <button className={`seg-btn ${view === "list" ? "on" : ""}`} onClick={() => pickView("list")}>List</button>
+          <button className={`seg-btn ${view === "grid" ? "on" : ""}`} onClick={() => pickView("grid")}>{tr("Grid")}</button>
+          <button className={`seg-btn ${view === "list" ? "on" : ""}`} onClick={() => pickView("list")}>{tr("List")}</button>
         </div>
       </div>
 
-      {shown.length === 0 && <div className="empty">No games for this filter.</div>}
+      {shown.length === 0 && <div className="empty">{tr("No games for this filter.")}</div>}
       {view === "grid" && <GamesGrid games={shown} allCategories={allCategories} courts={court === "all" ? courts : [court]} reports={reports} results={results}
         teamLabel={teamLabel} teamKits={teamKits} onOpen={(m) => nav(`${base}/game/${m.id}`)} />}
       {view === "list" && <div className="card-grid">
@@ -181,9 +185,9 @@ export default function MatchList({ me }) {
         const st = rep.status || "not_started";
         const locked = rep.lockedBy || null;
         const inProgress = st === "in_progress";
-        const stateLabel = st === "submitted" ? "Submitted"
-          : inProgress ? `In progress · ${locked?.name || "…"}`
-          : "Not started";
+        const stateLabel = st === "submitted" ? tr("Submitted")
+          : inProgress ? tr("In progress · {name}", { name: locked?.name || "…" })
+          : tr("Not started");
         const canUnlock = isAdmin && !archived && locked && locked.uid !== me.uid && st !== "submitted";
         return (
           <div className="match-card" key={m.id} onClick={() => nav(`${base}/game/${m.id}`)}>
@@ -191,20 +195,20 @@ export default function MatchList({ me }) {
               <span className="tag">#{m.nr}</span>
               <span className="tag day">{dayLabel(m.date)}</span>
               <span>{m.time}</span>
-              <span className="tag">Court {m.court}</span>
-              <span>{m.round}</span>
+              <span className="tag">{tr("Court {c}", { c: m.court })}</span>
+              <span>{tRound(lang, m.round)}</span>
               <span className="tag">{m.category}</span>
               <span className={`state ${st === "submitted" ? "submitted" : inProgress ? "progress" : "none"}`}>
                 {inProgress && <span className="live-dot" />}{stateLabel}
               </span>
               {canUnlock && (
-                <button className="btn danger sm" onClick={(e) => { e.stopPropagation(); adminUnlock(m.id); }}>Unlock</button>
+                <button className="btn danger sm" onClick={(e) => { e.stopPropagation(); adminUnlock(m.id); }}>{tr("Unlock")}</button>
               )}
             </div>
             <div className="mc-teams">
               <KitSwatch kit={resolveKit(m.kit?.A, teamKitsFor(teamKits, m.teamA.name, m.category))} />
               <span className="flag">{flagFor(m.teamA.name)}</span>{teamLabel(m.teamA)}
-              <span className="vs">vs</span>
+              <span className="vs">{tr("vs")}</span>
               <KitSwatch kit={resolveKit(m.kit?.B, teamKitsFor(teamKits, m.teamB.name, m.category))} />
               <span className="flag">{flagFor(m.teamB.name)}</span>{teamLabel(m.teamB)}
             </div>
@@ -219,6 +223,8 @@ export default function MatchList({ me }) {
 // Read-only timetable of the games: one table per day, a row per start time,
 // a column per court. Click a game to open its report.
 function GamesGrid({ games, allCategories, courts, reports, results, teamLabel, teamKits, onOpen }) {
+  const tr = useT();
+  const [lang] = useLang();
   const cats = allCategories;
   const catColor = (c) => PALETTE[Math.max(0, cats.indexOf(c)) % PALETTE.length];
   const toMin = (t) => { const [h, mm] = String(t || "").split(":").map(Number); return (h || 0) * 60 + (mm || 0); };
@@ -231,7 +237,7 @@ function GamesGrid({ games, allCategories, courts, reports, results, teamLabel, 
         <div className="day-head" style={{ position: "static" }}>{dayLabel(date)}</div>
         <div className="ag-grid-wrap">
           <table className="ag-grid">
-            <thead><tr><th className="ag-th-time" />{courts.map((c) => <th key={c} className="ag-th-court">Court {c}</th>)}</tr></thead>
+            <thead><tr><th className="ag-th-time" />{courts.map((c) => <th key={c} className="ag-th-court">{tr("Court {c}", { c })}</th>)}</tr></thead>
             <tbody>
               {times.map((time) => (
                 <tr key={time}>
@@ -244,7 +250,7 @@ function GamesGrid({ games, allCategories, courts, reports, results, teamLabel, 
                         const score = (Number(r.setsA) || 0) + (Number(r.setsB) || 0) > 0 ? `${r.setsA}–${r.setsB}` : "";
                         return (
                           <div key={g.id} className={`ag-card gg-card gg-${st}`} style={{ borderLeftColor: catColor(g.category) }} onClick={() => onOpen(g)}
-                            title={`${g.category} · ${g.round}`}>
+                            title={`${g.category} · ${tRound(lang, g.round)}`}>
                             <div className="ag-card-cat" style={{ color: catColor(g.category) }}>#{g.nr} · {g.category}</div>
                             <div className="ag-card-teams">
                               <KitSwatch kit={resolveKit(g.kit?.A, teamKitsFor(teamKits, g.teamA?.name, g.category))} size={11} />{teamLabel(g.teamA)}
@@ -252,8 +258,8 @@ function GamesGrid({ games, allCategories, courts, reports, results, teamLabel, 
                               <KitSwatch kit={resolveKit(g.kit?.B, teamKitsFor(teamKits, g.teamB?.name, g.category))} size={11} />{teamLabel(g.teamB)}
                             </div>
                             <div className="ag-card-round muted-sm">
-                              {g.round}
-                              {st === "in_progress" && <span className="gg-state live"><span className="live-dot" /> live</span>}
+                              {tRound(lang, g.round)}
+                              {st === "in_progress" && <span className="gg-state live"><span className="live-dot" /> {tr("live")}</span>}
                               {st === "submitted" && <span className="gg-state done">✓</span>}
                             </div>
                           </div>

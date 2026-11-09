@@ -9,10 +9,11 @@ import { teamMeta, ROLE_LABEL, SLOT_ROLE, canFill, rolesOf, availableAt, sameCou
 import { checkAssignments, cellLevel, SLOT_LABEL, refsOnLines } from "../officials/rules.js";
 import OfficialsCard from "./OfficialsCard.jsx";
 import AutoAssignModal from "./AutoAssignModal.jsx";
+import { useT, tNow, currentLang, localeOf } from "../i18n.js";
 
 const ROLES = [["r1", "Referee 1"], ["r2", "Referee 2"], ["clerk", "Clerk"], ["clerk2", "Clerk 2"], ["a1", "Assistant 1"], ["a2", "Assistant 2"], ["cm", "Court manager"]];
 const parseDate = (s) => { const [d, m, y] = String(s).split("/").map(Number); return new Date(2000 + (y || 0), (m || 1) - 1, d || 1); };
-const dayLabel = (s) => { const dt = parseDate(s); return `${dt.toLocaleDateString("en-US", { weekday: "short" })} ${dt.getDate()} ${dt.toLocaleDateString("en-US", { month: "short" })}`; };
+const dayLabel = (s) => { const dt = parseDate(s); const loc = currentLang() === "en" ? "en-US" : localeOf(currentLang()); return `${dt.toLocaleDateString(loc, { weekday: "short" })} ${dt.getDate()} ${dt.toLocaleDateString(loc, { month: "short" })}`; };
 const refName = (r) => [r.first, r.name].filter(Boolean).join(" ").trim();
 const shortTeam = (t) => String(t?.name || t || "").split(" - ")[0];
 
@@ -20,6 +21,7 @@ const shortTeam = (t) => String(t?.name || t || "").split(" - ")[0];
 // registry. Saved on the game and pre-fills its report. Admin only.
 export default function Referees() {
   const nav = useNavigate();
+  const t = useT();
   const { eventId, event, isAdmin, archived } = useEvent();
   const [games, setGames] = useState([]);
   const [refs, setRefs] = useState([]);
@@ -76,7 +78,7 @@ export default function Referees() {
       .sort((a, b) => parseDate(a.date) - parseDate(b.date) || String(a.time).localeCompare(b.time) || a.nr - b.nr);
   }, [games, day, q, issuesOnly, check]);
 
-  if (!isAdmin) return <div className="empty">Admins only.</div>;
+  if (!isAdmin) return <div className="empty">{t("Admins only.")}</div>;
 
   const valOf = (g, k) => (local[g.id]?.[k] ?? g.refs?.[k] ?? "");
   // Slots filled by auto-assign are flagged in game.refsAuto; any other filled
@@ -91,7 +93,7 @@ export default function Referees() {
     clearTimeout(timers.current[g.id]);
     timers.current[g.id] = setTimeout(async () => {
       try { await saveGameRefs(g.id, next, nextAuto); setSaved((s) => ({ ...s, [g.id]: Date.now() })); setTimeout(() => setSaved((s) => { const n = { ...s }; delete n[g.id]; return n; }), 1500); }
-      catch (e) { alert("Could not save referees for #" + g.nr + ": " + (e?.code || e?.message || e)); }
+      catch (e) { alert(tNow("Could not save referees for #{nr}: {err}", { nr: g.nr, err: e?.code || e?.message || e })); }
     }, 500);
   };
 
@@ -128,15 +130,15 @@ export default function Referees() {
     const A = teamMeta(event?.entries, g.teamA), B = teamMeta(event?.entries, g.teamB);
     const label = (o) => {
       const n = refName(o), lower = n.toLowerCase(), hints = [];
-      if (ROLES.some(([s]) => s !== k && String(valOf(g, s)).trim().toLowerCase() === lower)) hints.push("in this game");
+      if (ROLES.some(([s]) => s !== k && String(valOf(g, s)).trim().toLowerCase() === lower)) hints.push(t("in this game"));
       // Court manager on other courts at the same time is fine (only for the court manager slot).
       const other = (busyAt.get(`${g.date}|${g.time}`)?.get(lower) || []).filter((x) => x.nr !== g.nr && !(k === "cm" && x.slot === "cm")).map((x) => x.nr);
-      if (other.length) hints.push(`busy (#${other.join(", #")})`);
-      if (!availableAt(o, g.date, g.time, minutesOn(settings, g.date))) hints.push("away");
-      if ((k === "r1" || k === "r2") && o.country && (sameCountry(o.country, A.country) || sameCountry(o.country, B.country))) hints.push("own nation");
-      if ((k === "r1" || k === "r2") && rankOf(o) !== "normal") hints.unshift(RANK_LABEL[rankOf(o)].toLowerCase());
+      if (other.length) hints.push(t("busy (#{nrs})", { nrs: other.join(", #") }));
+      if (!availableAt(o, g.date, g.time, minutesOn(settings, g.date))) hints.push(t("away"));
+      if ((k === "r1" || k === "r2") && o.country && (sameCountry(o.country, A.country) || sameCountry(o.country, B.country))) hints.push(t("own nation"));
+      if ((k === "r1" || k === "r2") && rankOf(o) !== "normal") hints.unshift(t(RANK_LABEL[rankOf(o)]).toLowerCase());
       const l = loadOf.get(lower);
-      hints.push(`${l?.[g.date] || 0} today · ${l?.total || 0} total`);
+      hints.push(t("{d} today · {n} total", { d: l?.[g.date] || 0, n: l?.total || 0 }));
       return `${flagFor(o.country)} ${n}${hints.length ? " — " + hints.join(", ") : ""}`.trim();
     };
     const text = (o) => (refName(o) === value ? `${flagFor(o.country)} ${refName(o)}`.trim() : label(o));
@@ -146,16 +148,16 @@ export default function Referees() {
     const fits = sortedRefs.filter(fitsSlot), others = sortedRefs.filter((o) => !fitsSlot(o));
     const pick = (e) => {
       if (e.target.value !== "__other__") { setVal(g, k, e.target.value); return; }
-      const n = prompt("Name of the official (not in the registry):", value);
+      const n = prompt(tNow("Name of the official (not in the registry):"), value);
       if (n !== null) setVal(g, k, n.trim());
     };
     return (
-      <select className="ref-input" style={{ width: pickerWidth }} value={value} disabled={archived} onChange={pick} aria-label={`${ROLES.find(([s]) => s === k)[1]} of game ${g.nr}`}>
+      <select className="ref-input" style={{ width: pickerWidth }} value={value} disabled={archived} onChange={pick} aria-label={t("{slot} of game {nr}", { slot: t(ROLES.find(([s]) => s === k)[1]), nr: g.nr })}>
         <option value="">{placeholder}</option>
-        {v && !known && <option value={v}>{v} (not in the registry)</option>}
-        <optgroup label={finalLines ? "Referees (final: referees work the lines)" : `${ROLE_LABEL[SLOT_ROLE[k]]}s`}>{fits.map((o) => <option key={o.id} value={refName(o)}>{text(o)}</option>)}</optgroup>
-        {others.length > 0 && <optgroup label="Other officials">{others.map((o) => <option key={o.id} value={refName(o)}>{text(o)}</option>)}</optgroup>}
-        <option value={"__other__"}>Other name…</option>
+        {v && !known && <option value={v}>{t("{name} (not in the registry)", { name: v })}</option>}
+        <optgroup label={finalLines ? t("Referees (final: referees work the lines)") : t(`${ROLE_LABEL[SLOT_ROLE[k]]}s`)}>{fits.map((o) => <option key={o.id} value={refName(o)}>{text(o)}</option>)}</optgroup>
+        {others.length > 0 && <optgroup label={t("Other officials")}>{others.map((o) => <option key={o.id} value={refName(o)}>{text(o)}</option>)}</optgroup>}
+        <option value={"__other__"}>{t("Other name…")}</option>
       </select>
     );
   };
@@ -182,11 +184,13 @@ export default function Referees() {
   const clearAssignments = async (onlyAuto) => {
     const clears = (g, k) => !!String(valOf(g, k)).trim() && (!onlyAuto || !isManual(g, k));
     const targets = merged.filter((g) => (day === "all" || g.date === day) && ROLES.some(([k]) => clears(g, k)));
-    const when = day === "all" ? "all days" : dayLabel(day);
-    if (!targets.length) { alert(`No ${onlyAuto ? "auto-assigned " : ""}officials (${when}).`); return; }
+    const when = day === "all" ? tNow("all days") : dayLabel(day);
+    if (!targets.length) { alert(tNow(onlyAuto ? "No auto-assigned officials ({when})." : "No officials ({when}).", { when })); return; }
     const n = targets.reduce((s, g) => s + ROLES.filter(([k]) => clears(g, k)).length, 0);
     const kept = onlyAuto ? merged.filter((g) => day === "all" || g.date === day).reduce((s, g) => s + ROLES.filter(([k]) => isManual(g, k)).length, 0) : 0;
-    if (!confirm(`Remove ${n} ${onlyAuto ? "auto-assigned " : ""}official${n === 1 ? "" : "s"} from ${targets.length} game${targets.length === 1 ? "" : "s"} (${when})?${kept ? ` ${kept} set by hand stay.` : ""} Game reports that already exist keep their referees.`)) return;
+    const offs = tNow(onlyAuto ? (n === 1 ? "{n} auto-assigned official" : "{n} auto-assigned officials") : (n === 1 ? "{n} official" : "{n} officials"), { n });
+    const gms = tNow(targets.length === 1 ? "{n} game" : "{n} games", { n: targets.length });
+    if (!confirm(`${tNow("Remove {officials} from {games} ({when})?", { officials: offs, games: gms, when })}${kept ? ` ${tNow("{n} set by hand stay.", { n: kept })}` : ""} ${tNow("Game reports that already exist keep their referees.")}`)) return;
     const next = {}, nextAuto = {};
     for (const g of targets) {
       next[g.id] = Object.fromEntries(ROLES.map(([k]) => [k, clears(g, k) ? "" : String(valOf(g, k))]));
@@ -195,30 +199,30 @@ export default function Referees() {
     setLocal((p) => ({ ...p, ...next }));
     setLocalAuto((p) => ({ ...p, ...nextAuto }));
     try { await Promise.all(targets.map((g) => saveGameRefs(g.id, next[g.id], nextAuto[g.id]))); }
-    catch (e) { alert("Could not clear: " + (e?.code || e?.message || e)); }
+    catch (e) { alert(tNow("Could not clear: {err}", { err: e?.code || e?.message || e })); }
   };
 
   return (
     <>
-      <h2 className="page-h">Referees</h2>
-      <p className="muted-sm" style={{ marginTop: -8 }}>Assign the officiating team per game. Names come from the event's referee registry (import via Players &amp; staff) — or type a new one. Saved automatically; the game report is pre-filled with these.</p>
-      {archived && <div className="warn-box">This event is archived — read-only.</div>}
+      <h2 className="page-h">{t("Referees")}</h2>
+      <p className="muted-sm" style={{ marginTop: -8 }}>{t("Assign the officiating team per game. Names come from the event's referee registry (import via Players & staff) — or type a new one. Saved automatically; the game report is pre-filled with these.")}</p>
+      {archived && <div className="warn-box">{t("This event is archived — read-only.")}</div>}
 
       <OfficialsCard refs={refs} days={days} dayLabel={dayLabel} teamNations={teamNations} archived={archived} />
 
       <div className="filter-bar" style={{ padding: "8px 0" }}>
-        <span className="filter-label">Day</span>
-        <button className={`filter-pill ${day === "all" ? "active" : ""}`} onClick={() => setDay("all")}>All</button>
+        <span className="filter-label">{t("Day")}</span>
+        <button className={`filter-pill ${day === "all" ? "active" : ""}`} onClick={() => setDay("all")}>{t("All")}</button>
         {days.map((d) => <button key={d} className={`filter-pill ${day === d ? "active" : ""}`} onClick={() => setDay(d)}>{dayLabel(d)}</button>)}
       </div>
-      <input className="game-search" style={{ maxWidth: 360, marginBottom: 10 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search game # or team…" />
+      <input className="game-search" style={{ maxWidth: 360, marginBottom: 10 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search game # or team…")} />
 
       {!archived && (
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <button className="btn primary sm" onClick={() => setAutoOpen(true)} disabled={!refs.length} title={refs.length ? "" : "Add officials first"}>Auto-assign…</button>
-          <button className="btn sm" onClick={() => clearAssignments(true)} title={`Remove the auto-assigned officials (${day === "all" ? "all days" : dayLabel(day)}); officials set by hand stay`}>Clear auto-assigned…</button>
-          <button className="btn sm" onClick={() => nav(`/e/${eventId}/plans?view=schedule${day !== "all" ? `&day=${encodeURIComponent(day)}` : ""}`)} title="Day schedule with the referees of each game — print or PDF">🖨 Day schedule</button>
-          <button className="btn sm" onClick={() => clearAssignments(false)} title={`Remove all officials (${day === "all" ? "all days" : dayLabel(day)})`}>Clear all…</button>
+          <button className="btn primary sm" onClick={() => setAutoOpen(true)} disabled={!refs.length} title={refs.length ? "" : t("Add officials first")}>{t("Auto-assign…")}</button>
+          <button className="btn sm" onClick={() => clearAssignments(true)} title={t("Remove the auto-assigned officials ({when}); officials set by hand stay", { when: day === "all" ? t("all days") : dayLabel(day) })}>{t("Clear auto-assigned…")}</button>
+          <button className="btn sm" onClick={() => nav(`/e/${eventId}/plans?view=schedule${day !== "all" ? `&day=${encodeURIComponent(day)}` : ""}`)} title={t("Day schedule with the referees of each game — print or PDF")}>{t("🖨 Day schedule")}</button>
+          <button className="btn sm" onClick={() => clearAssignments(false)} title={t("Remove all officials ({when})", { when: day === "all" ? t("all days") : dayLabel(day) })}>{t("Clear all…")}</button>
         </div>
       )}
       <AssignSettings settings={settings} courts={courts} archived={archived} />
@@ -232,16 +236,16 @@ export default function Referees() {
         <table className="ref-grid">
           <thead>
             <tr>
-              <th className="rg-game">Game</th>
-              {cols.map(([k, label]) => <th key={k}>{label}</th>)}
+              <th className="rg-game">{t("Game")}</th>
+              {cols.map(([k, label]) => <th key={k}>{t(label)}</th>)}
             </tr>
           </thead>
           <tbody>
-            {shown.length === 0 && <tr><td className="muted-sm" colSpan={cols.length + 1}>No games.</td></tr>}
+            {shown.length === 0 && <tr><td className="muted-sm" colSpan={cols.length + 1}>{t("No games.")}</td></tr>}
             {shown.map((g) => (
               <tr key={g.id} className={saved[g.id] ? "rg-saved" : ""}>
-                <td className="rg-game" onClick={() => nav(`/e/${eventId}/game/${g.id}`)} title="Open game report">
-                  <div className="rg-nr">#{g.nr} <span className="muted-sm">{g.time} · Court {g.court}</span></div>
+                <td className="rg-game" onClick={() => nav(`/e/${eventId}/game/${g.id}`)} title={t("Open game report")}>
+                  <div className="rg-nr">#{g.nr} <span className="muted-sm">{g.time} · {t("Court {c}", { c: g.court })}</span></div>
                   <div className="rg-teams">
                     <span className="flag">{flagFor(g.teamA?.name)}</span>{shortTeam(g.teamA)} <KitSwatch kit={resolveKit(g.kit?.A, teamKitsFor(teamKits, g.teamA?.name, g.category))} size={12} />
                     <span className="muted-sm">v</span>{" "}
@@ -249,17 +253,17 @@ export default function Referees() {
                   </div>
                   <div className="muted-sm">{dayLabel(g.date)} · {g.category}</div>
                   <div className="rg-meta" onClick={(e) => e.stopPropagation()}>
-                    <label className="muted-sm" title="Game category — auto-assign gives it a Referee 1 of at least this rank (by default semifinals, bronze and final are top)">
-                      Category{" "}
+                    <label className="muted-sm" title={t("Game category — auto-assign gives it a Referee 1 of at least this rank (by default semifinals, bronze and final are top)")}>
+                      {t("Category")}{" "}
                       <select className={`rg-rank rg-rank-${g.rank || defaultGameRank(g)}`} value={g.rank || defaultGameRank(g)} disabled={archived}
-                        onChange={(e) => saveGameRank(g.id, e.target.value === defaultGameRank(g) ? "" : e.target.value).catch((err) => alert("Could not save the category: " + (err?.code || err?.message || err)))}
-                        aria-label={`Category of game ${g.nr}`}>
-                        {RANKS.map((x) => <option key={x} value={x}>{RANK_LABEL[x]}</option>)}
+                        onChange={(e) => saveGameRank(g.id, e.target.value === defaultGameRank(g) ? "" : e.target.value).catch((err) => alert(tNow("Could not save the category: {err}", { err: err?.code || err?.message || err })))}
+                        aria-label={t("Category of game {nr}", { nr: g.nr })}>
+                        {RANKS.map((x) => <option key={x} value={x}>{t(RANK_LABEL[x])}</option>)}
                       </select>
                     </label>
                     {(() => {
                       const rk = refKits.find((r) => r.id === g.kit?.R);
-                      return rk ? <span className="muted-sm rg-refshirt" title="Referee shirt">Referee <KitSwatch kit={{ colors: [rk.shirt] }} size={12} /> {rk.name}</span> : null;
+                      return rk ? <span className="muted-sm rg-refshirt" title={t("Referee shirt")}>{t("Referee")} <KitSwatch kit={{ colors: [rk.shirt] }} size={12} /> {rk.name}</span> : null;
                     })()}
                   </div>
                 </td>
@@ -269,9 +273,9 @@ export default function Referees() {
                   const empty = !String(valOf(g, k)).trim();
                   return (
                     <td key={k} className={`ag-cell ${lvl ? `rg-${empty ? "missing" : lvl}` : ""} ${isManual(g, k) ? "ag-manual" : ""}`}
-                      title={[isManual(g, k) && "✎ Set by hand", ...(iss || []).map((i) => (i.level === "hard" ? "⛔ " : "⚠ ") + i.msg)].filter(Boolean).join("\n") || undefined}>
-                      {isManual(g, k) && <span className="ag-manual-mark" aria-label="Set by hand">✎ manual</span>}
-                      {officialPicker(g, k, empty && lvl ? "required" : "—")}
+                      title={[isManual(g, k) && t("✎ Set by hand"), ...(iss || []).map((i) => (i.level === "hard" ? "⛔ " : "⚠ ") + t(i.msg))].filter(Boolean).join("\n") || undefined}>
+                      {isManual(g, k) && <span className="ag-manual-mark" aria-label={t("Set by hand")}>{t("✎ manual")}</span>}
+                      {officialPicker(g, k, empty && lvl ? t("required") : "—")}
                       {lvl && !empty && <span className={`rg-badge rg-badge-${lvl}`}>{iss.length > 1 ? iss.length : "!"}</span>}
                     </td>
                   );
@@ -288,6 +292,7 @@ export default function Referees() {
 // Header summary: hard / soft / empty counts (for the selected day); click to
 // list the issues, or show only games that have any.
 function IssueSummary({ check, games, day, showList, setShowList, issuesOnly, setIssuesOnly, onPick }) {
+  const t = useT();
   const byId = useMemo(() => new Map(games.map((g) => [g.id, g])), [games]);
   const items = check.list
     .filter((i) => day === "all" || byId.get(i.gameId)?.date === day)
@@ -296,21 +301,21 @@ function IssueSummary({ check, games, day, showList, setShowList, issuesOnly, se
   const hard = n((i) => i.level === "hard" && i.code !== "missing"), soft = n((i) => i.level === "soft"), missing = n((i) => i.code === "missing");
   return (
     <div className="rg-summary">
-      <button className={`rg-pill ${hard ? "rg-pill-hard" : "rg-pill-ok"}`} onClick={() => setShowList(!showList)}>{hard ? `${hard} conflict${hard === 1 ? "" : "s"}` : "No conflicts"}</button>
-      {soft > 0 && <button className="rg-pill rg-pill-soft" onClick={() => setShowList(!showList)}>{soft} warning{soft === 1 ? "" : "s"}</button>}
-      {missing > 0 && <button className="rg-pill rg-pill-missing" onClick={() => setShowList(!showList)}>{missing} empty required slot{missing === 1 ? "" : "s"}</button>}
-      <label className="rg-only"><input type="checkbox" checked={issuesOnly} onChange={(e) => setIssuesOnly(e.target.checked)} /> Only games with issues</label>
+      <button className={`rg-pill ${hard ? "rg-pill-hard" : "rg-pill-ok"}`} onClick={() => setShowList(!showList)}>{hard ? t(hard === 1 ? "{n} conflict" : "{n} conflicts", { n: hard }) : t("No conflicts")}</button>
+      {soft > 0 && <button className="rg-pill rg-pill-soft" onClick={() => setShowList(!showList)}>{t(soft === 1 ? "{n} warning" : "{n} warnings", { n: soft })}</button>}
+      {missing > 0 && <button className="rg-pill rg-pill-missing" onClick={() => setShowList(!showList)}>{t(missing === 1 ? "{n} empty required slot" : "{n} empty required slots", { n: missing })}</button>}
+      <label className="rg-only"><input type="checkbox" checked={issuesOnly} onChange={(e) => setIssuesOnly(e.target.checked)} /> {t("Only games with issues")}</label>
       {showList && items.length > 0 && (
         <ul className="rg-issues">
           {items.filter((i) => i.code !== "missing").map((i, j) => {
             const g = byId.get(i.gameId);
             return (
-              <li key={j} className={`rg-issue-${i.level}`} onClick={() => g && onPick(g)} title="Show this game">
-                <b>#{g?.nr}</b> <span className="muted-sm">{g?.time}</span> · {SLOT_LABEL[i.slot]}: <b>{i.name}</b> — {i.msg}
+              <li key={j} className={`rg-issue-${i.level}`} onClick={() => g && onPick(g)} title={t("Show this game")}>
+                <b>#{g?.nr}</b> <span className="muted-sm">{g?.time}</span> · {t(SLOT_LABEL[i.slot])}: <b>{i.name}</b> — {t(i.msg)}
               </li>
             );
           })}
-          {missing > 0 && <li className="muted-sm">+ {missing} empty required slot{missing === 1 ? "" : "s"} (Referee 1/2 always; Clerk and Assistants when officials with that role exist).</li>}
+          {missing > 0 && <li className="muted-sm">+ {t(missing === 1 ? "{n} empty required slot" : "{n} empty required slots", { n: missing })} {t("(Referee 1/2 always; Clerk and Assistants when officials with that role exist).")}</li>}
         </ul>
       )}
     </div>
@@ -321,6 +326,7 @@ function IssueSummary({ check, games, day, showList, setShowList, issuesOnly, se
 // clerk), to spot an uneven load at a glance.
 const ROLE_OF = { r1: "referee", r2: "referee", a1: "assistant", a2: "assistant", clerk: "clerk", clerk2: "clerk", cm: "courtManager" };
 function LoadOverview({ games, days, dayLabel }) {
+  const t = useT();
   const rows = useMemo(() => {
     const m = new Map();
     for (const g of games) for (const [slot, role] of Object.entries(ROLE_OF)) {
@@ -334,13 +340,13 @@ function LoadOverview({ games, days, dayLabel }) {
     return [...m.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
   }, [games]);
   if (!rows.length) return null;
-  const fmt = (d) => (d ? ["referee", "assistant", "clerk", "courtManager"].filter((r) => d[r]).map((r) => `${d[r]}× ${ROLE_LABEL[r]}`).join(" · ") : "");
+  const fmt = (d) => (d ? ["referee", "assistant", "clerk", "courtManager"].filter((r) => d[r]).map((r) => `${d[r]}× ${t(ROLE_LABEL[r])}`).join(" · ") : "");
   return (
     <details className="adv-tool" style={{ marginBottom: 10 }}>
-      <summary>Load per official</summary>
+      <summary>{t("Load per official")}</summary>
       <div className="grid-scroll">
         <table className="ref-grid">
-          <thead><tr><th>Official</th>{days.map((d) => <th key={d}>{dayLabel(d)}</th>)}<th>Total</th></tr></thead>
+          <thead><tr><th>{t("Official")}</th>{days.map((d) => <th key={d}>{dayLabel(d)}</th>)}<th>{t("Total")}</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.name}><td className="of-name">{r.name}</td>{days.map((d) => <td key={d} className="muted-sm">{fmt(r.day[d])}</td>)}<td><b>{r.total}</b></td></tr>
@@ -355,36 +361,37 @@ function LoadOverview({ games, days, dayLabel }) {
 // Event settings for the assignment (event.officialsRules, see
 // officials/model.js officialsSettings). Saved right away.
 function AssignSettings({ settings, courts, archived }) {
+  const t = useT();
   const save = (patch) => {
     const next = { r2: settings.r2, clerk2Courts: settings.clerk2Courts, finalRefsOnLines: settings.finalRefsOnLines, r2NationKo: settings.r2NationKo, ...patch };
-    updateEventFields({ officialsRules: next }).catch((e) => alert("Could not save: " + (e?.code || e?.message || e)));
+    updateEventFields({ officialsRules: next }).catch((e) => alert(tNow("Could not save: {err}", { err: e?.code || e?.message || e })));
   };
   const toggleCourt = (c) => save({ clerk2Courts: settings.clerk2Courts.includes(c) ? settings.clerk2Courts.filter((x) => x !== c) : [...settings.clerk2Courts, c] });
   return (
     <details className="adv-tool" style={{ marginBottom: 10 }}>
-      <summary>Assignment settings — Referee 2: {settings.r2 === "finals" ? "finals only" : "every game"}{settings.r2NationKo === "lenient" ? " · knockout Referee 2 from a playing nation allowed" : ""}{settings.clerk2Courts.length ? ` · Clerk 2 on court ${settings.clerk2Courts.join(", ")}` : ""}</summary>
+      <summary>{t("Assignment settings — Referee 2: {mode}", { mode: settings.r2 === "finals" ? t("finals only") : t("every game") })}{settings.r2NationKo === "lenient" ? ` · ${t("knockout Referee 2 from a playing nation allowed")}` : ""}{settings.clerk2Courts.length ? ` · ${t("Clerk 2 on court {c}", { c: settings.clerk2Courts.join(", ") })}` : ""}</summary>
       <div className="as-settings">
-        <label>Referee 2{" "}
+        <label>{t("Referee 2")}{" "}
           <select value={settings.r2} disabled={archived} onChange={(e) => save({ r2: e.target.value })}>
-            <option value="always">in every game</option>
-            <option value="finals">only semifinals, bronze / 3rd place and final</option>
+            <option value="always">{t("in every game")}</option>
+            <option value="finals">{t("only semifinals, bronze / 3rd place and final")}</option>
           </select>
-          <span className="muted-sm"> — elsewhere you can still add one by hand.</span>
+          <span className="muted-sm"> — {t("elsewhere you can still add one by hand.")}</span>
         </label>
-        <label>Knockout: Referee 2 from a playing nation{" "}
+        <label>{t("Knockout: Referee 2 from a playing nation")}{" "}
           <select value={settings.r2NationKo} disabled={archived} onChange={(e) => save({ r2NationKo: e.target.value })}>
-            <option value="lastResort">only if no neutral referee is available</option>
-            <option value="lenient">allowed — about as bad as no break (helps balance the load)</option>
+            <option value="lastResort">{t("only if no neutral referee is available")}</option>
+            <option value="lenient">{t("allowed — about as bad as no break (helps balance the load)")}</option>
           </select>
-          <span className="muted-sm"> — Referee 1 is always neutral; group games always need a neutral Referee 2.</span>
+          <span className="muted-sm"> — {t("Referee 1 is always neutral; group games always need a neutral Referee 2.")}</span>
         </label>
-        <div>Second clerk on courts:{" "}
+        <div>{t("Second clerk on courts:")}{" "}
           {courts.length ? courts.map((c) => (
             <label key={c} className="as-court"><input type="checkbox" checked={settings.clerk2Courts.includes(c)} disabled={archived} onChange={() => toggleCourt(c)} /> {c}</label>
-          )) : <span className="muted-sm">no games yet</span>}
+          )) : <span className="muted-sm">{t("no games yet")}</span>}
         </div>
-        <label><input type="checkbox" checked={settings.finalRefsOnLines} disabled={archived} onChange={(e) => save({ finalRefsOnLines: e.target.checked })} /> In the final, the referees work the lines</label>
-        <p className="muted-sm">Availability windows use the game length of each day ({settings.gameMinutes} min unless a day sets its own — Settings → Courts &amp; schedule).</p>
+        <label><input type="checkbox" checked={settings.finalRefsOnLines} disabled={archived} onChange={(e) => save({ finalRefsOnLines: e.target.checked })} /> {t("In the final, the referees work the lines")}</label>
+        <p className="muted-sm">{t("Availability windows use the game length of each day ({n} min unless a day sets its own — Settings → Courts & schedule).", { n: settings.gameMinutes })}</p>
       </div>
     </details>
   );

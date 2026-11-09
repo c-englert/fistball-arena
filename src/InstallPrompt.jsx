@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "./i18n.js";
 
 // Welcome modal inviting the user to install the PWA. Auto-shows once when the
 // browser offers installation (beforeinstallprompt); on iOS Safari it shows
@@ -10,6 +11,7 @@ const dismissed = () => { try { return localStorage.getItem(KEY) === "1"; } catc
 const remember = () => { try { localStorage.setItem(KEY, "1"); } catch { /* ignore */ } };
 
 export default function InstallPrompt() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState("prompt"); // "prompt" | "ios"
   const promptRef = useRef(null);
@@ -50,12 +52,15 @@ export default function InstallPrompt() {
     <div className="modal-overlay" onClick={() => setOpen(false)}>
       <div className="install-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="installTitle">
         <div className="install-logo"><img src={import.meta.env.BASE_URL + "ifa-mark.png"} alt="" /></div>
-        <h2 id="installTitle" className="install-title">Install Fistball Arena</h2>
+        <h2 id="installTitle" className="install-title">{t("Install Fistball Arena")}</h2>
         {mode === "ios"
-          ? <p className="install-msg">Tap the <b>Share</b> button, then <b>“Add to Home Screen”</b> to install.</p>
-          : <p className="install-msg">Install the app for quick access to your events, schedule and game reports.</p>}
-        {mode !== "ios" && <button className="btn primary install-primary" onClick={install}>Install App</button>}
-        <button className="btn install-ghost" onClick={later}>Maybe later</button>
+          ? <p className="install-msg">{t("Tap the {share} button, then {add} to install.").split(/(\{share\}|\{add\})/).map((part, i) =>
+              part === "{share}" ? <b key={i}>{t("Share")}</b>
+                : part === "{add}" ? <b key={i}>“{t("Add to Home Screen")}”</b>
+                : part)}</p>
+          : <p className="install-msg">{t("Install the app for quick access to your events, schedule and game reports.")}</p>}
+        {mode !== "ios" && <button className="btn primary install-primary" onClick={install}>{t("Install App")}</button>}
+        <button className="btn install-ghost" onClick={later}>{t("Maybe later")}</button>
       </div>
     </div>
   );

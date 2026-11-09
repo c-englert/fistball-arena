@@ -7,6 +7,7 @@ import { useEvent } from "../eventContext.js";
 import { flagFor } from "../flags.js";
 import { checkKits, checkRefShirts, countChanges, DEFAULT_KIT_RULES } from "../officials/kits.js";
 import SuggestKitsModal from "./SuggestKitsModal.jsx";
+import { useT, currentLang, localeOf } from "../i18n.js";
 
 const KIT_BADGE = { clash: ["Clash", "kb-clash"], unresolvable: ["Can't resolve", "kb-unres"], unknown: ["Unknown colour", "kb-unres"] };
 
@@ -18,12 +19,13 @@ const PALETTE = [
   ["Brown", "#8b5a2b"], ["Teal", "#14b8a6"], ["Maroon", "#7f1d1d"],
 ];
 const parseDate = (s) => { const [d, m, y] = String(s).split("/").map(Number); return new Date(2000 + (y || 0), (m || 1) - 1, d || 1); };
-const dayLabel = (s) => { const dt = parseDate(s); return `${dt.toLocaleDateString("en-US", { weekday: "short" })} ${dt.getDate()} ${dt.toLocaleDateString("en-US", { month: "short" })}`; };
+const dayLabel = (s) => { const dt = parseDate(s); const loc = localeOf(currentLang()); return `${dt.toLocaleDateString(loc, { weekday: "short" })} ${dt.getDate()} ${dt.toLocaleDateString(loc, { month: "short" })}`; };
 // Women's categories say so in their name ("Clubs U18 Women", "Damen"…).
 const isWomen = (cat) => /\b(women|woman|female|ladies|damen|frauen|feminino|femenino|mujeres)\b/i.test(String(cat || ""));
 const shortTeam = (t) => String(t?.name || t || "").split(" - ")[0];
 
 function ColorPick({ value, disabled, onPick, what = "jersey" }) {
+  const tr = useT();
   const [pos, setPos] = useState(null); // {top,left} while open (fixed, via portal)
   const btnRef = useRef(null);
   const toggle = () => {
@@ -35,7 +37,7 @@ function ColorPick({ value, disabled, onPick, what = "jersey" }) {
   return (
     <span className="cpick">
       <button ref={btnRef} type="button" className="cpick-btn" disabled={disabled} onClick={toggle}
-        title={value ? `Change ${what} colour` : `Set ${what} colour`} style={value ? { background: value } : undefined}>
+        title={what === "shirt" ? (value ? tr("Change shirt colour") : tr("Set shirt colour")) : (value ? tr("Change jersey colour") : tr("Set jersey colour"))} style={value ? { background: value } : undefined}>
         {!value && <span className="cpick-empty">—</span>}
       </button>
       {pos && !disabled && createPortal(
@@ -43,10 +45,10 @@ function ColorPick({ value, disabled, onPick, what = "jersey" }) {
           <div className="cpick-backdrop" onClick={close} />
           <div className="cpick-pop" style={{ top: pos.top, left: pos.left }}>
             {PALETTE.map(([name, hex]) => (
-              <button key={hex} type="button" className="cpick-sw" title={name} style={{ background: hex }}
+              <button key={hex} type="button" className="cpick-sw" title={tr(name)} style={{ background: hex }}
                 onClick={() => { onPick(hex); close(); }} />
             ))}
-            <button type="button" className="cpick-clear" onClick={() => { onPick(""); close(); }}>Clear</button>
+            <button type="button" className="cpick-clear" onClick={() => { onPick(""); close(); }}>{tr("Clear")}</button>
           </div>
         </>, document.body)}
     </span>
@@ -58,6 +60,7 @@ function ColorPick({ value, disabled, onPick, what = "jersey" }) {
 // value the team no longer has (removed uniform, old single shirt colour) gets
 // its own button to clear it.
 function KitPick({ value, kits, disabled, label, onPick }) {
+  const tr = useT();
   const options = [1, 2].map((n) => resolveKit(n, kits)).filter(Boolean);
   const stale = value && !options.some((k) => k.n === value);
   return (
@@ -66,15 +69,15 @@ function KitPick({ value, kits, disabled, label, onPick }) {
         const on = k.n === value;
         return (
           <button key={k.n} type="button" className={`kp-sw ${on ? "on" : ""}`} disabled={disabled} aria-pressed={on}
-            title={`Uniform ${k.n}${on ? " — click to clear" : ""}`} aria-label={`Uniform ${k.n}`} onClick={() => onPick(on ? "" : k.n)}>
+            title={on ? tr("Uniform {n} — click to clear", { n: k.n }) : tr("Uniform {n}", { n: k.n })} aria-label={tr("Uniform {n}", { n: k.n })} onClick={() => onPick(on ? "" : k.n)}>
             {k.colors.map((c, i) => <span key={i} style={{ background: c }} />)}
           </button>
         );
       })}
-      {!options.length && <span className="muted-sm">no uniforms registered</span>}
+      {!options.length && <span className="muted-sm">{tr("no uniforms registered")}</span>}
       {stale && (typeof value === "string"
-        ? <button type="button" className="kp-sw on" disabled={disabled} style={{ background: value }} title="Shirt colour from an older version — click to clear" onClick={() => onPick("")} />
-        : <button type="button" className="btn sm" disabled={disabled} title="This uniform was removed from the team" onClick={() => onPick("")}>Uniform {value} (removed) ✕</button>)}
+        ? <button type="button" className="kp-sw on" disabled={disabled} style={{ background: value }} title={tr("Shirt colour from an older version — click to clear")} onClick={() => onPick("")} />
+        : <button type="button" className="btn sm" disabled={disabled} title={tr("This uniform was removed from the team")} onClick={() => onPick("")}>{tr("Uniform {n} (removed) ✕", { n: value })}</button>)}
     </span>
   );
 }
@@ -84,6 +87,7 @@ function KitPick({ value, kits, disabled, label, onPick }) {
 // single game. Admin only. Shown on the games list and on Fistball Live.
 export default function Colors() {
   const nav = useNavigate();
+  const tr = useT();
   const { eventId, event, isAdmin, archived } = useEvent();
   const [games, setGames] = useState([]);
   const [teamKits, setTeamKitsState] = useState({});
@@ -126,9 +130,9 @@ export default function Colors() {
       .sort((a, b) => parseDate(a.date) - parseDate(b.date) || String(a.time).localeCompare(b.time) || a.nr - b.nr);
   }, [games, day, q]);
 
-  if (!isAdmin) return <div className="empty">Admins only.</div>;
+  if (!isAdmin) return <div className="empty">{tr("Admins only.")}</div>;
 
-  const fail = (e) => setStatus("Failed: " + (e?.code || e?.message || e));
+  const fail = (e) => setStatus(tr("Failed: {e}", { e: String(e?.code || e?.message || e) }));
   // Jersey colours of one uniform: set colour #idx ("" removes it).
   const setTeamColor = (t, n, idx, color) => {
     const cur = teamKitsFor(teamKits, t.name, t.category);
@@ -142,27 +146,27 @@ export default function Colors() {
   const setKit = (g, side, kit) => saveGameKit(g.id, side, kit).catch(fail);
   const applySuggestion = async (proposals) => {
     await Promise.all(proposals.map((p) => saveGameKit(p.gameId, p.side, p.to)));
-    setStatus(`Applied ${proposals.length} uniform${proposals.length === 1 ? "" : "s"}.`);
+    setStatus(proposals.length === 1 ? tr("Applied {n} uniform.", { n: 1 }) : tr("Applied {n} uniforms.", { n: proposals.length }));
   };
   const setThreshold = (v) => {
     const n = Math.round(Number(v));
     if (n >= 5 && n <= 80 && n !== threshold) updateEventFields({ kitThreshold: n }).catch(fail);
   };
   const nIssues = (lvl, issues = kitIssues) => Object.entries(issues).filter(([id, x]) => x.level === lvl && (day === "all" || games.find((g) => g.id === id)?.date === day)).length;
-  const changeHints = Object.entries(kitChanges).flatMap(([t, ds]) => Object.entries(ds).filter(([d]) => day === "all" || d === day).map(([d, n]) => `${shortTeam({ name: t })} ${n}× on ${dayLabel(d)}`));
+  const changeHints = Object.entries(kitChanges).flatMap(([t, ds]) => Object.entries(ds).filter(([d]) => day === "all" || d === day).map(([d, n]) => tr("{team} {n}× on {day}", { team: shortTeam({ name: t }), n, day: dayLabel(d) })));
   const applyBulk = async () => {
     const { date, kit } = bulk;
     const t = teamByKey.get(bulk.team);
-    if (!t || !date) { setStatus("Pick a team and a day first."); return; }
+    if (!t || !date) { setStatus(tr("Pick a team and a day first.")); return; }
     const team = t.name;
     const targets = games.filter((g) => (date === "all" || g.date === date) && (!t.category || g.category === t.category)
       && (g.teamA?.name === team || g.teamB?.name === team));
-    if (!targets.length) { setStatus("No games for that team on that day."); return; }
-    setStatus("Applying…");
+    if (!targets.length) { setStatus(tr("No games for that team on that day.")); return; }
+    setStatus(tr("Applying…"));
     try {
       for (const g of targets) await saveGameKit(g.id, g.teamA?.name === team ? "A" : "B", kit ? Number(kit) : "");
-      const when = date === "all" ? "every day" : dayLabel(date);
-      setStatus(`${kit ? `Uniform ${kit}` : "No uniform"} for ${rowLabel(t)} on ${when} — ${targets.length} game(s).`);
+      const when = date === "all" ? tr("every day") : dayLabel(date);
+      setStatus(tr("{kit} for {team} on {when} — {n} game(s).", { kit: kit ? tr("Uniform {n}", { n: kit }) : tr("No uniform"), team: rowLabel(t), when, n: targets.length }));
     } catch (e) { fail(e); }
   };
 
@@ -188,7 +192,7 @@ export default function Colors() {
     const v = g.kit?.[side];
     return (
       <KitPick value={v} kits={teamKitsFor(teamKits, team, g.category)} disabled={archived}
-        label={`Uniform for ${shortTeam({ name: team })}`} onPick={(n) => setKit(g, side, n)} />
+        label={tr("Uniform for {team}", { team: shortTeam({ name: team }) })} onPick={(n) => setKit(g, side, n)} />
     );
   };
 
@@ -198,33 +202,33 @@ export default function Colors() {
     const v = g.kit?.R || "";
     const known = refKits.some((r) => r.id === v);
     return (
-      <span className="rs-pick" role="group" aria-label="Referee shirt">
+      <span className="rs-pick" role="group" aria-label={tr("Referee shirt")}>
         {refKits.filter((r) => r.shirt).map((r) => (
           <button key={r.id} type="button" className={`rs-sw ${r.id === v ? "on" : ""}`} style={{ background: r.shirt }} disabled={archived}
-            title={`${r.name || r.shirt}${r.id === v ? " — click to clear" : ""}`} aria-label={r.name || r.shirt} aria-pressed={r.id === v}
+            title={r.id === v ? tr("{name} — click to clear", { name: r.name || r.shirt }) : (r.name || r.shirt)} aria-label={r.name || r.shirt} aria-pressed={r.id === v}
             onClick={() => setKit(g, "R", r.id === v ? "" : r.id)} />
         ))}
-        {v && !known && <button type="button" className="btn sm" disabled={archived} onClick={() => setKit(g, "R", "")} title="This colour was removed from the list">deleted colour ✕</button>}
+        {v && !known && <button type="button" className="btn sm" disabled={archived} onClick={() => setKit(g, "R", "")} title={tr("This colour was removed from the list")}>{tr("deleted colour ✕")}</button>}
       </span>
     );
   };
 
   return (
     <>
-      <h2 className="page-h">Uniforms</h2>
-      <p className="muted-sm" style={{ marginTop: -8 }}>Register each team's uniforms (up to two; each jersey can have up to 3 colours, e.g. stripes), then set which one a team wears — for a whole day at once, or per game to override a specific round. Shows on the games list and in the Uniforms tab of Fistball Live.</p>
-      {archived && <div className="warn-box">This event is archived — read-only.</div>}
+      <h2 className="page-h">{tr("Uniforms")}</h2>
+      <p className="muted-sm" style={{ marginTop: -8 }}>{tr("Register each team's uniforms (up to two; each jersey can have up to 3 colours, e.g. stripes), then set which one a team wears — for a whole day at once, or per game to override a specific round. Shows on the games list and in the Uniforms tab of Fistball Live.")}</p>
+      {archived && <div className="warn-box">{tr("This event is archived — read-only.")}</div>}
 
       <div className="card" style={{ maxWidth: "none" }}>
-        <h2>Team uniforms</h2>
+        <h2>{tr("Team uniforms")}</h2>
         <div className="grid-scroll">
           <table className="ref-grid kit-teams">
-            <thead><tr><th className="rg-game">Team</th><th>Uniform 1 (jersey colours)</th><th>Uniform 2 (jersey colours)</th></tr></thead>
+            <thead><tr><th className="rg-game">{tr("Team")}</th><th>{tr("Uniform 1 (jersey colours)")}</th><th>{tr("Uniform 2 (jersey colours)")}</th></tr></thead>
             <tbody>
-              {teams.length === 0 && <tr><td className="muted-sm" colSpan={3}>No teams yet — add them in Settings → Teams.</td></tr>}
+              {teams.length === 0 && <tr><td className="muted-sm" colSpan={3}>{tr("No teams yet — add them in Settings → Teams.")}</td></tr>}
               {[["Men", false], ["Women", true]].flatMap(([label, women]) => {
                 const list = teams.filter((t) => t.women === women);
-                return list.length ? [<tr key={label} className="kit-sec"><th colSpan={3}>{label}</th></tr>, ...list.map(teamRow)] : [];
+                return list.length ? [<tr key={label} className="kit-sec"><th colSpan={3}>{tr(label)}</th></tr>, ...list.map(teamRow)] : [];
               })}
             </tbody>
           </table>
@@ -236,68 +240,68 @@ export default function Colors() {
       {!archived && (
         <div className="card" style={{ maxWidth: "none" }}>
           <div className="bulk-row">
-            <span className="muted-sm">Uniform of the day:</span>
+            <span className="muted-sm">{tr("Uniform of the day:")}</span>
             <select className="ag-role" value={bulk.team} onChange={(e) => setBulk({ ...bulk, team: e.target.value })}>
-              <option value="">— team —</option>
+              <option value="">{tr("— team —")}</option>
               {[["Men", false], ["Women", true]].map(([label, women]) => (
-                <optgroup key={label} label={label}>
+                <optgroup key={label} label={tr(label)}>
                   {teams.filter((t) => t.women === women).map((t) => <option key={t.key} value={t.key}>{rowLabel(t)}</option>)}
                 </optgroup>
               ))}
             </select>
             <select className="ag-role" value={bulk.date} onChange={(e) => setBulk({ ...bulk, date: e.target.value })}>
-              <option value="">— day —</option>
-              <option value="all">Every day</option>
+              <option value="">{tr("— day —")}</option>
+              <option value="all">{tr("Every day")}</option>
               {days.map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
             </select>
             {bulk.team
               ? <KitPick value={Number(bulk.kit) || ""} kits={teamKitsFor(teamKits, teamByKey.get(bulk.team)?.name, teamByKey.get(bulk.team)?.category)}
-                  label="Uniform of the day" onPick={(n) => setBulk({ ...bulk, kit: n ? String(n) : "" })} />
-              : <span className="muted-sm">— pick a team to see its uniforms —</span>}
-            <button className="btn sm" onClick={applyBulk}>Apply</button>
+                  label={tr("Uniform of the day")} onPick={(n) => setBulk({ ...bulk, kit: n ? String(n) : "" })} />
+              : <span className="muted-sm">{tr("— pick a team to see its uniforms —")}</span>}
+            <button className="btn sm" onClick={applyBulk}>{tr("Apply")}</button>
           </div>
         </div>
       )}
 
       <div className="filter-bar" style={{ padding: "8px 0" }}>
-        <span className="filter-label">Day</span>
-        <button className={`filter-pill ${day === "all" ? "active" : ""}`} onClick={() => setDay("all")}>All</button>
+        <span className="filter-label">{tr("Day")}</span>
+        <button className={`filter-pill ${day === "all" ? "active" : ""}`} onClick={() => setDay("all")}>{tr("All")}</button>
         {days.map((d) => <button key={d} className={`filter-pill ${day === d ? "active" : ""}`} onClick={() => setDay(d)}>{dayLabel(d)}</button>)}
       </div>
-      <input className="game-search" style={{ maxWidth: 360, marginBottom: 10 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search game # or team…" />
+      <input className="game-search" style={{ maxWidth: 360, marginBottom: 10 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("Search game # or team…")} />
       {status && <p className="muted-sm">{status}</p>}
 
       <div className="rg-summary">
-        {nIssues("clash") ? <span className="rg-pill rg-pill-hard">{nIssues("clash")} clash{nIssues("clash") === 1 ? "" : "es"}</span> : <span className="rg-pill rg-pill-ok">No clashes</span>}
-        {nIssues("unresolvable") > 0 && <span className="rg-pill rg-pill-missing" title="Every uniform combination of the two teams clashes">{nIssues("unresolvable")} can't be resolved</span>}
+        {nIssues("clash") ? <span className="rg-pill rg-pill-hard">{nIssues("clash") === 1 ? tr("{n} clash", { n: 1 }) : tr("{n} clashes", { n: nIssues("clash") })}</span> : <span className="rg-pill rg-pill-ok">{tr("No clashes")}</span>}
+        {nIssues("unresolvable") > 0 && <span className="rg-pill rg-pill-missing" title={tr("Every uniform combination of the two teams clashes")}>{tr("{n} can't be resolved", { n: nIssues("unresolvable") })}</span>}
         {refKits.length > 0 && (nIssues("clash", refIssues) + nIssues("unknown", refIssues)
-          ? <span className="rg-pill rg-pill-hard">{nIssues("clash", refIssues) + nIssues("unknown", refIssues)} referee shirt clash{nIssues("clash", refIssues) + nIssues("unknown", refIssues) === 1 ? "" : "es"}</span>
+          ? <span className="rg-pill rg-pill-hard">{nIssues("clash", refIssues) + nIssues("unknown", refIssues) === 1 ? tr("{n} referee shirt clash", { n: 1 }) : tr("{n} referee shirt clashes", { n: nIssues("clash", refIssues) + nIssues("unknown", refIssues) })}</span>
           : null)}
-        {refKits.length > 0 && nIssues("unresolvable", refIssues) > 0 && <span className="rg-pill rg-pill-missing" title="No referee shirt colour contrasts with both teams">{nIssues("unresolvable", refIssues)} without a fitting referee shirt</span>}
-        {!archived && <button className="btn primary sm" onClick={() => setSuggestOpen(true)} disabled={!Object.keys(teamKits).length && !refKits.length} title={Object.keys(teamKits).length || refKits.length ? "" : "Register team uniforms first"}>Suggest uniforms…</button>}
-        <label className="rg-only" title="Colour distance (ΔE, CIE76) below which two jerseys count as a clash (striped jerseys: when made of the same colours). Higher = stricter.">
-          Clash below ΔE <input type="number" min="5" max="80" key={threshold} defaultValue={threshold} disabled={archived} style={{ width: 56 }}
+        {refKits.length > 0 && nIssues("unresolvable", refIssues) > 0 && <span className="rg-pill rg-pill-missing" title={tr("No referee shirt colour contrasts with both teams")}>{tr("{n} without a fitting referee shirt", { n: nIssues("unresolvable", refIssues) })}</span>}
+        {!archived && <button className="btn primary sm" onClick={() => setSuggestOpen(true)} disabled={!Object.keys(teamKits).length && !refKits.length} title={Object.keys(teamKits).length || refKits.length ? "" : tr("Register team uniforms first")}>{tr("Suggest uniforms…")}</button>}
+        <label className="rg-only" title={tr("Colour distance (ΔE, CIE76) below which two jerseys count as a clash (striped jerseys: when made of the same colours). Higher = stricter.")}>
+          {tr("Clash below ΔE")} <input type="number" min="5" max="80" key={threshold} defaultValue={threshold} disabled={archived} style={{ width: 56 }}
             onBlur={(e) => setThreshold(e.target.value)} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
         </label>
       </div>
-      {changeHints.length > 0 && <p className="muted-sm">Uniform changes during a day: {changeHints.join(", ")}</p>}
+      {changeHints.length > 0 && <p className="muted-sm">{tr("Uniform changes during a day:")} {changeHints.join(", ")}</p>}
       {suggestOpen && <SuggestKitsModal games={games} teamKits={teamKits} refKits={refKits} threshold={threshold} days={days} day={day} dayLabel={dayLabel} onApply={applySuggestion} onClose={() => setSuggestOpen(false)} />}
 
       <div className="grid-scroll">
         <table className="ref-grid">
-          <thead><tr><th className="rg-game">Game</th><th>Team A uniform</th><th>Team B uniform</th>{refKits.length > 0 && <th>Referee shirt</th>}</tr></thead>
+          <thead><tr><th className="rg-game">{tr("Game")}</th><th>{tr("Team A uniform")}</th><th>{tr("Team B uniform")}</th>{refKits.length > 0 && <th>{tr("Referee shirt")}</th>}</tr></thead>
           <tbody>
-            {shown.length === 0 && <tr><td className="muted-sm" colSpan={3}>No games.</td></tr>}
+            {shown.length === 0 && <tr><td className="muted-sm" colSpan={3}>{tr("No games.")}</td></tr>}
             {shown.map((g) => (
               <tr key={g.id}>
-                <td className="rg-game" onClick={() => nav(`/e/${eventId}/game/${g.id}`)} title="Open game report">
-                  <div className="rg-nr">#{g.nr} <span className="muted-sm">{dayLabel(g.date)} · {g.time} · Court {g.court}</span></div>
+                <td className="rg-game" onClick={() => nav(`/e/${eventId}/game/${g.id}`)} title={tr("Open game report")}>
+                  <div className="rg-nr">#{g.nr} <span className="muted-sm">{dayLabel(g.date)} · {g.time} · {tr("Court {c}", { c: g.court })}</span></div>
                   <div className="muted-sm">{g.category} · {g.round}</div>
-                  {kitIssues[g.id] && <span className={`kit-badge ${KIT_BADGE[kitIssues[g.id].level][1]}`} title={kitIssues[g.id].msg}>{KIT_BADGE[kitIssues[g.id].level][0]}</span>}
+                  {kitIssues[g.id] && <span className={`kit-badge ${KIT_BADGE[kitIssues[g.id].level][1]}`} title={kitIssues[g.id].msg}>{tr(KIT_BADGE[kitIssues[g.id].level][0])}</span>}
                 </td>
                 <td className="clr-cell"><span className="flag">{flagFor(g.teamA?.name)}</span>{shortTeam(g.teamA)} {kitSelect(g, "A")}</td>
                 <td className="clr-cell"><span className="flag">{flagFor(g.teamB?.name)}</span>{shortTeam(g.teamB)} {kitSelect(g, "B")}</td>
-                {refKits.length > 0 && <td className="clr-cell">{refSelect(g)}{refIssues[g.id] && <div><span className={`kit-badge ${KIT_BADGE[refIssues[g.id].level][1]}`} title={refIssues[g.id].msg}>{KIT_BADGE[refIssues[g.id].level][0]}</span></div>}</td>}
+                {refKits.length > 0 && <td className="clr-cell">{refSelect(g)}{refIssues[g.id] && <div><span className={`kit-badge ${KIT_BADGE[refIssues[g.id].level][1]}`} title={refIssues[g.id].msg}>{tr(KIT_BADGE[refIssues[g.id].level][0])}</span></div>}</td>}
               </tr>
             ))}
           </tbody>
@@ -311,28 +315,29 @@ export default function Colors() {
 // game wear one of them; "Suggest uniforms" picks one per game that contrasts
 // with both teams.
 function RefShirtsCard({ refKits, archived, onSave }) {
+  const tr = useT();
   const [names, setNames] = useState({}); // id -> name being typed
   const update = (i, patch) => onSave(refKits.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const add = () => onSave([...refKits, { id: Date.now().toString(36), name: "", shirt: "" }]);
   return (
     <div className="card" style={{ maxWidth: "none" }}>
-      <h2>Referee shirts</h2>
-      <p className="muted-sm" style={{ marginTop: -6 }}>Shirt colours the officials have at this event. All officials of a game wear the same colour; "Suggest uniforms" picks one that contrasts with both teams.</p>
+      <h2>{tr("Referee shirts")}</h2>
+      <p className="muted-sm" style={{ marginTop: -6 }}>{tr("Shirt colours the officials have at this event. All officials of a game wear the same colour; \"Suggest uniforms\" picks one that contrasts with both teams.")}</p>
       {refKits.length > 0 && (
         <div className="rs-list">
           {refKits.map((r, i) => (
             <div key={r.id} className="rs-row">
               <ColorPick what="shirt" value={r.shirt || ""} disabled={archived} onPick={(c) => update(i, { shirt: c })} />
-              <input className="of-input" value={names[r.id] ?? r.name ?? ""} disabled={archived} placeholder="Name, e.g. Yellow"
+              <input className="of-input" value={names[r.id] ?? r.name ?? ""} disabled={archived} placeholder={tr("Name, e.g. Yellow")}
                 onChange={(e) => setNames((p) => ({ ...p, [r.id]: e.target.value }))}
                 onBlur={() => { if (names[r.id] !== undefined && names[r.id] !== r.name) update(i, { name: names[r.id].trim() }); setNames((p) => { const n = { ...p }; delete n[r.id]; return n; }); }}
-                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label="Colour name" />
-              {!archived && <button className="btn danger sm" onClick={() => onSave(refKits.filter((_, j) => j !== i))} aria-label="Remove">✕</button>}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label={tr("Colour name")} />
+              {!archived && <button className="btn danger sm" onClick={() => onSave(refKits.filter((_, j) => j !== i))} aria-label={tr("Remove")}>✕</button>}
             </div>
           ))}
         </div>
       )}
-      {!archived && <button className="btn sm" style={{ marginTop: 8 }} onClick={add}>+ Add colour</button>}
+      {!archived && <button className="btn sm" style={{ marginTop: 8 }} onClick={add}>{tr("+ Add colour")}</button>}
     </div>
   );
 }

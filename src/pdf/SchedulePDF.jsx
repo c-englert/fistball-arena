@@ -1,4 +1,5 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { tNow, tRound, currentLang, localeOf } from "../i18n.js";
 
 const PURPLE = "#3a2d6b", LINE = "#8a90a2", LIGHT = "#eceef3";
 const s = StyleSheet.create({
@@ -19,12 +20,14 @@ const toMin = (t) => { const [h, mm] = String(t || "").split(":").map(Number); r
 const dayLabel = (v) => {
   const [dd, mm, yy] = String(v || "").split("/").map(Number);
   if (!dd) return v || "—";
-  return new Date(2000 + (yy || 0), (mm || 1) - 1, dd).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  return new Date(2000 + (yy || 0), (mm || 1) - 1, dd).toLocaleDateString(localeOf(currentLang()), { weekday: "long", day: "numeric", month: "long" });
 };
 // A team may carry a short/display name; fall back to the full name.
 const nm = (t) => (t?.short || t?.name || t || "");
 
 export default function SchedulePDF({ games = [], event }) {
+  const t = tNow;
+  const lang = currentLang();
   const list = [...games]
     .filter((g) => g.teamA && g.teamB)
     .sort((a, b) => parseD(a.date) - parseD(b.date) || toMin(a.time) - toMin(b.time)
@@ -41,38 +44,38 @@ export default function SchedulePDF({ games = [], event }) {
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        <Text style={s.title}>{event?.name || "Game schedule"}</Text>
-        <Text style={s.sub}>{[event?.place, event?.dates].filter(Boolean).join("  ·  ")}{list.length ? `  ·  ${list.length} games` : ""}</Text>
+        <Text style={s.title}>{event?.name || t("Game schedule")}</Text>
+        <Text style={s.sub}>{[event?.place, event?.dates].filter(Boolean).join("  ·  ")}{list.length ? `  ·  ${t("{n} games", { n: list.length })}` : ""}</Text>
 
-        {list.length === 0 && <Text style={{ marginTop: 20 }}>No games to show.</Text>}
+        {list.length === 0 && <Text style={{ marginTop: 20 }}>{t("No games to show.")}</Text>}
 
         {days.map((day) => (
           <View key={day.date}>
-            <Text style={s.dayHead}>{dayLabel(day.date)}  ·  {day.items.length} games</Text>
+            <Text style={s.dayHead}>{dayLabel(day.date)}  ·  {t("{n} games", { n: day.items.length })}</Text>
             <View style={s.thead} fixed>
               <Text style={[s.th, s.cNr]}>#</Text>
-              <Text style={[s.th, s.cTime]}>Time</Text>
-              <Text style={[s.th, s.cCourt]}>Court</Text>
-              <Text style={[s.th, s.cCat]}>Category</Text>
-              <Text style={[s.th, s.cTeams]}>Match</Text>
-              <Text style={[s.th, s.cRound]}>Round</Text>
-              <Text style={[s.th, s.cBo]}>Best of</Text>
+              <Text style={[s.th, s.cTime]}>{t("Time")}</Text>
+              <Text style={[s.th, s.cCourt]}>{t("Court")}</Text>
+              <Text style={[s.th, s.cCat]}>{t("Category")}</Text>
+              <Text style={[s.th, s.cTeams]}>{t("Match")}</Text>
+              <Text style={[s.th, s.cRound]}>{t("Round")}</Text>
+              <Text style={[s.th, s.cBo]}>{t("Best of")}</Text>
             </View>
             {day.items.map((g) => (
               <View key={g.nr} style={s.tr} wrap={false}>
                 <Text style={[s.td, s.cNr]}>{g.nr}</Text>
                 <Text style={[s.td, s.cTime]}>{g.time || "—"}</Text>
-                <Text style={[s.td, s.cCourt]}>{g.court ? `Court ${g.court}` : "—"}</Text>
+                <Text style={[s.td, s.cCourt]}>{g.court ? t("Court {c}", { c: g.court }) : "—"}</Text>
                 <Text style={[s.td, s.cCat]}>{g.category}</Text>
-                <Text style={[s.td, s.cTeams]}>{nm(g.teamA)}  vs  {nm(g.teamB)}</Text>
-                <Text style={[s.td, s.cRound]}>{g.round}</Text>
+                <Text style={[s.td, s.cTeams]}>{nm(g.teamA)}  {t("vs")}  {nm(g.teamB)}</Text>
+                <Text style={[s.td, s.cRound]}>{tRound(lang, g.round)}</Text>
                 <Text style={[s.td, s.cBo]}>{g.bestOf || "—"}</Text>
               </View>
             ))}
           </View>
         ))}
 
-        <Text style={s.foot} fixed render={({ pageNumber, totalPages }) => `${event?.name || ""}  —  page ${pageNumber} / ${totalPages}`} />
+        <Text style={s.foot} fixed render={({ pageNumber, totalPages }) => `${event?.name || ""}  —  ${t("page {p} / {n}", { p: pageNumber, n: totalPages })}`} />
       </Page>
     </Document>
   );

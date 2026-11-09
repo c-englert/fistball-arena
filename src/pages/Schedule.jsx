@@ -8,6 +8,7 @@ import { eventCategoryNames } from "../categories.js";
 import { fetchSheetGames } from "../schedule/importSheet.js";
 import { saveScheduleConfig, subscribeScheduleConfig, publishGames } from "../cloud.js";
 import { useEvent } from "../eventContext.js";
+import { useT, useLang, tRound } from "../i18n.js";
 
 const EVENT_SHEET_ID = "1IWuv2zOZtIJDZCFnItp_z8p546azRGlD8I052jVe8Mk";
 
@@ -62,6 +63,7 @@ const fromISO = (iso) => {
 
 export default function Schedule({ me }) {
   const nav = useNavigate();
+  const t = useT();
   const { eventId, isAdmin, event } = useEvent();
   const [config, setConfig] = useState(() => initialConfig(event));
   const [step, setStep] = useState(() => {
@@ -91,67 +93,69 @@ export default function Schedule({ me }) {
   useEffect(() => { if (!steps.some(([k]) => k === step)) setStep(steps[0][0]); }, [presetOnly]); // eslint-disable-line
 
   if (!isAdmin) {
-    return <div className="empty">Admins only. <button className="btn" onClick={() => nav(`/e/${eventId}`)}>Back</button></div>;
+    return <div className="empty">{t("Admins only.")} <button className="btn" onClick={() => nav(`/e/${eventId}`)}>{t("Back")}</button></div>;
   }
 
   const patch = (fn) => setConfig((c) => { const n = structuredClone(c); fn(n); return n; });
 
   const saveSetup = async () => {
-    setStatus("Saving…");
-    try { await saveScheduleConfig(config); setStatus("Setup saved"); }
-    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+    setStatus(t("Saving…"));
+    try { await saveScheduleConfig(config); setStatus(t("Setup saved")); }
+    catch (e) { setStatus(t("Save failed: ") + (e?.message || e)); }
   };
 
   const generate = () => {
     const r = generateSchedule(config);
     setResult(r);
-    setStatus(`${r.games.length} match(es) generated${r.unplaced.length ? `, ${r.unplaced.length} unplaced` : ""}.`);
+    setStatus(r.unplaced.length
+      ? t("{n} match(es) generated, {u} unplaced.", { n: r.games.length, u: r.unplaced.length })
+      : t("{n} match(es) generated.", { n: r.games.length }));
   };
 
   const doImport = async () => {
-    setStatus("Reading spreadsheet…");
+    setStatus(t("Reading spreadsheet…"));
     try {
       const id = sheetId.match(/[-\w]{25,}/)?.[0] || sheetId.trim(); // accept a full URL or a bare id
       const r = await fetchSheetGames(id, "0");
       setResult(r);
       setStep("preview");
-      setStatus(`Imported ${r.games.length} match(es) from the sheet.`);
+      setStatus(t("Imported {n} match(es) from the sheet.", { n: r.games.length }));
     } catch (e) {
-      setStatus("Import failed: " + (e?.message || e));
+      setStatus(t("Import failed: ") + (e?.message || e));
     }
   };
 
   const runPublish = async () => {
     setConfirm(null);
-    setStatus("Publishing…");
+    setStatus(t("Publishing…"));
     try {
       try { await saveScheduleConfig(config); } catch (_) { /* meta rules optional */ }
       await publishGames(result.games, { replaceAll });
-      setStatus(`Published ${result.games.length} games. Open the games list to see them.`);
+      setStatus(t("Published {n} games. Open the games list to see them.", { n: result.games.length }));
     } catch (e) {
-      setStatus("Publish failed: " + (e?.message || e));
+      setStatus(t("Publish failed: ") + (e?.message || e));
     }
   };
 
   const doPublish = () => {
     if (!result?.games.length) return;
     setConfirm({
-      title: replaceAll ? "Replace the whole schedule?" : "Publish games?",
+      title: replaceAll ? t("Replace the whole schedule?") : t("Publish games?"),
       message: replaceAll
-        ? `This replaces ALL current games, reports and results with the ${result.games.length} matches below. Existing game reports and scores will be deleted. This cannot be undone.`
-        : `Add ${result.games.length} games to the database.`,
+        ? t("This replaces ALL current games, reports and results with the {n} matches below. Existing game reports and scores will be deleted. This cannot be undone.", { n: result.games.length })
+        : t("Add {n} games to the database.", { n: result.games.length }),
       danger: replaceAll,
-      okLabel: replaceAll ? "Replace all" : "Publish",
+      okLabel: replaceAll ? t("Replace all") : t("Publish"),
       onOk: runPublish,
     });
   };
 
   return (
     <>
-      <h2 className="page-h">Schedule generator</h2>
+      <h2 className="page-h">{t("Schedule generator")}</h2>
       <nav className="steps">
         {steps.map(([k, label]) => (
-          <button key={k} className={`step ${step === k ? "active" : ""}`} onClick={() => setStep(k)}>{label}</button>
+          <button key={k} className={`step ${step === k ? "active" : ""}`} onClick={() => setStep(k)}>{t(label)}</button>
         ))}
       </nav>
 
@@ -169,10 +173,10 @@ export default function Schedule({ me }) {
       <div className="bottombar">
         <span className="status">{status}</span>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" onClick={saveSetup}>Save setup</button>
+          <button className="btn" onClick={saveSetup}>{t("Save setup")}</button>
           {step !== "preview"
-            ? <button className="btn primary" onClick={() => setStep((steps[steps.findIndex((s) => s[0] === step) + 1] || steps[steps.length - 1])[0])}>Next ›</button>
-            : <button className="btn primary" onClick={generate}>Generate</button>}
+            ? <button className="btn primary" onClick={() => setStep((steps[steps.findIndex((s) => s[0] === step) + 1] || steps[steps.length - 1])[0])}>{t("Next ›")}</button>
+            : <button className="btn primary" onClick={generate}>{t("Generate")}</button>}
         </div>
       </div>
 
@@ -183,6 +187,7 @@ export default function Schedule({ me }) {
 
 /* ---------------- confirm modal ---------------- */
 function ConfirmModal({ confirm, onClose }) {
+  const t = useT();
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -190,9 +195,9 @@ function ConfirmModal({ confirm, onClose }) {
         <h3 className="modal-title">{confirm.title}</h3>
         <p className="modal-msg">{confirm.message}</p>
         <div className="modal-actions">
-          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={onClose}>{t("Cancel")}</button>
           <button className={`btn ${confirm.danger ? "danger-solid" : "primary"}`} onClick={confirm.onOk} autoFocus>
-            {confirm.okLabel || "Confirm"}
+            {confirm.okLabel || t("Confirm")}
           </button>
         </div>
       </div>
@@ -202,19 +207,20 @@ function ConfirmModal({ confirm, onClose }) {
 
 /* ---------------- Step 1: categories & groups ---------------- */
 function CatsStep({ config, patch }) {
+  const t = useT();
   return (
     <>
       {config.categories.map((cat, ci) => (
         <div className="card" key={ci}>
           <div className="row-between">
             <input className="h-input" value={cat.name}
-              onChange={(e) => patch((n) => (n.categories[ci].name = e.target.value))} placeholder="Category name" />
-            <button className="btn danger sm" onClick={() => patch((n) => n.categories.splice(ci, 1))}>Remove</button>
+              onChange={(e) => patch((n) => (n.categories[ci].name = e.target.value))} placeholder={t("Category name")} />
+            <button className="btn danger sm" onClick={() => patch((n) => n.categories.splice(ci, 1))}>{t("Remove")}</button>
           </div>
           {cat.groups.map((g, gi) => (
             <div className="group-box" key={gi}>
               <div className="row-between">
-                <div className="group-title">Group {g.label}</div>
+                <div className="group-title">{t("Group {g}", { g: g.label })}</div>
                 <button className="btn sm" onClick={() => patch((n) => n.categories[ci].groups.splice(gi, 1))}>✕</button>
               </div>
               <TeamEditor teams={g.teams}
@@ -226,17 +232,18 @@ function CatsStep({ config, patch }) {
             const used = n.categories[ci].groups.map((x) => x.label);
             const label = [...LABELS].find((L) => !used.includes(L)) || String(used.length + 1);
             n.categories[ci].groups.push({ label, teams: [] });
-          })}>+ Add group</button>
+          })}>{t("+ Add group")}</button>
         </div>
       ))}
       <button className="btn primary" onClick={() => patch((n) => n.categories.push(
         { name: "New category", bestOf: 5, double: false, qualifiersPerGroup: 2, knockout: true, groups: [{ label: "A", teams: [] }] }
-      ))}>+ Add category</button>
+      ))}>{t("+ Add category")}</button>
     </>
   );
 }
 
 function TeamEditor({ teams, onAdd, onRemove }) {
+  const tr = useT();
   const [val, setVal] = useState("");
   const add = () => { onAdd(val.trim()); setVal(""); };
   return (
@@ -245,12 +252,12 @@ function TeamEditor({ teams, onAdd, onRemove }) {
         {teams.map((t, ti) => (
           <span className="team-chip" key={ti}>{t}<button onClick={() => onRemove(ti)}>✕</button></span>
         ))}
-        {!teams.length && <span className="muted-sm">No teams yet</span>}
+        {!teams.length && <span className="muted-sm">{tr("No teams yet")}</span>}
       </div>
       <div className="add-row">
         <input list="known-teams" value={val} onChange={(e) => setVal(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Add team name" />
-        <button className="btn sm" onClick={add}>Add</button>
+          onKeyDown={(e) => e.key === "Enter" && add()} placeholder={tr("Add team name")} />
+        <button className="btn sm" onClick={add}>{tr("Add")}</button>
         <datalist id="known-teams">{TEAM_NAMES.map((t) => <option key={t} value={t} />)}</datalist>
       </div>
     </>
@@ -259,37 +266,39 @@ function TeamEditor({ teams, onAdd, onRemove }) {
 
 /* ---------------- Step 2: format ---------------- */
 function FormatStep({ config, patch }) {
+  const t = useT();
   return config.categories.map((cat, ci) => (
     <div className="card" key={ci}>
-      <h2>{cat.name || "Category"}</h2>
+      <h2>{cat.name || t("Category")}</h2>
       <div className="grid2">
-        <label className="field"><span>Best of</span>
+        <label className="field"><span>{t("Best of")}</span>
           <select value={cat.bestOf} onChange={(e) => patch((n) => (n.categories[ci].bestOf = Number(e.target.value)))}>
             <option value={1}>1</option><option value={3}>3</option><option value={5}>5</option>
           </select>
         </label>
-        <label className="field"><span>Qualifiers per group</span>
+        <label className="field"><span>{t("Qualifiers per group")}</span>
           <select value={cat.qualifiersPerGroup} onChange={(e) => patch((n) => (n.categories[ci].qualifiersPerGroup = Number(e.target.value)))}>
             <option value={1}>1</option><option value={2}>2</option>
           </select>
         </label>
       </div>
       <label className="check"><input type="checkbox" checked={cat.double}
-        onChange={(e) => patch((n) => (n.categories[ci].double = e.target.checked))} /> Double round-robin (home &amp; away)</label>
+        onChange={(e) => patch((n) => (n.categories[ci].double = e.target.checked))} /> {t("Double round-robin (home & away)")}</label>
       <label className="check"><input type="checkbox" checked={cat.knockout}
-        onChange={(e) => patch((n) => (n.categories[ci].knockout = e.target.checked))} /> Generate knockout bracket</label>
+        onChange={(e) => patch((n) => (n.categories[ci].knockout = e.target.checked))} /> {t("Generate knockout bracket")}</label>
     </div>
   ));
 }
 
 /* ---------------- Step 3: slots ---------------- */
 function SlotsStep({ config, patch }) {
+  const t = useT();
   return (
     <div className="card">
-      <h2>Courts &amp; schedule</h2>
-      <p className="muted-sm">Comes from the event’s “Courts &amp; schedule” step — tweak here if needed.</p>
+      <h2>{t("Courts & schedule")}</h2>
+      <p className="muted-sm">{t("Comes from the event’s “Courts & schedule” step — tweak here if needed.")}</p>
       <SlotsEditor value={config.slots} onChange={(next) => patch((n) => { n.slots = next; })} />
-      <label className="field" style={{ maxWidth: 160, marginTop: 12 }}><span>First match #</span>
+      <label className="field" style={{ maxWidth: 160, marginTop: 12 }}><span>{t("First match #")}</span>
         <input type="number" min="1" value={config.startNr} onChange={(e) => patch((n) => (n.startNr = Number(e.target.value)))} /></label>
     </div>
   );
@@ -297,6 +306,8 @@ function SlotsStep({ config, patch }) {
 
 /* ---------------- Step 4: preview & publish ---------------- */
 function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPublish, sheetId, setSheetId, doImport }) {
+  const t = useT();
+  const [lang] = useLang();
   const byDay = useMemo(() => {
     if (!result) return [];
     const map = new Map();
@@ -320,20 +331,20 @@ function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPu
   return (
     <>
       <div className="card">
-        <h2>Import existing schedule from a Google Sheet</h2>
-        <p className="muted-sm">Loads the real matchups, days, times and courts as-is (recommended for an event already planned in a sheet).</p>
+        <h2>{t("Import existing schedule from a Google Sheet")}</h2>
+        <p className="muted-sm">{t("Loads the real matchups, days, times and courts as-is (recommended for an event already planned in a sheet).")}</p>
         <div className="add-row" style={{ marginTop: 8 }}>
-          <input value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder="Sheet URL or ID" />
-          <button className="btn primary" onClick={doImport}>Import</button>
+          <input value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder={t("Sheet URL or ID")} />
+          <button className="btn primary" onClick={doImport}>{t("Import")}</button>
         </div>
       </div>
 
       <div className="card">
         <div className="row-between">
-          <h2 style={{ margin: 0 }}>Preview</h2>
-          <button className="btn" onClick={generate}>{result ? "Regenerate" : "Generate"}</button>
+          <h2 style={{ margin: 0 }}>{t("Preview")}</h2>
+          <button className="btn" onClick={generate}>{result ? t("Regenerate") : t("Generate")}</button>
         </div>
-        {!result && <p className="muted-sm">Import above, or press Generate to build from your group setup.</p>}
+        {!result && <p className="muted-sm">{t("Import above, or press Generate to build from your group setup.")}</p>}
         {result?.warnings?.length > 0 && (
           <div className="warn-box">
             {result.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
@@ -343,15 +354,15 @@ function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPu
 
       {byCat.length > 0 && (
         <div className="card">
-          <h2>Structure</h2>
-          <p className="muted-sm">The assembled bracket per category — check it before publishing.</p>
+          <h2>{t("Structure")}</h2>
+          <p className="muted-sm">{t("The assembled bracket per category — check it before publishing.")}</p>
           {byCat.map(([cat, c]) => (
             <div className="fmt-cat" key={cat}>
-              <div className="fmt-head"><b>{cat}</b><span className="tag">{c.group.size} teams</span></div>
-              <div className="fmt-line"><span className="fmt-round">Qualification round</span> {[...c.group].join(" · ")}</div>
+              <div className="fmt-head"><b>{cat}</b><span className="tag">{t("{n} teams", { n: c.group.size })}</span></div>
+              <div className="fmt-line"><span className="fmt-round">{tRound(lang, "Qualification round")}</span> {[...c.group].join(" · ")}</div>
               {[...c.rounds.entries()].map(([round, gs]) => (
                 <div className="fmt-line" key={round}>
-                  <span className="fmt-round">{round}</span> {gs.map((g) => `${g.teamA.name} × ${g.teamB.name}`).join(" · ")}
+                  <span className="fmt-round">{tRound(lang, round)}</span> {gs.map((g) => `${g.teamA.name} × ${g.teamB.name}`).join(" · ")}
                 </div>
               ))}
             </div>
@@ -363,12 +374,12 @@ function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPu
         <div className="card" key={day}>
           <h2>{day}</h2>
           <table className="sched-table">
-            <thead><tr><th>#</th><th>Time</th><th>Court</th><th>Round</th><th>Match</th></tr></thead>
+            <thead><tr><th>#</th><th>{t("Time")}</th><th>{t("Court")}</th><th>{t("Round")}</th><th>{t("Match")}</th></tr></thead>
             <tbody>
               {games.map((g) => (
                 <tr key={g.nr} className={g.round === "Qualification round" ? "" : "ko-row"}>
-                  <td>{g.nr}</td><td>{g.time}</td><td>{g.court}</td><td>{g.round}</td>
-                  <td>{g.teamA.name} <span className="vs">vs</span> {g.teamB.name}</td>
+                  <td>{g.nr}</td><td>{g.time}</td><td>{g.court}</td><td>{tRound(lang, g.round)}</td>
+                  <td>{g.teamA.name} <span className="vs">{t("vs")}</span> {g.teamB.name}</td>
                 </tr>
               ))}
             </tbody>
@@ -379,9 +390,9 @@ function PreviewStep({ config, result, generate, replaceAll, setReplaceAll, doPu
       {result?.games?.length > 0 && (
         <div className="card">
           <label className="check"><input type="checkbox" checked={replaceAll}
-            onChange={(e) => setReplaceAll(e.target.checked)} /> Replace all existing games, reports &amp; results</label>
+            onChange={(e) => setReplaceAll(e.target.checked)} /> {t("Replace all existing games, reports & results")}</label>
           <button className="btn primary" style={{ width: "100%", marginTop: 8 }} onClick={doPublish}>
-            Publish {result.games.length} games to database
+            {t("Publish {n} games to database", { n: result.games.length })}
           </button>
         </div>
       )}

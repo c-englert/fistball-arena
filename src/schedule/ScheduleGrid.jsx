@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { subscribeGames, updateGameSlots, saveScheduleBlocks } from "../cloud.js";
 import { normalizeSlots, dayGameMinutes } from "./scheduler.js";
 import { useEvent } from "../eventContext.js";
+import { useLang, makeT, localeOf, currentLang, tRound } from "../i18n.js";
 
 export const PALETTE = ["#6c5ce7", "#e84393", "#00b894", "#0984e3", "#e17055", "#00cec9", "#d63031", "#a29bfe", "#e1b12c", "#636e72"];
 const toMin = (hhmm) => { const [h, m] = String(hhmm || "").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
@@ -10,7 +11,7 @@ const short = (s) => (String(s || "").length > 16 ? String(s).slice(0, 15) + "�
 const dayLabel = (d) => {
   const [dd, mm, yy] = String(d || "").split("/").map(Number);
   if (!dd) return d || "—";
-  return new Date(2000 + (yy || 0), (mm || 1) - 1, dd).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  return new Date(2000 + (yy || 0), (mm || 1) - 1, dd).toLocaleDateString(currentLang() === "en" ? undefined : localeOf(currentLang()), { weekday: "short", day: "numeric", month: "short" });
 };
 
 // Drag-and-drop grid to place each game on a day / court / time.
@@ -20,6 +21,8 @@ const dayLabel = (d) => {
 //    to Firestore — used by the Arrange page for post-publish tweaks.
 export default function ScheduleGrid({ games: controlledGames, onChange }) {
   const controlled = typeof onChange === "function";
+  const [lang] = useLang();
+  const t = makeT(lang);
   const { event, archived } = useEvent();
   const [fetched, setFetched] = useState(controlled ? [] : null);
   const [local, setLocal] = useState({}); // nr -> { date, time, court } (standalone only)
@@ -69,30 +72,30 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
   const changed = Object.keys(local);
   const save = async () => {
     if (!changed.length) return;
-    setStatus("Saving…");
+    setStatus(t("Saving…"));
     try {
       await updateGameSlots(changed.map((nr) => ({ nr: Number(nr), ...eff((games || []).find((g) => String(g.nr) === String(nr))) })));
       setLocal({});
-      setStatus(`Saved ${changed.length} game${changed.length === 1 ? "" : "s"}.`);
-    } catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+      setStatus(changed.length === 1 ? t("Saved {n} game.", { n: changed.length }) : t("Saved {n} games.", { n: changed.length }));
+    } catch (e) { setStatus(t("Save failed: ") + (e?.message || e)); }
   };
 
   const addBlock = () => { setBlocksDirty(true); setBlocks((b) => [...b, { id: `b${Date.now()}${Math.floor(Math.random() * 1000)}`, label: "", date: days[0] || "", time: "", court: "" }]); };
   const editBlock = (id, patch) => { setBlocksDirty(true); setBlocks((b) => b.map((x) => (x.id === id ? { ...x, ...patch } : x))); };
   const delBlock = (id) => { setBlocksDirty(true); setBlocks((b) => b.filter((x) => x.id !== id)); };
   const saveBlocks = async () => {
-    setStatus("Saving entries…");
-    try { await saveScheduleBlocks(blocks); setBlocksDirty(false); setStatus(`Saved ${blocks.length} extra entr${blocks.length === 1 ? "y" : "ies"}.`); }
-    catch (e) { setStatus("Save failed: " + (e?.message || e)); }
+    setStatus(t("Saving entries…"));
+    try { await saveScheduleBlocks(blocks); setBlocksDirty(false); setStatus(blocks.length === 1 ? t("Saved {n} extra entry.", { n: blocks.length }) : t("Saved {n} extra entries.", { n: blocks.length })); }
+    catch (e) { setStatus(t("Save failed: ") + (e?.message || e)); }
   };
 
   const card = (g) => (
     <div key={g.nr} className="ag-card" draggable={!archived} style={{ borderLeftColor: catColor(g.category) }}
       onDragStart={() => setDrag(g.nr)} onDragEnd={() => { setDrag(null); setOver(""); }}
-      title={`#${g.nr} · ${g.category} · ${g.round}`}>
+      title={`#${g.nr} · ${g.category} · ${tRound(lang, g.round)}`}>
       <div className="ag-card-cat" style={{ color: catColor(g.category) }}>#{g.nr} · {g.category}</div>
       <div className="ag-card-teams">{short(g.teamA?.short || g.teamA?.name || g.teamA)} <span className="muted-sm">v</span> {short(g.teamB?.short || g.teamB?.name || g.teamB)}</div>
-      <div className="ag-card-round muted-sm">{g.round}</div>
+      <div className="ag-card-round muted-sm">{tRound(lang, g.round)}</div>
     </div>
   );
 
@@ -104,29 +107,29 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
     const out = [];
     const cell = {};
     sched.forEach((g) => { const k = `${g.date}|${g.court}|${g.time}`; (cell[k] = cell[k] || []).push(g); });
-    Object.entries(cell).forEach(([k, gs]) => { if (gs.length > 1) { const [d, c, t] = k.split("|"); out.push({ bad: true, msg: `Court clash — ${dayLabel(d)} ${t} · Court ${c}: ${gs.map((g) => "#" + g.nr).join(", ")}` }); } });
+    Object.entries(cell).forEach(([k, gs]) => { if (gs.length > 1) { const [d, c, tm0] = k.split("|"); out.push({ bad: true, msg: t("Court clash — {day} {time} · Court {c}: {games}", { day: dayLabel(d), time: tm0, c, games: gs.map((g) => "#" + g.nr).join(", ") }) }); } });
     // A team is unique WITHIN its category (Argentina Men ≠ Argentina Women),
     // so identity = category + name — otherwise same-named squads look clashy.
     const SEP = "";
     const ts = {};
-    sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { const k = `${g.category}${SEP}${t}${SEP}${g.date}${SEP}${g.time}`; (ts[k] = ts[k] || []).push(g.nr); } }));
-    Object.entries(ts).forEach(([k, ns]) => { if (ns.length > 1) { const [cat, t, d, tm] = k.split(SEP); out.push({ bad: true, msg: `${t} (${cat}) has ${ns.length} games at ${dayLabel(d)} ${tm}` }); } });
+    sched.forEach((g) => teamsOf(g).forEach((tm) => { if (tm && !isPh(tm)) { const k = `${g.category}${SEP}${tm}${SEP}${g.date}${SEP}${g.time}`; (ts[k] = ts[k] || []).push(g.nr); } }));
+    Object.entries(ts).forEach(([k, ns]) => { if (ns.length > 1) { const [cat, tm, d, tt] = k.split(SEP); out.push({ bad: true, msg: t("{team} ({cat}) has {n} games at {day} {time}", { team: tm, cat, n: ns.length, day: dayLabel(d), time: tt }) }); } });
     if (courts.length > 1) {
       const tc = {};
-      sched.forEach((g) => teamsOf(g).forEach((t) => { if (t && !isPh(t)) { const id = `${g.category}${SEP}${t}`; tc[id] = tc[id] || {}; tc[id][g.court] = (tc[id][g.court] || 0) + 1; } }));
+      sched.forEach((g) => teamsOf(g).forEach((tm) => { if (tm && !isPh(tm)) { const id = `${g.category}${SEP}${tm}`; tc[id] = tc[id] || {}; tc[id][g.court] = (tc[id][g.court] || 0) + 1; } }));
       Object.entries(tc).forEach(([id, m]) => {
-        const [cat, t] = id.split(SEP);
+        const [cat, tm] = id.split(SEP);
         const total = Object.values(m).reduce((a, b) => a + b, 0);
         const [topCourt, top] = Object.entries(m).sort((a, b) => b[1] - a[1])[0];
-        if (total >= 3 && Object.keys(m).length === 1) out.push({ bad: false, msg: `${t} (${cat}) plays all ${total} games on Court ${topCourt}` });
-        else if (total >= 4 && top / total >= 0.75) out.push({ bad: false, msg: `${t} (${cat}) plays ${top}/${total} games on Court ${topCourt}` });
+        if (total >= 3 && Object.keys(m).length === 1) out.push({ bad: false, msg: t("{team} ({cat}) plays all {n} games on Court {c}", { team: tm, cat, n: total, c: topCourt }) });
+        else if (total >= 4 && top / total >= 0.75) out.push({ bad: false, msg: t("{team} ({cat}) plays {k}/{n} games on Court {c}", { team: tm, cat, k: top, n: total, c: topCourt }) });
       });
     }
     return out;
-  }, [games, local, courts]);
+  }, [games, local, courts, lang]); // eslint-disable-line
 
-  if (games === null) return <div className="empty">Loading games…</div>;
-  if (games.length === 0) return <div className="empty">No games yet — generate the schedule first.</div>;
+  if (games === null) return <div className="empty">{t("Loading games…")}</div>;
+  if (games.length === 0) return <div className="empty">{t("No games yet — generate the schedule first.")}</div>;
 
   const byTimeCourt = (a, b) => (toMin(a.time) - toMin(b.time)) || String(a.court || "").localeCompare(String(b.court || ""), undefined, { numeric: true }) || (a.nr - b.nr);
 
@@ -135,16 +138,16 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
       <span className="ag-lcat" style={{ color: catColor(g.category) }}>#{g.nr}</span>
       <div className="ag-lmid">
         <div className="ag-lteams">{short(g.teamA?.short || g.teamA?.name || g.teamA)} <span className="muted-sm">v</span> {short(g.teamB?.short || g.teamB?.name || g.teamB)}</div>
-        <div className="ag-lsub muted-sm">{g.category} · {g.round}</div>
+        <div className="ag-lsub muted-sm">{g.category} · {tRound(lang, g.round)}</div>
       </div>
       <select className="ag-lday" value={g.date || ""} disabled={archived} onChange={(e) => applyMove(g.nr, { date: e.target.value })}>
-        <option value="">— day —</option>
+        <option value="">{t("— day —")}</option>
         {days.map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
       </select>
-      <input className="ag-ltime" value={g.time || ""} placeholder="hh:mm" disabled={archived} onChange={(e) => applyMove(g.nr, { time: e.target.value })} />
+      <input className="ag-ltime" value={g.time || ""} placeholder={t("hh:mm")} disabled={archived} onChange={(e) => applyMove(g.nr, { time: e.target.value })} />
       <select className="ag-lcourt" value={g.court || ""} disabled={archived} onChange={(e) => applyMove(g.nr, { court: e.target.value })}>
-        <option value="">— court —</option>
-        {courts.map((c) => <option key={c} value={String(c)}>Court {c}</option>)}
+        <option value="">{t("— court —")}</option>
+        {courts.map((c) => <option key={c} value={String(c)}>{t("Court {c}", { c })}</option>)}
       </select>
     </div>
   );
@@ -153,24 +156,24 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
     <>
       <div className="ag-bar">
         <div className="seg">
-          <button className={`seg-btn ${view === "list" ? "on" : ""}`} onClick={() => setView("list")}>List</button>
-          <button className={`seg-btn ${view === "grid" ? "on" : ""}`} onClick={() => setView("grid")}>Grid</button>
+          <button className={`seg-btn ${view === "list" ? "on" : ""}`} onClick={() => setView("list")}>{t("List")}</button>
+          <button className={`seg-btn ${view === "grid" ? "on" : ""}`} onClick={() => setView("grid")}>{t("Grid")}</button>
         </div>
         <span style={{ flex: 1 }} />
         {!controlled && (
           <>
-            <span className="muted-sm">{changed.length ? `${changed.length} unsaved` : "No changes"}</span>
-            {changed.length > 0 && <button className="btn sm" onClick={() => setLocal({})}>Reset</button>}
-            <button className="btn primary sm" disabled={!changed.length || archived} onClick={save}>Save</button>
+            <span className="muted-sm">{changed.length ? t("{n} unsaved", { n: changed.length }) : t("No changes")}</span>
+            {changed.length > 0 && <button className="btn sm" onClick={() => setLocal({})}>{t("Reset")}</button>}
+            <button className="btn primary sm" disabled={!changed.length || archived} onClick={save}>{t("Save")}</button>
           </>
         )}
       </div>
 
-      {courts.length === 0 && <div className="warn-box">No courts defined — set them in “Courts &amp; schedule”.</div>}
+      {courts.length === 0 && <div className="warn-box">{t("No courts defined — set them in “Courts & schedule”.")}</div>}
 
       {warnings.length > 0 && (
         <details className="ag-warns">
-          <summary>{warnings.filter((w) => w.bad).length} conflict{warnings.filter((w) => w.bad).length === 1 ? "" : "s"} · {warnings.filter((w) => !w.bad).length} court-fairness note{warnings.filter((w) => !w.bad).length === 1 ? "" : "s"}</summary>
+          <summary>{t(warnings.filter((w) => w.bad).length === 1 ? "{n} conflict" : "{n} conflicts", { n: warnings.filter((w) => w.bad).length })} · {t(warnings.filter((w) => !w.bad).length === 1 ? "{n} court-fairness note" : "{n} court-fairness notes", { n: warnings.filter((w) => !w.bad).length })}</summary>
           <ul>{warnings.map((w, i) => <li key={i} className={w.bad ? "ag-w-bad" : "ag-w-note"}>{w.bad ? "⚠️" : "ℹ️"} {w.msg}</li>)}</ul>
         </details>
       )}
@@ -178,21 +181,21 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
       {view === "list" && (
         <div className="ag-blocks">
           <div className="row-between" style={{ alignItems: "center" }}>
-            <div className="subhead" style={{ margin: 0 }}>Ceremonies &amp; breaks ({blocks.length})</div>
+            <div className="subhead" style={{ margin: 0 }}>{t("Ceremonies & breaks ({n})", { n: blocks.length })}</div>
             <div style={{ display: "flex", gap: 8 }}>
-              {blocksDirty && <button className="btn primary sm" disabled={archived} onClick={saveBlocks}>Save entries</button>}
-              <button className="btn sm" disabled={archived} onClick={addBlock}>+ Add entry</button>
+              {blocksDirty && <button className="btn primary sm" disabled={archived} onClick={saveBlocks}>{t("Save entries")}</button>}
+              <button className="btn sm" disabled={archived} onClick={addBlock}>{t("+ Add entry")}</button>
             </div>
           </div>
           {blocks.map((b) => (
             <div className="ag-lrow" key={b.id} style={{ borderLeftColor: "#8a6d1c" }}>
-              <input className="ag-lname" value={b.label || ""} placeholder="e.g. NT Awards ceremony" disabled={archived} onChange={(e) => editBlock(b.id, { label: e.target.value })} />
+              <input className="ag-lname" value={b.label || ""} placeholder={t("e.g. NT Awards ceremony")} disabled={archived} onChange={(e) => editBlock(b.id, { label: e.target.value })} />
               <select className="ag-lday" value={b.date || ""} disabled={archived} onChange={(e) => editBlock(b.id, { date: e.target.value })}>
-                <option value="">— day —</option>{days.map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
+                <option value="">{t("— day —")}</option>{days.map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
               </select>
-              <input className="ag-ltime" value={b.time || ""} placeholder="hh:mm" disabled={archived} onChange={(e) => editBlock(b.id, { time: e.target.value })} />
+              <input className="ag-ltime" value={b.time || ""} placeholder={t("hh:mm")} disabled={archived} onChange={(e) => editBlock(b.id, { time: e.target.value })} />
               <select className="ag-lcourt" value={b.court || ""} disabled={archived} onChange={(e) => editBlock(b.id, { court: e.target.value })}>
-                <option value="">— court —</option>{courts.map((c) => <option key={c} value={String(c)}>Court {c}</option>)}
+                <option value="">{t("— court —")}</option>{courts.map((c) => <option key={c} value={String(c)}>{t("Court {c}", { c })}</option>)}
               </select>
               <button className="btn danger sm" disabled={archived} onClick={() => delBlock(b.id)}>✕</button>
             </div>
@@ -206,7 +209,7 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
           if (!date && !list.length) return null;
           return (
             <div className="ag-day" key={date || "uns"}>
-              <div className="day-head" style={{ position: "static" }}>{date ? dayLabel(date) : `Unscheduled (${list.length})`}</div>
+              <div className="day-head" style={{ position: "static" }}>{date ? dayLabel(date) : t("Unscheduled ({n})", { n: list.length })}</div>
               {list.map(listRow)}
             </div>
           );
@@ -215,8 +218,8 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
         <>
           <div className={`ag-tray ${over === "unsched" ? "ag-over" : ""}`}
             onDragOver={(e) => { e.preventDefault(); setOver("unsched"); }} onDragLeave={() => setOver("")} onDrop={dropUnscheduled}>
-            <div className="subhead" style={{ margin: 0 }}>Unscheduled ({unscheduled.length})</div>
-            <div className="ag-tray-cards">{unscheduled.length ? unscheduled.map(card) : <span className="muted-sm">Drag a game here to unschedule it.</span>}</div>
+            <div className="subhead" style={{ margin: 0 }}>{t("Unscheduled ({n})", { n: unscheduled.length })}</div>
+            <div className="ag-tray-cards">{unscheduled.length ? unscheduled.map(card) : <span className="muted-sm">{t("Drag a game here to unschedule it.")}</span>}</div>
           </div>
           {courts.length > 0 && days.map((date) => {
             const times = timesFor(date);
@@ -226,7 +229,7 @@ export default function ScheduleGrid({ games: controlledGames, onChange }) {
                 <div className="ag-grid-wrap">
                   <table className="ag-grid">
                     <thead>
-                      <tr><th className="ag-th-time" /> {courts.map((c) => <th key={c} className="ag-th-court">Court {c}</th>)}</tr>
+                      <tr><th className="ag-th-time" /> {courts.map((c) => <th key={c} className="ag-th-court">{t("Court {c}", { c })}</th>)}</tr>
                     </thead>
                     <tbody>
                       {times.map((time) => (

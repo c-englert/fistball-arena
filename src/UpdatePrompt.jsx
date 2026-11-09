@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
+import { useT } from "./i18n.js";
 
 // Registers the service worker in "prompt" mode and shows a toast when a new
 // version is waiting. Tapping Update messages the waiting worker to skipWaiting;
 // when it takes control (controllerchange) the page reloads once. Also polls for
 // updates every minute so open tabs learn about a deploy.
 export default function UpdatePrompt() {
+  const t = useT();
   const [show, setShow] = useState(false);
   const regRef = useRef(null);
   const updateRef = useRef(null);
@@ -44,8 +46,8 @@ export default function UpdatePrompt() {
   if (!show) return null;
   return (
     <div className="update-toast" role="status">
-      <span>New version available</span>
-      <button className="btn sm" onClick={apply}>Update</button>
+      <span>{t("New version available")}</span>
+      <button className="btn sm" onClick={apply}>{t("Update")}</button>
     </div>
   );
 }

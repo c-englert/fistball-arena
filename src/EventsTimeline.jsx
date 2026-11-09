@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { IconStar, IconShield, IconWhistle, IconEye } from "./icons.jsx";
+import { useT } from "./i18n.js";
 
 const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = 86400000;
@@ -13,12 +14,12 @@ const parseISO = (s) => {
 const roleIcon = (role) =>
   role === "org-admin" ? IconStar : role === "admin" ? IconShield : role === "official" ? IconWhistle : IconEye;
 const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-function fmtRange(s, e) {
+function fmtRange(s, e, t = (x) => x) {
   if (!s) return "";
-  if (!e || +e === +s) return `${s.getDate()} ${MO[s.getMonth()]}`;
+  if (!e || +e === +s) return `${s.getDate()} ${t(MO[s.getMonth()])}`;
   if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear())
-    return `${s.getDate()}–${e.getDate()} ${MO[e.getMonth()]}`;
-  return `${s.getDate()} ${MO[s.getMonth()]} – ${e.getDate()} ${MO[e.getMonth()]}`;
+    return `${s.getDate()}–${e.getDate()} ${t(MO[e.getMonth()])}`;
+  return `${s.getDate()} ${t(MO[s.getMonth()])} – ${e.getDate()} ${t(MO[e.getMonth()])}`;
 }
 
 function Avatar({ src, name }) {
@@ -30,6 +31,7 @@ function Avatar({ src, name }) {
 // Horizontal month timeline: one pill per event at its start date, event logo
 // as the avatar. Events are packed into lanes so pills never overlap.
 export default function EventsTimeline({ events, brandings, live, roleOf, onOpen }) {
+  const t = useT();
   const items = useMemo(
     () => (events || [])
       .map((e) => ({ ev: e, s: parseISO(e.startDate), e2: parseISO(e.endDate || e.startDate) }))
@@ -72,7 +74,7 @@ export default function EventsTimeline({ events, brandings, live, roleOf, onOpen
   }, [items]);
 
   if (!model) {
-    return <div className="empty">No dated events to show on the timeline.{undated.length ? " Some events have no start date." : ""}</div>;
+    return <div className="empty">{t("No dated events to show on the timeline.")}{undated.length ? " " + t("Some events have no start date.") : ""}</div>;
   }
 
   const { months, width, xOf, placed, lanes } = model;
@@ -90,21 +92,21 @@ export default function EventsTimeline({ events, brandings, live, roleOf, onOpen
           <div className="tl-months">
             {months.map((m, i) => (
               <div className="tl-month" key={i} style={{ width: COLW }}>
-                <span className="tl-month-lbl">{MONTH[m.getMonth()]} {String(m.getFullYear()).slice(2)}</span>
+                <span className="tl-month-lbl">{t(MONTH[m.getMonth()])} {String(m.getFullYear()).slice(2)}</span>
               </div>
             ))}
           </div>
           <div className="tl-lanes" style={{ height: laneAreaH }}>
             {months.map((m, i) => <div className="tl-grid-line" key={i} style={{ left: i * COLW }} />)}
             {todayX != null && (
-              <div className="tl-today" style={{ left: todayX }}><span className="tl-today-lbl">Today</span></div>
+              <div className="tl-today" style={{ left: todayX }}><span className="tl-today-lbl">{t("Today")}</span></div>
             )}
             {placed.map(({ ev, left, lane, spanW, s, e2 }) => {
               const role = roleOf(ev);
               const RoleIcon = roleIcon(role);
               const isLive = !!live?.ids?.has(ev.id);
               const logo = brandings?.[ev.id]?.eventLogo?.dataUrl;
-              const dateLabel = fmtRange(s, e2);
+              const dateLabel = fmtRange(s, e2, t);
               return (
                 <div key={ev.id} className="tl-item" style={{ left, top: lane * LANE_H + 6 }}>
                   <button className={`tl-pill ${isLive ? "live" : ""}`} onClick={() => onOpen(ev.id)} title={`${ev.name} · ${dateLabel}`}>
@@ -112,13 +114,13 @@ export default function EventsTimeline({ events, brandings, live, roleOf, onOpen
                     <span className="tl-txt">
                       <span className="tl-name">{ev.name}</span>
                       <span className="tl-meta">
-                        <RoleIcon size={12} /> {role}
+                        <RoleIcon size={12} /> {t(role)}
                         <span className="tl-dates">· {dateLabel}</span>
-                        {isLive && <span className="tl-liveflag"><span className="live-dot" /> Live</span>}
+                        {isLive && <span className="tl-liveflag"><span className="live-dot" /> {t("Live")}</span>}
                       </span>
                     </span>
                   </button>
-                  <div className="tl-bar" style={{ width: Math.max(14, spanW) }} title={`${dateLabel} — actual dates`} />
+                  <div className="tl-bar" style={{ width: Math.max(14, spanW) }} title={t("{dates} — actual dates", { dates: dateLabel })} />
                 </div>
               );
             })}
@@ -127,7 +129,7 @@ export default function EventsTimeline({ events, brandings, live, roleOf, onOpen
       </div>
       {undated.length > 0 && (
         <div className="tl-undated">
-          <span className="muted-sm">No date:</span>
+          <span className="muted-sm">{t("No date:")}</span>
           {undated.map((e) => (
             <button key={e.id} className="btn sm" onClick={() => onOpen(e.id)}>{e.name}</button>
           ))}

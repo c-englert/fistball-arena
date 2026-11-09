@@ -6,6 +6,7 @@ import { subscribeRosters, subscribeResults, subscribeGames, publishRosters, add
 import { flagFor } from "../flags.js";
 import { eventCategoryNames } from "../categories.js";
 import { useEvent } from "../eventContext.js";
+import { useT, tNow } from "../i18n.js";
 
 function Avatar({ src, name }) {
   const [err, setErr] = useState(false);
@@ -15,6 +16,7 @@ function Avatar({ src, name }) {
 
 export default function Roster({ me }) {
   const nav = useNavigate();
+  const tr = useT(); // not "t": team rows below are named t
   const { eventId, isAdmin, event, archived } = useEvent();
   const [rosters, setRosters] = useState(null);   // live registry from Firestore
   const [numEdit, setNumEdit] = useState({});      // `${rosterKey}:${idx}` -> jersey string (in-flight edits)
@@ -35,26 +37,26 @@ export default function Roster({ me }) {
   const [refPick, setRefPick] = useState(null); // { team, picks: Set(index key) } while choosing player-referees // "name|category" -> registered team name
 
   const doImport = async () => {
-    setStatus("Reading DB tab…");
+    setStatus(tNow("Reading DB tab…"));
     try {
       const id = sheetId.match(/[-\w]{25,}/)?.[0] || sheetId.trim();
       const r = await fetchRosters(id, tab.trim() || "DB");
       setPreview(r);
-      setStatus(`Found ${r.count} people across ${r.teamCount} teams.`);
+      setStatus(tNow("Found {n} people across {teams} teams.", { n: r.count, teams: r.teamCount }));
     } catch (e) {
-      setStatus("Import failed: " + (e?.message || e));
+      setStatus(tNow("Import failed: {err}", { err: e?.message || e }));
     }
   };
 
   const doPublish = async () => {
     if (!preview?.count) return;
-    setStatus("Saving registry…");
+    setStatus(tNow("Saving registry…"));
     try {
       await publishRosters(preview.rosters);
-      setStatus(`Saved ${preview.count} people across ${preview.teamCount} teams. Line-ups will now pre-fill when a game is opened.`);
+      setStatus(tNow("Saved {n} people across {teams} teams. Line-ups will now pre-fill when a game is opened.", { n: preview.count, teams: preview.teamCount }));
       setPreview(null);
     } catch (e) {
-      setStatus("Save failed: " + (e?.message || e));
+      setStatus(tNow("Save failed: {err}", { err: e?.message || e }));
     }
   };
 
@@ -85,12 +87,12 @@ export default function Roster({ me }) {
   const doRename = async (u) => {
     const to = fixTo[`${u.name}|${u.category}`];
     if (!to) return;
-    if (!window.confirm(`Rename “${u.name}” to “${to}” in all ${u.category} games (schedule, reports and Fistball Live)? Reports with an empty line-up get the registered players.`)) return;
-    setStatus(`Renaming ${u.name}…`);
+    if (!window.confirm(tNow("Rename “{from}” to “{to}” in all {cat} games (schedule, reports and Fistball Live)? Reports with an empty line-up get the registered players.", { from: u.name, to, cat: u.category }))) return;
+    setStatus(tNow("Renaming {name}…", { name: u.name }));
     try {
       const n = await renameTeamInGames(u.name, to, u.category);
-      setStatus(`Renamed “${u.name}” → “${to}” in ${n} game(s).`);
-    } catch (e) { setStatus("Rename failed: " + (e?.code || e?.message || e)); }
+      setStatus(tNow("Renamed “{from}” → “{to}” in {n} game(s).", { from: u.name, to, n }));
+    } catch (e) { setStatus(tNow("Rename failed: {err}", { err: e?.code || e?.message || e })); }
   };
 
   const teams = useMemo(() => {
@@ -114,8 +116,8 @@ export default function Roster({ me }) {
           return { ...p, nr };
         });
         updateRosterPlayers(t.key, players)
-          .then(() => setStatus(`Saved jersey numbers for ${t.name}.`))
-          .catch((e) => setStatus("Save failed: " + (e?.code || e?.message || e)));
+          .then(() => setStatus(tNow("Saved jersey numbers for {team}.", { team: t.name })))
+          .catch((e) => setStatus(tNow("Save failed: {err}", { err: e?.code || e?.message || e })));
         // drop this team's in-flight edits; the subscription now holds the truth
         const next = { ...cur };
         Object.keys(next).forEach((k) => { if (k.startsWith(`${t.key}:`)) delete next[k]; });
@@ -132,27 +134,27 @@ export default function Roster({ me }) {
 
   // After every hook, so the hook order never changes.
   if (!isAdmin) {
-    return <div className="empty">Admins only. <button className="btn" onClick={() => nav(`/e/${eventId}`)}>Back</button></div>;
+    return <div className="empty">{tr("Admins only.")} <button className="btn" onClick={() => nav(`/e/${eventId}`)}>{tr("Back")}</button></div>;
   }
 
   return (
     <>
-      <h2 className="page-h">Players &amp; staff</h2>
+      <h2 className="page-h">{tr("Players & staff")}</h2>
         {!archived && unmatched.length > 0 && (
           <div className="card" style={{ maxWidth: "none" }}>
-            <h2>⚠️ Teams in the schedule without players</h2>
-            <p className="muted-sm">These names appear in the games but don't match any registered team, so their game reports can't load players. Usually it's a spelling difference — pick the registered team and rename it in the games.</p>
+            <h2>{tr("⚠️ Teams in the schedule without players")}</h2>
+            <p className="muted-sm">{tr("These names appear in the games but don't match any registered team, so their game reports can't load players. Usually it's a spelling difference — pick the registered team and rename it in the games.")}</p>
             {unmatched.map((u) => {
               const k = `${u.name}|${u.category}`;
               return (
                 <div className="bulk-row" key={k} style={{ padding: "6px 0", borderTop: "1px solid var(--line)" }}>
-                  <span style={{ minWidth: 200 }}><span className="flag">{flagFor(u.name)}</span><b>{u.name}</b> <span className="muted-sm">· {u.category} · {u.games} game{u.games === 1 ? "" : "s"}</span></span>
+                  <span style={{ minWidth: 200 }}><span className="flag">{flagFor(u.name)}</span><b>{u.name}</b> <span className="muted-sm">· {u.category} · {tr(u.games === 1 ? "{n} game" : "{n} games", { n: u.games })}</span></span>
                   <span className="muted-sm">→</span>
                   <select className="ag-role" value={fixTo[k] || ""} onChange={(e) => setFixTo((m) => ({ ...m, [k]: e.target.value }))}>
-                    <option value="">— registered team —</option>
+                    <option value="">{tr("— registered team —")}</option>
                     {registeredIn(u.category).map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
-                  <button className="btn sm primary" disabled={!fixTo[k]} onClick={() => doRename(u)}>Rename in games</button>
+                  <button className="btn sm primary" disabled={!fixTo[k]} onClick={() => doRename(u)}>{tr("Rename in games")}</button>
                 </div>
               );
             })}
@@ -164,30 +166,30 @@ export default function Roster({ me }) {
 
         {/* ---- Google Sheet import (alternative) ---- */}
         <div className="card">
-          <h2>Import players &amp; staff from the DB sheet</h2>
-          <p className="muted-sm">Reads the “DB” tab and stores one roster per team. Game-report line-ups then pre-fill automatically.</p>
+          <h2>{tr("Import players & staff from the DB sheet")}</h2>
+          <p className="muted-sm">{tr("Reads the “DB” tab and stores one roster per team. Game-report line-ups then pre-fill automatically.")}</p>
           <div className="add-row" style={{ marginTop: 8 }}>
-            <input value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder="Sheet URL or ID" />
-            <input value={tab} onChange={(e) => setTab(e.target.value)} placeholder="Tab" style={{ maxWidth: 90, flex: "none" }} />
-            <button className="btn primary" onClick={doImport}>Read</button>
+            <input value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder={tr("Sheet URL or ID")} />
+            <input value={tab} onChange={(e) => setTab(e.target.value)} placeholder={tr("Tab")} style={{ maxWidth: 90, flex: "none" }} />
+            <button className="btn primary" onClick={doImport}>{tr("Read")}</button>
           </div>
           {preview?.warnings?.length > 0 && (
             <div className="warn-box">{preview.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>
           )}
           {preview?.count > 0 && (
             <div style={{ marginTop: 12 }}>
-              <p className="muted-sm">Ready to save <b>{preview.count}</b> people across <b>{preview.teamCount}</b> teams.</p>
+              <p className="muted-sm">{tr("Ready to save {n} people across {teams} teams.", { n: preview.count, teams: preview.teamCount })}</p>
               <button className="btn primary" style={{ width: "100%" }} onClick={doPublish}>
-                Save {preview.count} people to the registry
+                {tr("Save {n} people to the registry", { n: preview.count })}
               </button>
             </div>
           )}
           {status && <p className="muted-sm" style={{ marginTop: 10 }}>{status}</p>}
         </div>
 
-        {rosters === null && <div className="empty">Loading registry…</div>}
+        {rosters === null && <div className="empty">{tr("Loading registry…")}</div>}
         {rosters !== null && teams.length === 0 && (
-          <div className="empty">No teams in the registry yet — import from the DB sheet above.</div>
+          <div className="empty">{tr("No teams in the registry yet — import from the DB sheet above.")}</div>
         )}
 
         <div className="card-grid loose">
@@ -196,9 +198,9 @@ export default function Roster({ me }) {
             <button className="roster-head" onClick={() => setOpen(open === t.key ? null : t.key)}>
               <div className="row-between">
                 <span className="group-title"><span className="flag">{flagFor(t.name)}</span>{t.name}</span>
-                <span className="muted-sm">{t.players?.length || 0} players · {t.staff?.length || 0} staff {open === t.key ? "▾" : "▸"}</span>
+                <span className="muted-sm">{tr("{p} players · {s} staff", { p: t.players?.length || 0, s: t.staff?.length || 0 })} {open === t.key ? "▾" : "▸"}</span>
               </div>
-              <div className="vol-bar" title={`${t.players?.length || 0} players · ${t.staff?.length || 0} staff`}>
+              <div className="vol-bar" title={tr("{p} players · {s} staff", { p: t.players?.length || 0, s: t.staff?.length || 0 })}>
                 <div className="vol-half left">
                   <span className="vol-fill players" style={{ width: ((t.players?.length || 0) / maxCount * 100) + "%" }} />
                 </div>
@@ -216,25 +218,25 @@ export default function Roster({ me }) {
                     <div className="ref-pick-bar">
                       {!picking ? (
                         <>
-                          <span className="muted-sm">Players who also referee?</span>
-                          <button className="btn sm" onClick={() => setRefPick({ team: t.key, picks: new Set() })}>Add to Referees…</button>
+                          <span className="muted-sm">{tr("Players who also referee?")}</span>
+                          <button className="btn sm" onClick={() => setRefPick({ team: t.key, picks: new Set() })}>{tr("Add to Referees…")}</button>
                           {!(t.players || []).length && (
-                            <button className="btn sm" title="This card is only officials, not a team" onClick={async () => {
-                              if (!window.confirm(`“${t.name}” has no players — move its ${(t.staff || []).length} people to the Referees page and remove “${t.name}” from Players & staff?`)) return;
-                              try { const n = await moveRosterToReferees(t.key); window.alert(`Moved ${n} people from “${t.name}” to Referees.`); setOpen(null); }
-                              catch (e) { window.alert("Move failed: " + (e?.code || e?.message || e)); }
-                            }}>Move all to Referees →</button>
+                            <button className="btn sm" title={tr("This card is only officials, not a team")} onClick={async () => {
+                              if (!window.confirm(tNow("“{team}” has no players — move its {n} people to the Referees page and remove “{team}” from Players & staff?", { team: t.name, n: (t.staff || []).length }))) return;
+                              try { const n = await moveRosterToReferees(t.key); window.alert(tNow("Moved {n} people from “{team}” to Referees.", { n, team: t.name })); setOpen(null); }
+                              catch (e) { window.alert(tNow("Move failed: {err}", { err: e?.code || e?.message || e })); }
+                            }}>{tr("Move all to Referees →")}</button>
                           )}
                         </>
                       ) : (
                         <>
-                          <span className="muted-sm">Tick who also referees — they stay in {t.name} and are never assigned while {t.name} plays.</span>
+                          <span className="muted-sm">{tr("Tick who also referees — they stay in {team} and are never assigned while {team} plays.", { team: t.name })}</span>
                           <button className="btn sm primary" disabled={!refPick.picks.size} onClick={async () => {
                             const chosen = people.filter((p) => refPick.picks.has(p._k));
-                            try { await addPlayersAsReferees(chosen, t.name); window.alert(`Added ${chosen.length} to Referees (they stay in ${t.name}).`); setRefPick(null); }
-                            catch (e) { window.alert("Couldn't add: " + (e?.code || e?.message || e)); }
-                          }}>Add {refPick.picks.size || ""} to Referees</button>
-                          <button className="btn sm" onClick={() => setRefPick(null)}>Cancel</button>
+                            try { await addPlayersAsReferees(chosen, t.name); window.alert(tNow("Added {n} to Referees (they stay in {team}).", { n: chosen.length, team: t.name })); setRefPick(null); }
+                            catch (e) { window.alert(tNow("Couldn't add: {err}", { err: e?.code || e?.message || e })); }
+                          }}>{refPick.picks.size ? tr("Add {n} to Referees", { n: refPick.picks.size }) : tr("Add to Referees")}</button>
+                          <button className="btn sm" onClick={() => setRefPick(null)}>{tr("Cancel")}</button>
                         </>
                       )}
                     </div>
@@ -244,15 +246,15 @@ export default function Roster({ me }) {
                   <div className="roster-row clickable" key={"p" + i} onClick={() => (refPick?.team === t.key
                     ? setRefPick((rp) => { const picks = new Set(rp.picks); const k = "p" + i; picks.has(k) ? picks.delete(k) : picks.add(k); return { ...rp, picks }; })
                     : setProfile({ ...p, team: t.name, kind: "player" }))}>
-                    {refPick?.team === t.key && <input type="checkbox" readOnly checked={refPick.picks.has("p" + i)} aria-label="Also a referee" />}
+                    {refPick?.team === t.key && <input type="checkbox" readOnly checked={refPick.picks.has("p" + i)} aria-label={tr("Also a referee")} />}
                     <Avatar src={p.photo} name={p.name} />
                     {canEditNums ? (
                       <input
                         className="roster-nr nr-edit"
                         value={numEdit[`${t.key}:${i}`] ?? (p.nr ?? "")}
                         inputMode="numeric"
-                        aria-label={`Jersey number for ${p.name}`}
-                        title="Jersey number — click to edit"
+                        aria-label={tr("Jersey number for {name}", { name: p.name })}
+                        title={tr("Jersey number — click to edit")}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => setNum(t, i, e.target.value)}
                       />
@@ -264,14 +266,14 @@ export default function Roster({ me }) {
                   </div>
                 ))}
                 {canEditNums && (t.players || []).length > 0 && (
-                  <p className="muted-sm" style={{ margin: "4px 0 0" }}>Tip: edit a jersey number above — it saves automatically. In an already-open game report, use “↻ Load roster” (Line-ups tab) to pull the fix.</p>
+                  <p className="muted-sm" style={{ margin: "4px 0 0" }}>{tr("Tip: edit a jersey number above — it saves automatically. In an already-open game report, use “↻ Load roster” (Line-ups tab) to pull the fix.")}</p>
                 )}
-                {(t.staff || []).length > 0 && <div className="subhead">Staff</div>}
+                {(t.staff || []).length > 0 && <div className="subhead">{tr("Staff")}</div>}
                 {(t.staff || []).map((s, i) => (
                   <div className="roster-row clickable" key={"s" + i} onClick={() => (refPick?.team === t.key
                     ? setRefPick((rp) => { const picks = new Set(rp.picks); const k = "s" + i; picks.has(k) ? picks.delete(k) : picks.add(k); return { ...rp, picks }; })
                     : setProfile({ ...s, team: t.name, kind: "staff" }))}>
-                    {refPick?.team === t.key && <input type="checkbox" readOnly checked={refPick.picks.has("s" + i)} aria-label="Also a referee" />}
+                    {refPick?.team === t.key && <input type="checkbox" readOnly checked={refPick.picks.has("s" + i)} aria-label={tr("Also a referee")} />}
                     <Avatar src={s.photo} name={s.name} />
                     <span className="roster-nr role">{(s.role || "").split(" ").map((w) => w[0]).join("").slice(0, 3)}</span>
                     <span className="roster-name">{s.name} <span className="muted-sm">{s.first}</span></span>
@@ -309,6 +311,7 @@ function sameCard(c, p) {
 }
 
 function PersonModal({ person, results = [], onClose, me, isAdmin }) {
+  const tr = useT();
   const p = person;
   const age = ageFrom(p.birthday);
 
@@ -347,9 +350,9 @@ function PersonModal({ person, results = [], onClose, me, isAdmin }) {
     setGranting(true);
     try {
       await addMember({ email: grant.email, name: `${p.first} ${p.name}`.trim(), role: grant.role }, me);
-      setGranted(`${grant.email} authorized as ${grant.role}.`);
+      setGranted(tNow("{email} authorized as {role}.", { email: grant.email, role: tNow(grant.role) }));
       setGrant({ email: "", role: "official" });
-    } catch (e) { setGranted("Failed: " + (e?.message || e)); }
+    } catch (e) { setGranted(tNow("Failed: {err}", { err: e?.message || e })); }
     setGranting(false);
   };
   const facts = [
@@ -363,7 +366,7 @@ function PersonModal({ person, results = [], onClose, me, isAdmin }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal person-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
+        <button className="modal-x" onClick={onClose} aria-label={tr("Close")}>✕</button>
         {p.photo
           ? <img className="person-photo" src={p.photo} alt="" referrerPolicy="no-referrer" />
           : <div className="person-photo person-photo-ph">{(p.name || "?").trim()[0]}</div>}
@@ -371,34 +374,34 @@ function PersonModal({ person, results = [], onClose, me, isAdmin }) {
         <div className="person-sub">{p.kind === "player" ? p.position : p.role} · <span className="flag">{flagFor(p.team)}</span>{p.team}</div>
         <div className="person-facts">
           {facts.map(([k, v]) => (
-            <div className="person-fact" key={k}><span className="pf-k">{k}</span><span className="pf-v">{v}</span></div>
+            <div className="person-fact" key={k}><span className="pf-k">{tr(k)}</span><span className="pf-v">{v}</span></div>
           ))}
         </div>
         <div className="person-history">
           <div className="subhead" style={{ marginTop: 14 }}>
-            Match &amp; card history
+            {tr("Match & card history")}
             {(totals.y || totals.yr || totals.r) ? (
               <span style={{ marginLeft: 8 }}>
-                {totals.y > 0 && <span className="chip y on">Y {totals.y}</span>}
-                {totals.yr > 0 && <span className="chip yr on">YR {totals.yr}</span>}
-                {totals.r > 0 && <span className="chip r on">R {totals.r}</span>}
+                {totals.y > 0 && <span className="chip y on">{tr("Y")} {totals.y}</span>}
+                {totals.yr > 0 && <span className="chip yr on">{tr("YR")} {totals.yr}</span>}
+                {totals.r > 0 && <span className="chip r on">{tr("R")} {totals.r}</span>}
               </span>
             ) : null}
           </div>
           {history.length === 0 ? (
-            <p className="muted-sm">No matches recorded for {p.team} yet.</p>
+            <p className="muted-sm">{tr("No matches recorded for {team} yet.", { team: p.team })}</p>
           ) : (
             <div className="hist-list">
               {history.map((h) => (
                 <div className="hist-row" key={h.nr}>
                   <span className="tag">#{h.nr}</span>
-                  <span className="hist-opp">vs {h.opp}</span>
+                  <span className="hist-opp">{tr("vs")} {h.opp}</span>
                   <span className="hist-score">{h.status === "Not Started" ? "—" : h.score}</span>
-                  {h.result && <span className={`hist-res ${h.result === "W" ? "win" : h.result === "L" ? "loss" : ""}`}>{h.result}</span>}
+                  {h.result && <span className={`hist-res ${h.result === "W" ? "win" : h.result === "L" ? "loss" : ""}`}>{tr(h.result)}</span>}
                   <span className="hist-cards">
-                    {h.y > 0 && <span className="chip y on">Y{h.y > 1 ? "×" + h.y : ""}</span>}
-                    {h.yr > 0 && <span className="chip yr on">YR{h.yr > 1 ? "×" + h.yr : ""}</span>}
-                    {h.r > 0 && <span className="chip r on">R{h.r > 1 ? "×" + h.r : ""}</span>}
+                    {h.y > 0 && <span className="chip y on">{tr("Y")}{h.y > 1 ? "×" + h.y : ""}</span>}
+                    {h.yr > 0 && <span className="chip yr on">{tr("YR")}{h.yr > 1 ? "×" + h.yr : ""}</span>}
+                    {h.r > 0 && <span className="chip r on">{tr("R")}{h.r > 1 ? "×" + h.r : ""}</span>}
                   </span>
                 </div>
               ))}
@@ -408,14 +411,14 @@ function PersonModal({ person, results = [], onClose, me, isAdmin }) {
 
         {isAdmin && (
           <div className="person-grant">
-            <div className="subhead">Give access</div>
-            <p className="muted-sm">Authorize this person as a member of the event.</p>
+            <div className="subhead">{tr("Give access")}</div>
+            <p className="muted-sm">{tr("Authorize this person as a member of the event.")}</p>
             <div className="add-row" style={{ flexWrap: "wrap" }}>
               <input style={{ flex: "2 1 160px" }} value={grant.email} onChange={(e) => setGrant({ ...grant, email: e.target.value })} placeholder="email@example.com" />
               <select value={grant.role} onChange={(e) => setGrant({ ...grant, role: e.target.value })}>
-                <option value="admin">admin</option><option value="official">official</option><option value="viewer">viewer</option>
+                <option value="admin">{tr("admin")}</option><option value="official">{tr("official")}</option><option value="viewer">{tr("viewer")}</option>
               </select>
-              <button className="btn primary" disabled={granting || !grant.email.trim()} onClick={authorize}>Authorize</button>
+              <button className="btn primary" disabled={granting || !grant.email.trim()} onClick={authorize}>{tr("Authorize")}</button>
             </div>
             {granted && <p className="muted-sm">{granted}</p>}
           </div>

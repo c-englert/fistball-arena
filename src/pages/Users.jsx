@@ -4,6 +4,7 @@ import {
   subscribeOrgAdmins, addOrgAdmin, removeOrgAdmin, subscribePeople, BOOTSTRAP_ORG_ADMINS,
   listMyEvents, subscribeMembersAt, setMemberRoleAt, removeMemberAt, mirrorMembership,
 } from "../cloud.js";
+import { useT, tNow } from "../i18n.js";
 
 // Same Gmail account written differently — used only to warn.
 function canonEmail(e) {
@@ -18,10 +19,25 @@ function canonEmail(e) {
 const ROLES = ["", "viewer", "official", "admin"];
 const ROLE_LABEL = { "": "—", viewer: "Viewer", official: "Official", admin: "Admin" };
 
+// Translated rich text: **bold** and [[tag]] markers become <b> / <span class="tag">.
+const rich = (s) => String(s).split(/(\*\*[^*]+\*\*|\[\[[^\]]+\]\])/).map((p, i) =>
+  p.startsWith("**") ? <b key={i}>{p.slice(2, -2)}</b>
+    : p.startsWith("[[") ? <span key={i} className="tag">{p.slice(2, -2)}</span>
+    : p);
+// Status messages are kept in English (the "Failed" prefix is checked); translate at display.
+const showStatus = (tr, s) => {
+  let m = /^Failed to save (.*) in “(.*)”: ([\s\S]*)$/.exec(s);
+  if (m) return tr("Failed to save {email} in “{event}”: {code}", { email: m[1], event: m[2], code: m[3] });
+  m = /^Failed: ([\s\S]*)$/.exec(s);
+  if (m) return tr("Failed: ") + m[1];
+  return tr(s);
+};
+
 // GLOBAL users & access area (org-admins only): see every user (with or without
 // access) and grant/change/revoke their role per event, inline. Per-event
 // Settings → Access still works too, with the extra "this event" context.
 export default function Users({ me }) {
+  const tr = useT();
   const nav = useNavigate();
   const [orgAdmins, setOrgAdmins] = useState([]);
   const [people, setPeople] = useState([]);
@@ -148,7 +164,7 @@ export default function Users({ me }) {
     return { dupEmails: emails, dupClusters: clusters };
   }, [orgAdminEmails, members, people]);
 
-  if (!me?.admin) return <div className="empty">Org-admins only.</div>;
+  if (!me?.admin) return <div className="empty">{tr("Org-admins only.")}</div>;
 
   const addOrgA = async () => {
     if (!oaForm.email.trim()) return;
@@ -161,7 +177,7 @@ export default function Users({ me }) {
   const toggleOrgAdmin = async (user) => {
     if (BOOTSTRAP_ORG_ADMINS.includes(user.email)) return;
     const on = orgAdminEmails.has(user.email);
-    if (on && !window.confirm(`Remove org-admin from ${user.name || user.email}? They lose full access to all events.`)) return;
+    if (on && !window.confirm(tNow("Remove org-admin from {name}? They lose full access to all events.", { name: user.name || user.email }))) return;
     try {
       if (on) await removeOrgAdmin(user.email);
       else await addOrgAdmin({ email: user.email, name: user.name }, me);
@@ -193,96 +209,96 @@ export default function Users({ me }) {
 
   return (
     <>
-      <h2 className="page-h">Users & access</h2>
+      <h2 className="page-h">{tr("Users & access")}</h2>
 
       {/* ---- Access grid (single container) ---- */}
       <div className="card wide">
         <div className="row-between" style={{ alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <h2 style={{ margin: 0 }}>Access by event <span className="muted-sm" style={{ fontWeight: 400 }}>· {rows.length} user(s) · {cols.length} event(s)</span></h2>
+          <h2 style={{ margin: 0 }}>{tr("Access by event")} <span className="muted-sm" style={{ fontWeight: 400 }}>· {tr("{n} user(s)", { n: rows.length })} · {tr("{n} event(s)", { n: cols.length })}</span></h2>
           <label className="imp-active" style={{ margin: 0 }}>
             <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
-            <span>Show users without access</span>
+            <span>{tr("Show users without access")}</span>
           </label>
         </div>
-        <p className="muted-sm">Turn on the <b>org-admin toggle</b> next to a name to grant full access to all events. For a single event, pick the role in that event's column (<b>—</b> removes). Roles: <b>Admin</b> manages · <b>Official</b> scores · <b>Viewer</b> read-only.</p>
+        <p className="muted-sm">{rich(tr("Turn on the **org-admin toggle** next to a name to grant full access to all events. For a single event, pick the role in that event's column (**—** removes). Roles: **Admin** manages · **Official** scores · **Viewer** read-only."))}</p>
 
         <details className="access-note">
-          <summary>What is <b>org-admin</b>? How do I choose a role?</summary>
+          <summary>{rich(tr("What is **org-admin**? How do I choose a role?"))}</summary>
           <div className="access-note-body">
-            <p><b>Org-admin</b> is the top level: <b>full access to every event</b> (create, archive, manage, score) without being authorized in each one — and the only role that can see this screen. In the grid, org-admins show as <b>TOTAL</b>. Use it for whoever runs the championship as a whole. Some are <span className="tag">built-in</span> (set in code, not removable here).</p>
-            <p>The other roles apply to <b>a single event</b> (pick them in that event's column):</p>
+            <p>{rich(tr("**Org-admin** is the top level: **full access to every event** (create, archive, manage, score) without being authorized in each one — and the only role that can see this screen. In the grid, org-admins show as **TOTAL**. Use it for whoever runs the championship as a whole. Some are [[built-in]] (set in code, not removable here)."))}</p>
+            <p>{rich(tr("The other roles apply to **a single event** (pick them in that event's column):"))}</p>
             <ul>
-              <li><b>Admin</b> — manages that event (schedule, players, settings, format) and scores.</li>
-              <li><b>Official</b> — scores that event's game reports.</li>
-              <li><b>Viewer</b> — read-only for that event.</li>
-              <li><b>—</b> — no access to that event (removes).</li>
+              <li>{rich(tr("**Admin** — manages that event (schedule, players, settings, format) and scores."))}</li>
+              <li>{rich(tr("**Official** — scores that event's game reports."))}</li>
+              <li>{rich(tr("**Viewer** — read-only for that event."))}</li>
+              <li>{rich(tr("**—** — no access to that event (removes)."))}</li>
             </ul>
-            <p className="muted-sm">Rule of thumb: <b>org-admin</b> = championship organizer; <b>Admin/Official/Viewer</b> = participant in <b>one</b> event.</p>
+            <p className="muted-sm">{rich(tr("Rule of thumb: **org-admin** = championship organizer; **Admin/Official/Viewer** = participant in **one** event."))}</p>
           </div>
         </details>
 
         {/* pre-authorize someone who hasn't logged in yet */}
         <div className="add-row" style={{ marginTop: 8 }}>
-          <input style={{ flex: "2 1 200px" }} value={oaForm.email} onChange={(e) => setOaForm({ ...oaForm, email: e.target.value })} placeholder="Add org-admin by email…" />
-          <input style={{ flex: "1 1 120px" }} value={oaForm.name} onChange={(e) => setOaForm({ ...oaForm, name: e.target.value })} placeholder="Name (optional)" />
-          <button className="btn" onClick={addOrgA}>+ Org-admin</button>
+          <input style={{ flex: "2 1 200px" }} value={oaForm.email} onChange={(e) => setOaForm({ ...oaForm, email: e.target.value })} placeholder={tr("Add org-admin by email…")} />
+          <input style={{ flex: "1 1 120px" }} value={oaForm.name} onChange={(e) => setOaForm({ ...oaForm, name: e.target.value })} placeholder={tr("Name (optional)")} />
+          <button className="btn" onClick={addOrgA}>{tr("+ Org-admin")}</button>
         </div>
         {suggest && (
           <div className="warn-box" style={{ marginTop: 8 }}>
-            ⚠️ This looks like the same account as <b>{suggest}</b>, which already signed in. Use the <b>exact login email</b>.{" "}
-            <button className="btn sm" style={{ marginLeft: 4 }} onClick={() => setOaForm({ ...oaForm, email: suggest })}>Use {suggest}</button>
+            ⚠️ {rich(tr("This looks like the same account as **{email}**, which already signed in. Use the **exact login email**.", { email: suggest }))}{" "}
+            <button className="btn sm" style={{ marginLeft: 4 }} onClick={() => setOaForm({ ...oaForm, email: suggest })}>{tr("Use {email}", { email: suggest })}</button>
           </div>
         )}
 
         {dupClusters.length > 0 && (
           <div className="warn-box" style={{ marginTop: 4 }}>
-            ⚠️ <b>Possible duplicate accounts</b> — several emails for the same Google account (gmail vs googlemail, dots, +tags). Only the <b>exact login email</b> grants access; the others are “ghost” access. Review:
+            ⚠️ {rich(tr("**Possible duplicate accounts** — several emails for the same Google account (gmail vs googlemail, dots, +tags). Only the **exact login email** grants access; the others are “ghost” access. Review:"))}
             <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
               {dupClusters.map((c, i) => <li key={i}>{c.join("  ≈  ")}</li>)}
             </ul>
           </div>
         )}
 
-        {status && status.startsWith("Failed") && <div className="warn-box err" style={{ marginTop: 6 }}>❌ {status}</div>}
+        {status && status.startsWith("Failed") && <div className="warn-box err" style={{ marginTop: 6 }}>❌ {showStatus(tr, status)}</div>}
 
         <div className="ag-searchrow">
           <div className="search-wrap">
-            <input className="game-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…" />
-            {q && <button className="search-clear" aria-label="Clear search" onClick={() => setQ("")}>✕</button>}
+            <input className="game-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("Search by name or email…")} />
+            {q && <button className="search-clear" aria-label={tr("Clear search")} onClick={() => setQ("")}>✕</button>}
           </div>
           <button
             type="button"
             role="switch"
             aria-checked={onlyOrg}
             className={`ios-switch ${onlyOrg ? "on" : ""}`}
-            title="Show org-admins only"
+            title={tr("Show org-admins only")}
             onClick={() => setOnlyOrg((v) => !v)}>
             <span className="knob" />
           </button>
-          <span className="ag-switchlbl">Org-admins only</span>
+          <span className="ag-switchlbl">{tr("Org-admins only")}</span>
         </div>
 
-        {loading && <div className="empty">Loading access…</div>}
-        {!loading && cols.length === 0 && <div className="empty">No events yet.</div>}
+        {loading && <div className="empty">{tr("Loading access…")}</div>}
+        {!loading && cols.length === 0 && <div className="empty">{tr("No events yet.")}</div>}
         {!loading && cols.length > 0 && (
           <div className="grid-scroll">
             <table className="access-grid">
               <thead>
                 <tr>
-                  <th className="ag-user">User</th>
+                  <th className="ag-user">{tr("User")}</th>
                   {cols.map((ev) => (
                     <th key={ev.id} className={ev.status === "archived" ? "ag-arch" : ""}>
-                      <button className="ag-evbtn" onClick={() => nav(`/e/${ev.id}/settings`)} title="Open this event's access">
+                      <button className="ag-evbtn" onClick={() => nav(`/e/${ev.id}/settings`)} title={tr("Open this event's access")}>
                         {ev.name}
                       </button>
-                      <div className="ag-evsub">{ev.status === "archived" ? "Archived" : "Active"}</div>
+                      <div className="ag-evsub">{ev.status === "archived" ? tr("Archived") : tr("Active")}</div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 && (
-                  <tr><td className="ag-user muted-sm" colSpan={cols.length + 1}>No users match this filter.</td></tr>
+                  <tr><td className="ag-user muted-sm" colSpan={cols.length + 1}>{tr("No users match this filter.")}</td></tr>
                 )}
                 {rows.map((u) => {
                   const isOrg = orgAdminEmails.has(u.email);
@@ -293,24 +309,24 @@ export default function Users({ me }) {
                       <td className="ag-user">
                         <div className="ag-name">
                           <span className="ag-nm">{u.name || "—"}</span>
-                          {isDup && <span className="tag tag-dup" title="Several emails for this same Google account appear in the list — check which one is the login email.">⚠ duplicate?</span>}
+                          {isDup && <span className="tag tag-dup" title={tr("Several emails for this same Google account appear in the list — check which one is the login email.")}>{tr("⚠ duplicate?")}</span>}
                           <button
                             type="button"
                             role="switch"
                             aria-checked={isOrg}
-                            aria-label="org-admin"
+                            aria-label={tr("org-admin")}
                             className={`ios-switch ${isOrg ? "on" : ""} ${isBuiltin ? "locked" : ""}`}
                             disabled={isBuiltin}
-                            title={isBuiltin ? "Org-admin set in code (not removable)" : "org-admin — full access to all events"}
+                            title={isBuiltin ? tr("Org-admin set in code (not removable)") : tr("org-admin — full access to all events")}
                             onClick={() => toggleOrgAdmin(u)}>
                             <span className="knob" />
                           </button>
-                          <span className="ag-switchlbl">org-admin</span>
+                          <span className="ag-switchlbl">{tr("org-admin")}</span>
                         </div>
                         <div className="ag-email muted-sm">{u.email}</div>
                       </td>
                       {cols.map((ev) => {
-                        if (isOrg) return <td key={ev.id} className="ag-cell ag-full">total</td>;
+                        if (isOrg) return <td key={ev.id} className="ag-cell ag-full">{tr("total")}</td>;
                         const k = `${u.email}||${ev.id}`;
                         const role = shownRole(u.email, ev.id);
                         return (
@@ -318,7 +334,7 @@ export default function Users({ me }) {
                             <select className={`ag-role r-${role || "none"}`} value={role}
                               disabled={!!saving[k]}
                               onChange={(e) => changeRole(u, ev, e.target.value)}>
-                              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                              {ROLES.map((r) => <option key={r} value={r}>{tr(ROLE_LABEL[r])}</option>)}
                             </select>
                             {saving[k] && <span className="ag-saving">…</span>}
                             {errCell[k] && <span className="ag-cellerr" title={errCell[k]}>⚠</span>}

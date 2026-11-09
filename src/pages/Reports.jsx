@@ -6,6 +6,7 @@ import { flagFor } from "../flags.js";
 import { isPlaceholder } from "../schedule/advance.js";
 import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams } from "../report/finalReport.js";
 import { SumulasPDF } from "../pdf/SumulaPDF.jsx";
+import { useT } from "../i18n.js";
 
 // Reports: the event's final report (print / Word) and every game report
 // (súmula) of one team in a single PDF.
@@ -19,6 +20,7 @@ const byNr = (a, b) => (Number(a.nr) || 0) - (Number(b.nr) || 0);
 
 export default function Reports() {
   const { event, branding } = useEvent();
+  const tr = useT();
   const [view, setView] = useState("final");
   const [games, setGames] = useState([]);
   const [results, setResults] = useState([]);
@@ -35,11 +37,11 @@ export default function Reports() {
 
   return (
     <>
-      <h2 className="page-h no-print">Reports</h2>
+      <h2 className="page-h no-print">{tr("Reports")}</h2>
       <div className="plan-bar no-print">
         <span className="filter-pill-group">
-          <button className={`filter-pill ${view === "final" ? "active" : ""}`} onClick={() => setView("final")}>Event final report</button>
-          <button className={`filter-pill ${view === "team" ? "active" : ""}`} onClick={() => setView("team")}>Game reports by team</button>
+          <button className={`filter-pill ${view === "final" ? "active" : ""}`} onClick={() => setView("final")}>{tr("Event final report")}</button>
+          <button className={`filter-pill ${view === "team" ? "active" : ""}`} onClick={() => setView("team")}>{tr("Game reports by team")}</button>
         </span>
       </div>
       {view === "final"
@@ -51,6 +53,7 @@ export default function Reports() {
 
 /* ---------------- event final report ---------------- */
 function FinalReport({ event, games, results, rosters, refs, reports }) {
+  const tr = useT();
   const docRef = useRef(null);
   const saved = event?.finalReport || {};
   const [fields, setFields] = useState({ host: "", technical: "", notes: "", ...saved });
@@ -59,7 +62,7 @@ function FinalReport({ event, games, results, rosters, refs, reports }) {
   const set = (k) => (e) => { setFields((f) => ({ ...f, [k]: e.target.value })); setDirty(true); };
   const save = async () => {
     try { await saveFinalReportFields({ host: fields.host || "", technical: fields.technical || "", notes: fields.notes || "" }); setDirty(false); }
-    catch (e) { alert("Could not save: " + (e?.message || e)); }
+    catch (e) { alert(tr("Could not save: {e}", { e: String(e?.message || e) })); }
   };
 
   const data = useMemo(() => {
@@ -98,7 +101,7 @@ function FinalReport({ event, games, results, rosters, refs, reports }) {
   }, [games, results, rosters, reports]);
 
   const anyEstimated = data.durations.some((d) => d.estimated.n);
-  const title = `Event final report — ${event?.name || ""}`;
+  const title = tr("Event final report — {name}", { name: event?.name || "" });
 
   const downloadWord = () => {
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title>
@@ -117,15 +120,15 @@ table{border-collapse:collapse;margin:4pt 0}td,th{border:1px solid #999;padding:
     <>
       <section className="card no-print fr-edit">
         <div className="fr-edit-grid">
-          <label>Host<input className="fr-input" value={fields.host} onChange={set("host")} placeholder="e.g. Federación Chilena de Fistball" /></label>
-          <label>Technical responsible<input className="fr-input" value={fields.technical} onChange={set("technical")} placeholder="e.g. Technical delegate's name" /></label>
+          <label>{tr("Host")}<input className="fr-input" value={fields.host} onChange={set("host")} placeholder={tr("e.g. Federación Chilena de Fistball")} /></label>
+          <label>{tr("Technical responsible")}<input className="fr-input" value={fields.technical} onChange={set("technical")} placeholder={tr("e.g. Technical delegate's name")} /></label>
         </div>
-        <label>Notes — what happened (shown at the end of the report)<textarea className="fr-input" rows={4} value={fields.notes} onChange={set("notes")} /></label>
+        <label>{tr("Notes — what happened (shown at the end of the report)")}<textarea className="fr-input" rows={4} value={fields.notes} onChange={set("notes")} /></label>
         <div className="fr-actions">
-          <button className="btn sm primary" onClick={save} disabled={!dirty}>{dirty ? "Save" : "Saved"}</button>
+          <button className="btn sm primary" onClick={save} disabled={!dirty}>{dirty ? tr("Save") : tr("Saved")}</button>
           <span className="spacer" />
-          <button className="btn sm" onClick={() => window.print()}>Print / PDF</button>
-          <button className="btn sm" onClick={downloadWord}>Word (.doc)</button>
+          <button className="btn sm" onClick={() => window.print()}>{tr("Print / PDF")}</button>
+          <button className="btn sm" onClick={downloadWord}>{tr("Word (.doc)")}</button>
         </div>
       </section>
 
@@ -133,77 +136,77 @@ table{border-collapse:collapse;margin:4pt 0}td,th{border:1px solid #999;padding:
         <h1>{title}</h1>
         <table className="fr-table">
           <tbody>
-            <tr><th>1. Event</th><td>{event?.name || "—"}</td></tr>
-            <tr><th>2. Dates</th><td>{event?.dates || [event?.startDate, event?.endDate].filter(Boolean).join(" – ") || "—"}</td></tr>
-            <tr><th>3. Venue</th><td>{[event?.place, event?.address].filter(Boolean).join(" · ") || "—"}</td></tr>
-            <tr><th>4. Host</th><td>{fields.host || "—"}</td></tr>
-            <tr><th>4. Technical responsible</th><td>{fields.technical || "—"}</td></tr>
+            <tr><th>{tr("1. Event")}</th><td>{event?.name || "—"}</td></tr>
+            <tr><th>{tr("2. Dates")}</th><td>{event?.dates || [event?.startDate, event?.endDate].filter(Boolean).join(" – ") || "—"}</td></tr>
+            <tr><th>{tr("3. Venue")}</th><td>{[event?.place, event?.address].filter(Boolean).join(" · ") || "—"}</td></tr>
+            <tr><th>{tr("4. Host")}</th><td>{fields.host || "—"}</td></tr>
+            <tr><th>{tr("4. Technical responsible")}</th><td>{fields.technical || "—"}</td></tr>
           </tbody>
         </table>
 
-        <h2>5. Categories</h2>
+        <h2>{tr("5. Categories")}</h2>
         {GENDERS.map((gen) => {
           const list = data.perCat.filter((c) => c.gender === gen);
-          return list.length ? <p key={gen}><b>{gen}:</b> {list.map((c) => c.cat).join(", ")}</p> : null;
+          return list.length ? <p key={gen}><b>{tr(gen)}:</b> {list.map((c) => c.cat).join(", ")}</p> : null;
         })}
 
-        <h2>6–8. Teams, players, officials and games</h2>
+        <h2>{tr("6–8. Teams, players, officials and games")}</h2>
         <table className="fr-table">
-          <thead><tr><th>Category</th><th>Teams</th><th>Players</th><th>Team officials</th><th>Games played</th></tr></thead>
+          <thead><tr><th>{tr("Category")}</th><th>{tr("Teams")}</th><th>{tr("Players")}</th><th>{tr("Team officials")}</th><th>{tr("Games played")}</th></tr></thead>
           <tbody>
             {data.perCat.map((c) => (
               <tr key={c.cat}><td>{c.cat}</td><td className="fr-num">{c.teams}</td><td className="fr-num">{c.players}</td><td className="fr-num">{c.staff}</td>
-                <td className="fr-num">{c.played}{c.scheduled > c.played ? ` of ${c.scheduled}` : ""}</td></tr>
+                <td className="fr-num">{c.played}{c.scheduled > c.played ? ` ${tr("of {n}", { n: c.scheduled })}` : ""}</td></tr>
             ))}
-            <tr className="fr-total"><td><b>Total</b></td><td className="fr-num"><b>{data.total.teams}</b></td><td className="fr-num"><b>{data.total.players}</b></td><td className="fr-num"><b>{data.total.staff}</b></td>
-              <td className="fr-num"><b>{data.total.played}</b>{data.total.scheduled > data.total.played ? ` of ${data.total.scheduled}` : ""}</td></tr>
+            <tr className="fr-total"><td><b>{tr("Total")}</b></td><td className="fr-num"><b>{data.total.teams}</b></td><td className="fr-num"><b>{data.total.players}</b></td><td className="fr-num"><b>{data.total.staff}</b></td>
+              <td className="fr-num"><b>{data.total.played}</b>{data.total.scheduled > data.total.played ? ` ${tr("of {n}", { n: data.total.scheduled })}` : ""}</td></tr>
           </tbody>
         </table>
-        <p>Referees: <b>{refs.length}</b> · Players + team officials: <b>{data.total.players + data.total.staff}</b></p>
+        <p>{tr("Referees:")} <b>{refs.length}</b> · {tr("Players + team officials:")} <b>{data.total.players + data.total.staff}</b></p>
 
-        <h2>9. Disciplinary — cards</h2>
+        <h2>{tr("9. Disciplinary — cards")}</h2>
         <table className="fr-table">
-          <thead><tr><th>Category</th><th>Yellow</th><th>Yellow-red</th><th>Red</th><th>Total</th></tr></thead>
+          <thead><tr><th>{tr("Category")}</th><th>{tr("Yellow")}</th><th>{tr("Yellow-red")}</th><th>{tr("Red")}</th><th>{tr("Total")}</th></tr></thead>
           <tbody>
             {data.perCat.map((c) => (
               <tr key={c.cat}><td>{c.cat}</td><td className="fr-num">{c.cards.y}</td><td className="fr-num">{c.cards.yr}</td><td className="fr-num">{c.cards.r}</td><td className="fr-num">{c.cards.y + c.cards.yr + c.cards.r}</td></tr>
             ))}
-            <tr className="fr-total"><td><b>Total</b></td><td className="fr-num"><b>{data.total.cards.y}</b></td><td className="fr-num"><b>{data.total.cards.yr}</b></td><td className="fr-num"><b>{data.total.cards.r}</b></td>
+            <tr className="fr-total"><td><b>{tr("Total")}</b></td><td className="fr-num"><b>{data.total.cards.y}</b></td><td className="fr-num"><b>{data.total.cards.yr}</b></td><td className="fr-num"><b>{data.total.cards.r}</b></td>
               <td className="fr-num"><b>{data.total.cards.y + data.total.cards.yr + data.total.cards.r}</b></td></tr>
           </tbody>
         </table>
 
-        <h2>10. Average game length</h2>
-        {reports === null ? <p>Loading…</p> : (
+        <h2>{tr("10. Average game length")}</h2>
+        {reports === null ? <p>{tr("Loading…")}</p> : (
           <>
             <table className="fr-table">
-              <thead><tr><th>Best of</th><th>Games</th><th>Average</th><th>Based on</th></tr></thead>
+              <thead><tr><th>{tr("Best of")}</th><th>{tr("Games")}</th><th>{tr("Average")}</th><th>{tr("Based on")}</th></tr></thead>
               <tbody>
                 {data.durations.map((d) => {
                   const use = d.measured.n ? d.measured : d.estimated;
                   return (
-                    <tr key={d.bestOf}><td>Best of {d.bestOf || "?"}</td><td className="fr-num">{d.games}</td>
+                    <tr key={d.bestOf}><td>{tr("Best of {n}", { n: d.bestOf || "?" })}</td><td className="fr-num">{d.games}</td>
                       <td className="fr-num">{use.n ? `${d.measured.n ? "" : "≈ "}${fmtMin(use.avg)}` : "—"}</td>
-                      <td>{d.measured.n ? `${d.measured.n} games timed (first to last point)` : d.estimated.n ? `${d.estimated.n} games, estimated*` : "no times recorded"}</td></tr>
+                      <td>{d.measured.n ? tr("{n} games timed (first to last point)", { n: d.measured.n }) : d.estimated.n ? tr("{n} games, estimated*", { n: d.estimated.n }) : tr("no times recorded")}</td></tr>
                   );
                 })}
               </tbody>
             </table>
-            {anyEstimated && <p className="fr-foot">* Estimated from the scheduled start to the moment the game report was submitted, so delays before the start and the time to sign are included. From now on, Arena records each game's real length (first to last point) automatically.</p>}
+            {anyEstimated && <p className="fr-foot">{tr("* Estimated from the scheduled start to the moment the game report was submitted, so delays before the start and the time to sign are included. From now on, Arena records each game's real length (first to last point) automatically.")}</p>}
           </>
         )}
 
-        <h2>11. Final ranking</h2>
+        <h2>{tr("11. Final ranking")}</h2>
         {GENDERS.map((gen) => {
           const list = data.perCat.filter((c) => c.gender === gen && c.ranking);
           if (!list.length) return null;
           return (
             <div key={gen}>
-              <h3>{gen}</h3>
+              <h3>{tr(gen)}</h3>
               <div className="fr-rank-grid">
                 {list.map((c) => (
                   <table key={c.cat} className="fr-table fr-rank">
-                    <thead><tr><th colSpan={2}>{c.cat}{c.ranking.decided ? (c.ranking.complete ? "" : " (provisional)") : " (final not played yet)"}</th></tr></thead>
+                    <thead><tr><th colSpan={2}>{c.cat}{c.ranking.decided ? (c.ranking.complete ? "" : ` ${tr("(provisional)")}`) : ` ${tr("(final not played yet)")}`}</th></tr></thead>
                     <tbody>
                       {c.ranking.rows.map((x) => (
                         <tr key={x.team}><td className="fr-num">{c.ranking.decided ? (MEDAL[x.pos] ? `${MEDAL[x.pos]} ${x.pos}` : x.pos) : "–"}</td><td>{flagFor(x.team)} {short(x.team)}</td></tr>
@@ -216,7 +219,7 @@ table{border-collapse:collapse;margin:4pt 0}td,th{border:1px solid #999;padding:
           );
         })}
 
-        {fields.notes?.trim() && (<><h2>Notes</h2><p className="fr-notes">{fields.notes}</p></>)}
+        {fields.notes?.trim() && (<><h2>{tr("Notes")}</h2><p className="fr-notes">{fields.notes}</p></>)}
       </section>
     </>
   );
@@ -224,6 +227,7 @@ table{border-collapse:collapse;margin:4pt 0}td,th{border:1px solid #999;padding:
 
 /* ---------------- game reports by team ---------------- */
 function TeamReports({ event, branding, games, reports, reload }) {
+  const tr = useT();
   const teams = useMemo(() => {
     const m = new Map();
     for (const g of games) for (const t of [g.teamA?.name, g.teamB?.name]) {
@@ -273,25 +277,25 @@ function TeamReports({ event, branding, games, reports, reload }) {
       a.href = url; a.download = `${fileSafe(`Game-reports-${short(team.name)}-${team.category}`)}.pdf`;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
-    } catch (e) { alert("Could not create the PDF: " + (e?.message || e)); }
+    } catch (e) { alert(tr("Could not create the PDF: {e}", { e: String(e?.message || e) })); }
     setBusy(false);
   };
 
-  if (!teams.length) return <div className="empty">No games with teams yet.</div>;
+  if (!teams.length) return <div className="empty">{tr("No games with teams yet.")}</div>;
   return (
     <section className="card">
       <div className="plan-bar">
-        <select className="ag-role" value={team?.key || ""} onChange={(e) => setKey(e.target.value)} aria-label="Team">
+        <select className="ag-role" value={team?.key || ""} onChange={(e) => setKey(e.target.value)} aria-label={tr("Team")}>
           {teams.map((t) => <option key={t.key} value={t.key}>{short(t.name)}{t.category ? ` — ${t.category}` : ""}</option>)}
         </select>
-        <label className="muted-sm"><input type="checkbox" checked={onlyDone} onChange={(e) => setOnlyDone(e.target.checked)} /> Submitted reports only</label>
+        <label className="muted-sm"><input type="checkbox" checked={onlyDone} onChange={(e) => setOnlyDone(e.target.checked)} /> {tr("Submitted reports only")}</label>
         <button className="btn sm primary" onClick={download} disabled={busy || reports === null || !printable.length}>
-          {busy ? "Creating PDF…" : `PDF — ${printable.length} game report${printable.length === 1 ? "" : "s"}`}
+          {busy ? tr("Creating PDF…") : printable.length === 1 ? tr("PDF — {n} game report", { n: 1 }) : tr("PDF — {n} game reports", { n: printable.length })}
         </button>
       </div>
-      <p className="muted-sm">All game reports (súmulas) of the team in one PDF, one page per game, in game order — to print or send.</p>
+      <p className="muted-sm">{tr("All game reports (súmulas) of the team in one PDF, one page per game, in game order — to print or send.")}</p>
       <table className="ref-grid plan-table">
-        <thead><tr><th>#</th><th>Date</th><th>Time</th><th>Court</th><th>Round</th><th>Match</th><th>Report</th></tr></thead>
+        <thead><tr><th>#</th><th>{tr("Date")}</th><th>{tr("Time")}</th><th>{tr("Court")}</th><th>{tr("Round")}</th><th>{tr("Match")}</th><th>{tr("Report")}</th></tr></thead>
         <tbody>
           {list.map((g) => {
             const r = repById[g.id];
@@ -300,7 +304,7 @@ function TeamReports({ event, branding, games, reports, reload }) {
               <tr key={g.id} className={printable.includes(g) ? "" : "fr-skip"}>
                 <td>#{g.nr}</td><td>{g.date}</td><td>{g.time}</td><td>{g.court}</td><td>{g.round}</td>
                 <td>{flagFor(g.teamA?.name)} {short(g.teamA?.name)} <span className="muted-sm">v</span> {flagFor(g.teamB?.name)} {short(g.teamB?.name)}</td>
-                <td>{reports === null ? "…" : st}</td>
+                <td>{reports === null ? "…" : tr(st)}</td>
               </tr>
             );
           })}

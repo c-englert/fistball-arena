@@ -11,8 +11,10 @@ import InstallPrompt from "./InstallPrompt.jsx";
 import UpdatePrompt from "./UpdatePrompt.jsx";
 import { onMe, signOutMe } from "./cloud.js";
 import "./styles.css";
+import { useT } from "./i18n.js";
 
 function Root() {
+  const t = useT();
   const [me, setMe] = useState(undefined); // undefined = auth not resolved yet
   const [ready, setReady] = useState(false);
 
@@ -21,7 +23,7 @@ function Root() {
     return unsub;
   }, []);
 
-  if (!ready || me === undefined) return <><div className="empty">Loading…</div><UpdatePrompt /></>;
+  if (!ready || me === undefined) return <><div className="empty">{t("Loading…")}</div><UpdatePrompt /></>;
   if (!me) return <><Identity /><InstallPrompt /><UpdatePrompt /></>;
 
   const signOut = () => signOutMe();
