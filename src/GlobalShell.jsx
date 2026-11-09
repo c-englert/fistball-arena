@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { subscribeLivePointer } from "./cloud.js";
 import AccountMenu from "./AccountMenu.jsx";
+import LangPicker from "./LangPicker.jsx";
 import { IconEvents, IconUsers, IconGuide } from "./icons.jsx";
 
 const LIVE_URL = "https://c-englert.github.io/fistball-live/";
@@ -52,6 +53,7 @@ export default function GlobalShell({ me, onSignOut }) {
         </nav>
         <div className="sb-foot">
           <AccountMenu me={me} onSignOut={onSignOut} />
+          <LangPicker />
           <div className="sb-who"><div className="who">{me.name}</div><div className="role">{me.admin ? "org-admin" : "member"}</div></div>
         </div>
       </aside>

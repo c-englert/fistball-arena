@@ -1149,3 +1149,5 @@ tr.fr-skip td { opacity: .45; }
 
 /* Súmula language picker */
 .lang-pick { font: inherit; font-size: 13px; font-weight: 700; padding: 5px 6px; border-radius: 8px; border: 1px solid var(--line, #d6d9e0); background: var(--card, #fff); color: inherit; cursor: pointer; }
+.sb-foot .lang-pick { background: transparent; color: #fff; border-color: rgba(255,255,255,.3); padding: 3px 4px; font-size: 12px; }
+.sb-foot .lang-pick option { color: #111; }

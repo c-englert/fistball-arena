@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation, useMatch } from "react-router-dom";
 import { useEvent } from "./eventContext.js";
 import { subscribeLivePointer } from "./cloud.js";
 import AccountMenu from "./AccountMenu.jsx";
+import LangPicker from "./LangPicker.jsx";
 import { IconBack, IconGames, IconStandings, IconRoster, IconSettings, IconSchedule, IconGuide, IconWhistle, IconShirt, IconClipboard, IconMap } from "./icons.jsx";
 
 const LIVE_URL = "https://c-englert.github.io/fistball-live/";
@@ -70,6 +71,7 @@ export default function AppShell({ me, onSignOut }) {
         </button>
         <div className="sb-foot">
           <AccountMenu me={me} onSignOut={onSignOut} />
+          <LangPicker />
           <div className="sb-who"><div className="who">{me.name}</div><div className="role">{me.admin ? "org-admin" : "member"}</div></div>
         </div>
       </aside>

@@ -2,6 +2,11 @@
 // Español, Deutsch, Português. Keys are the English text; missing entries
 // fall back to English. {name} placeholders are filled from `vars`.
 import { useEffect, useState } from "react";
+import settingsDict from "./i18n/settings.js";
+import scheduleDict from "./i18n/schedule.js";
+import officialsDict from "./i18n/officials.js";
+import kitsDict from "./i18n/kits.js";
+import shellDict from "./i18n/shell.js";
 
 export const LANGS = [
   { code: "en", label: "EN", name: "English", locale: "en-GB" },
@@ -241,6 +246,10 @@ const ROUND = {
 };
 
 const fill = (s, v) => (v ? String(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m)) : s);
+// Per-area dictionaries (src/i18n/*.js) merged under the súmula's (D).
+for (const area of [settingsDict, scheduleDict, officialsDict, kitsDict, shellDict]) {
+  for (const code of ["es", "de", "pt"]) D[code] = { ...(area[code] || {}), ...D[code] };
+}
 export function makeT(lang) {
   const d = D[lang] || {};
   return (en, vars) => fill(d[en] || en, vars);
@@ -294,3 +303,12 @@ export function useLang() {
   };
   return [lang, setLang];
 }
+
+// Translate with the current screen language — for components (re-renders on
+// change) use useT(); tNow() is for plain functions (alerts, helpers).
+export function useT() {
+  const [lang] = useLang();
+  return makeT(lang);
+}
+export function tNow(en, vars) { return makeT(current)(en, vars); }
+export function currentLang() { return current; }
