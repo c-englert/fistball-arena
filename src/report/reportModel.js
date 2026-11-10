@@ -4,7 +4,7 @@
 import { isPlaceholder } from "../schedule/advance.js";
 import { flagFor } from "../flags.js";
 import { tRound, localeOf } from "../i18n.js";
-import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams, formatOf, playingDays } from "./finalReport.js";
+import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams, formatOf, playingDays, medalGames } from "./finalReport.js";
 
 export const GENDERS = ["Women", "Men", "Other"];
 const MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -59,11 +59,13 @@ export function reportData({ games, results, rosterOf, reports, defaultMinutes }
       teams: sum("teams"), players: sum("players"), staff: sum("staff"), played: sum("played"), scheduled: sum("scheduled"),
       cards: perCat.reduce((s, c) => ({ y: s.y + c.cards.y, yr: s.yr + c.cards.yr, r: s.r + c.cards.r }), { y: 0, yr: 0, r: 0 }),
     };
-    return { perCat, durations, total, days, courts };
+    const order = new Map(cats.map((c, i) => [c, i]));
+    const medals = medalGames(results).sort((a, b) => (order.get(a.category) ?? 99) - (order.get(b.category) ?? 99) || a.place - b.place);
+    return { perCat, durations, total, days, courts, medals };
 }
 
 // tr: translator for lang. fields: { host, technical, notes }. mapPages: images of a PDF venue map.
-export function reportModel({ data, lang, tr, event, branding, fields, refsCount, reports, teamLogos, venueMap, mapPages }) {
+export function reportModel({ data, lang, tr, event, branding, fields, refsCount, reports, teamLogos, venueMap, mapPages, weather }) {
     const loc = localeOf(lang);
     const R = (s) => tRound(lang, s);
     const hm = (d) => d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
@@ -127,6 +129,26 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
       { type: "p", small: true, text: tr("Playing time = start of the first game to the end of the last game of the day. The end is the last point when recorded by the game report; otherwise the scheduled start plus the average game length.") },
     ] : [{ type: "p", text: "—" }]);
 
+    // Weather on the playing days (reference for the medical team).
+    if (data.days.length) {
+      const deg = (v) => (v == null ? "—" : `${v.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`);
+      const pct = (v) => (v == null ? "—" : `${Math.round(v)} %`);
+      const wd = weather?.days || [];
+      const mean = (k) => { const v = wd.map((d) => d[k]).filter((x) => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+      add(tr("Weather on the playing days"), weather === undefined ? [{ type: "p", text: tr("Loading…") }] : !wd.length
+        ? [{ type: "p", text: tr("Weather data is not available for this venue or these dates.") }] : [
+          { type: "table", num: [1, 2, 3, 4],
+            head: [tr("Day"), tr("Min."), tr("Max."), tr("Average during the games"), tr("Humidity during the games")],
+            rows: data.days.map((d, i) => [
+              d.day.toLocaleDateString(loc, { weekday: "short", day: "2-digit", month: "2-digit" }),
+              deg(wd[i]?.min), deg(wd[i]?.max), deg(wd[i]?.avgPlay), pct(wd[i]?.humPlay),
+            ]),
+            total: [tr("Average"), deg(mean("min")), deg(mean("max")), deg(mean("avgPlay")), pct(mean("humPlay"))] },
+          { type: "p", small: true, text: tr("Air temperature and relative humidity per hour at {place} ({lat}, {lon}), from Open-Meteo weather model data — not measured at the courts. “During the games” = the hours from the first to the last game of the day.", {
+            place: weather.place, lat: weather.lat.toFixed(2), lon: weather.lon.toFixed(2) }) },
+        ]);
+    }
+
     add(tr("Teams, players, officials and games"), [
       { type: "table", num: [1, 2, 3, 4], head: [tr("Category"), tr("Teams"), tr("Players"), tr("Team officials"), tr("Games played")],
         rows: data.perCat.map((c) => [c.cat, of(c, "teams"), of(c, "players"), of(c, "staff"), `${c.played}${c.scheduled > c.played ? ` ${tr("of {n}", { n: c.scheduled })}` : ""}`]),
@@ -164,6 +186,14 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
       })) });
     }
     add(tr("Final ranking"), rank, true);
+
+    if (data.medals.length) add(tr("Medal matches"), [{ type: "table", num: [],
+      head: [tr("Category"), tr("Round"), tr("Match"), tr("Sets")],
+      rows: data.medals.map((m) => [
+        m.category, R(m.round),
+        `${flagFor(m.teamA)} ${short(m.teamA)} ${m.setsA}:${m.setsB} ${short(m.teamB)} ${flagFor(m.teamB)}`.trim(),
+        m.sets.join(", ") || "—",
+      ]) }]);
 
     if (venueMap) add(tr("Venue map"), venueMap.kind === "image" ? [{ type: "image", src: venueMap.data }]
       : mapPages.length ? mapPages.map((src) => ({ type: "image", src }))

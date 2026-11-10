@@ -84,8 +84,21 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
     rosterOf: (t, cat) => rosters[rosterKey(`${t} - ${cat}`)] || rosters[rosterKey(t)],
   }), [games, results, rosters, reports, event?.slots?.gameMinutes]);
 
-  const model = useMemo(() => reportModel({ data, lang, tr, event, branding, fields, refsCount: refs.length, reports, teamLogos, venueMap, mapPages }),
-    [data, lang, tr, event, branding, fields, refs.length, reports, teamLogos, venueMap, mapPages]);
+  // Weather per playing day (Open-Meteo), refetched when the days or the place change.
+  const [weather, setWeather] = useState(undefined);
+  const dayList = data.days.map((d) => `${d.day.getTime()}|${d.first.getHours()}|${d.last.getHours()}`).join(",");
+  useEffect(() => {
+    if (!data.days.length) return;
+    let live = true;
+    setWeather(undefined);
+    import("../report/weather.js").then(({ fetchWeather }) => fetchWeather(event?.place, data.days))
+      .then((w) => { if (live) setWeather(w); })
+      .catch((e) => { console.warn("weather unavailable:", e); if (live) setWeather(null); });
+    return () => { live = false; };
+  }, [dayList, event?.place]);
+
+  const model = useMemo(() => reportModel({ data, lang, tr, event, branding, fields, refsCount: refs.length, reports, teamLogos, venueMap, mapPages, weather }),
+    [data, lang, tr, event, branding, fields, refs.length, reports, teamLogos, venueMap, mapPages, weather]);
 
   const downloadWord = async () => {
     setBusy(true);

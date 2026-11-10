@@ -180,3 +180,15 @@ export function playingDays(items) {
     first: new Date(d.first), last: new Date(d.last), minutes: (d.last - d.first) / 60000,
   }));
 }
+
+// Medal games (gold/final and bronze) that were played, gold first, with set scores.
+export function medalGames(results) {
+  return results
+    .filter((r) => finished(r) && [1, 3].includes(placeOfRound(r.round)) && !isPlaceholder(r.teamA) && !isPlaceholder(r.teamB))
+    .map((r) => ({
+      category: r.category || "", round: r.round, place: placeOfRound(r.round),
+      teamA: r.teamA, teamB: r.teamB, setsA: num(r.setsA), setsB: num(r.setsB),
+      sets: (r.sets || []).filter((s) => num(s.a) || num(s.b)).map((s) => `${num(s.a)}/${num(s.b)}`),
+    }))
+    .sort((a, b) => a.place - b.place);
+}

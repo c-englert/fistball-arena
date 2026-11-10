@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { finalRanking, placeOfRound, genderOf, gameMinutes, durationByBestOf, cardsByCategory, scheduledStart, formatOf, playingDays, stageOf } from "./finalReport.js";
+import { finalRanking, placeOfRound, genderOf, gameMinutes, durationByBestOf, cardsByCategory, scheduledStart, formatOf, playingDays, stageOf, medalGames } from "./finalReport.js";
 
 const R = (round, a, b, sa, sb, over = {}) => ({ round, teamA: a, teamB: b, setsA: sa, setsB: sb, pointsA: sa * 11, pointsB: sb * 11, status: "Finished", ...over });
 
@@ -91,4 +91,16 @@ test("playingDays: window per day from first start to last end", () => {
   assert.equal(d[0].games, 2);
   assert.equal(d[0].minutes, 9 * 60 + 10);
   assert.equal(d[1].minutes, 40);
+});
+
+test("medalGames: gold before bronze, with set scores", () => {
+  const m = [
+    { round: "Bronze medal match", status: "Finished", teamA: "x", teamB: "y", setsA: 3, setsB: 1, sets: [{ a: 11, b: 4 }, { a: 7, b: 11 }, { a: 11, b: 8 }, { a: 11, b: 1 }, { a: 0, b: 0 }] },
+    { round: "Gold medal match", status: "Finished", teamA: "a", teamB: "b", setsA: 0, setsB: 3, sets: [{ a: 8, b: 11 }, { a: 5, b: 11 }, { a: 7, b: 11 }] },
+    { round: "Semifinal 1", status: "Finished", teamA: "a", teamB: "x", setsA: 3, setsB: 0 },
+    { round: "Gold medal match", status: "Scheduled", teamA: "c", teamB: "d" },
+  ];
+  const g = medalGames(m);
+  assert.deepEqual(g.map((x) => x.round), ["Gold medal match", "Bronze medal match"]);
+  assert.deepEqual(g[1].sets, ["11/4", "7/11", "11/8", "11/1"]);
 });
