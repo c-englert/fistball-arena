@@ -1141,10 +1141,32 @@ body.sumula-full .sidebar, body.sumula-full .sb-scrim, body.sumula-full .appbar 
 .fr-foot { font-size: 12px; opacity: .75; }
 .fr-notes { white-space: pre-wrap; }
 tr.fr-skip td { opacity: .45; }
+/* Final report: cover with logos, spaced sections */
+.fr-doc { line-height: 1.5; }
+.fr-cover { text-align: center; padding: 8px 0 22px; margin-bottom: 8px; border-bottom: 1px solid var(--line, #d6d9e0); }
+.fr-cover-logo { max-width: 220px; max-height: 140px; object-fit: contain; display: block; margin: 0 auto 14px; }
+.fr-cover h1 { font-size: 26px; margin: 0 0 4px; color: #1f3a5f; }
+.fr-cover-name { font-size: 18px; color: #2e6db4; margin-bottom: 4px; }
+.fr-cover-line { font-size: 14px; opacity: .7; }
+.fr-promoters { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 22px; margin-top: 18px; }
+.fr-promoters img { max-height: 48px; max-width: 120px; object-fit: contain; }
+.fr-section { margin-top: 26px; }
+.fr-doc .fr-section h2 { font-size: 17px; color: #1f3a5f; border-bottom: 2px solid #2e6db4; padding-bottom: 4px; margin: 0 0 12px; }
+.fr-doc .fr-section h3 { color: #2e6db4; margin: 14px 0 4px; }
+.fr-section p { margin: 4px 0 8px; }
+.fr-wide, .fr-kv { width: 100%; }
+.fr-kv th { width: 30%; }
+.fr-doc .fr-table thead th { background: #1f3a5f; color: #fff; }
+.fr-doc .fr-kv th { background: #eef2f7; color: #1f3a5f; }
+.fr-doc tr.fr-total td { background: #eef2f7; }
+.fr-team-logo { height: 18px; width: 18px; object-fit: contain; vertical-align: middle; margin-right: 6px; }
+.fr-map { display: block; max-width: 100%; margin: 6px auto; border: 1px solid var(--line, #d6d9e0); border-radius: 6px; }
 @media print {
   .fr-doc { box-shadow: none; border: 0; padding: 0; color: #000; }
-  .fr-doc h2 { break-after: avoid; }
+  .fr-doc h2, .fr-doc h3 { break-after: avoid; }
   .fr-table, .fr-rank { break-inside: avoid; }
+  .fr-newpage { break-before: page; }
+  .fr-doc .fr-table thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* Súmula language picker */

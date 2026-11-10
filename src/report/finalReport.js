@@ -114,3 +114,69 @@ export function cardsByCategory(results) {
   }
   return out;
 }
+
+// "Quarterfinal 3" → "Quarterfinal"; "Placement 5-6" stays.
+export const stageOf = (round) => String(round || "").replace(/\s+\d+\s*$/, "").trim();
+const medal = (stage) => { const p = placeOfRound(stage); return p === 1 ? 2 : p === 3 ? 1 : 0; };
+const bestOfs = (list) => [...new Set(list.map((r) => num(r.bestOf)).filter(Boolean))].sort((a, b) => a - b);
+
+// How one category was played, read from its games: the group stage (groups,
+// teams per group, single/double round robin) and the knockout stages in
+// game order with how many games each had.
+export function formatOf(results) {
+  const sorted = [...results].sort((a, b) => num(a.nr) - num(b.nr));
+  const grp = sorted.filter((r) => isGroupRound(r.round));
+  const ko = sorted.filter((r) => !isGroupRound(r.round));
+  const gm = new Map();
+  for (const r of grp) {
+    const k = r.group || "";
+    if (!gm.has(k)) gm.set(k, { label: k, teams: new Set(), games: 0 });
+    const g = gm.get(k);
+    g.games++;
+    for (const t of [r.teamA, r.teamB]) if (t && !isPlaceholder(t)) g.teams.add(t);
+  }
+  const groups = [...gm.values()].sort((a, b) => a.label.localeCompare(b.label)).map((g) => {
+    const n = g.teams.size, single = (n * (n - 1)) / 2;
+    return { label: g.label, teams: n, games: g.games, double: n > 1 && g.games >= 2 * single };
+  });
+  const stages = [];
+  for (const r of ko) {
+    const s = stageOf(r.round);
+    let st = stages.find((x) => x.stage === s);
+    if (!st) stages.push((st = { stage: s, games: 0, bestOf: num(r.bestOf), placement: placeOfRound(r.round) >= 5 }));
+    st.games++;
+  }
+  return {
+    teams: realTeams(results).length, games: results.length,
+    groupStage: grp.length ? stageOf(grp[0].round) : "", groups, groupBestOf: bestOfs(grp),
+    // Medal games last (bronze before gold); placement games by place.
+    stages: stages.filter((x) => !x.placement).sort((a, b) => medal(a.stage) - medal(b.stage))
+      .concat(stages.filter((x) => x.placement).sort((a, b) => placeOfRound(a.stage) - placeOfRound(b.stage))),
+    koBestOf: bestOfs(ko),
+  };
+}
+
+// Playing days: [{ day (Date, midnight), games, courts: [..], first, last (Date), minutes }].
+// items: { date, time, court, minutes (game length), end (ms of the last point, optional) }.
+// A game ends at its recorded last point when plausible, else start + minutes.
+export function playingDays(items) {
+  const by = new Map();
+  for (const it of items) {
+    const st = scheduledStart(it.date, it.time);
+    if (!st) continue;
+    const s = st.getTime();
+    const end = it.end && it.end > s && it.end - s < 6 * 3600000 ? it.end : s + (num(it.minutes) || 60) * 60000;
+    const key = `${st.getFullYear()}-${st.getMonth()}-${st.getDate()}`;
+    if (!by.has(key)) by.set(key, { day: new Date(st.getFullYear(), st.getMonth(), st.getDate()), games: 0, courts: new Set(), first: s, last: end });
+    const d = by.get(key);
+    d.games++;
+    if (it.court != null && it.court !== "") d.courts.add(String(it.court));
+    d.first = Math.min(d.first, s);
+    d.last = Math.max(d.last, end);
+  }
+  const byNum = (a, b) => (Number(a) - Number(b)) || a.localeCompare(b);
+  return [...by.values()].sort((a, b) => a.day - b.day).map((d) => ({
+    day: d.day, games: d.games, courts: [...d.courts].sort(byNum),
+    first: new Date(d.first), last: new Date(d.last), minutes: (d.last - d.first) / 60000,
+  }));
+}

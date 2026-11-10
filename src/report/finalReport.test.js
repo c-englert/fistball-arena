@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { finalRanking, placeOfRound, genderOf, gameMinutes, durationByBestOf, cardsByCategory, scheduledStart } from "./finalReport.js";
+import { finalRanking, placeOfRound, genderOf, gameMinutes, durationByBestOf, cardsByCategory, scheduledStart, formatOf, playingDays, stageOf } from "./finalReport.js";
 
 const R = (round, a, b, sa, sb, over = {}) => ({ round, teamA: a, teamB: b, setsA: sa, setsB: sb, pointsA: sa * 11, pointsB: sb * 11, status: "Finished", ...over });
 
@@ -62,4 +62,33 @@ test("durationByBestOf and cardsByCategory", () => {
   ]);
   const c = cardsByCategory([{ category: "M", cards: [{ category: "M", y: 1, yr: 0, r: 0 }, { category: "M", y: 1, yr: 1, r: 0 }] }]);
   assert.deepEqual(c, { M: { y: 2, yr: 1, r: 0 } });
+});
+
+test("formatOf: groups, round robin and knockout stages", () => {
+  const rr = (g, ts, bo) => ts.flatMap((a, i) => ts.slice(i + 1).map((b) => ({ round: "Qualification round", group: g, teamA: a, teamB: b, bestOf: bo })));
+  const res = [...rr("A", ["a", "b", "c", "d"], 3), ...rr("B", ["e", "f", "g", "h"], 3)].map((r, i) => ({ ...r, nr: i + 1 }));
+  res.push({ nr: 20, round: "Semifinal 1", teamA: "a", teamB: "f", bestOf: 5 }, { nr: 21, round: "Semifinal 2", teamA: "e", teamB: "b", bestOf: 5 },
+    { nr: 22, round: "Placement 5-6", teamA: "c", teamB: "g", bestOf: 5 }, { nr: 23, round: "Gold medal match", teamA: "a", teamB: "e", bestOf: 5 });
+  const f = formatOf(res);
+  assert.equal(f.teams, 8);
+  assert.equal(f.games, 16);
+  assert.deepEqual(f.groups.map((g) => [g.label, g.teams, g.games, g.double]), [["A", 4, 6, false], ["B", 4, 6, false]]);
+  assert.deepEqual(f.groupBestOf, [3]);
+  assert.deepEqual(f.stages.map((x) => [x.stage, x.games, x.placement]), [["Semifinal", 2, false], ["Gold medal match", 1, false], ["Placement 5-6", 1, true]]);
+  assert.deepEqual(f.koBestOf, [5]);
+  assert.equal(stageOf("Quarterfinal 3"), "Quarterfinal");
+});
+
+test("playingDays: window per day from first start to last end", () => {
+  const end = new Date(2026, 10, 4, 18, 10).getTime();
+  const d = playingDays([
+    { date: "04/11/26", time: "09:00", court: "1", minutes: 50 },
+    { date: "04/11/26", time: "17:00", court: "2", minutes: 50, end },
+    { date: "05/11/26", time: "10:00", court: "1", minutes: 40 },
+  ]);
+  assert.equal(d.length, 2);
+  assert.deepEqual(d[0].courts, ["1", "2"]);
+  assert.equal(d[0].games, 2);
+  assert.equal(d[0].minutes, 9 * 60 + 10);
+  assert.equal(d[1].minutes, 40);
 });

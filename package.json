@@ -12,8 +12,10 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
+    "docx": "^9.15.3",
     "firebase": "^12.16.0",
     "localforage": "^1.10.0",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.4",
