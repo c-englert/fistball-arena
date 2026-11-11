@@ -186,7 +186,7 @@ export function medalGames(results) {
   return results
     .filter((r) => finished(r) && [1, 3].includes(placeOfRound(r.round)) && !isPlaceholder(r.teamA) && !isPlaceholder(r.teamB))
     .map((r) => ({
-      category: r.category || "", round: r.round, place: placeOfRound(r.round),
+      id: r.id, category: r.category || "", round: r.round, place: placeOfRound(r.round),
       teamA: r.teamA, teamB: r.teamB, setsA: num(r.setsA), setsB: num(r.setsB),
       sets: (r.sets || []).filter((s) => num(s.a) || num(s.b)).map((s) => `${num(s.a)}/${num(s.b)}`),
     }))

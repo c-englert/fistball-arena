@@ -270,6 +270,23 @@ export function tRound(lang, round) {
   if ((m = s.match(/^\s*group\s+(\w+)\s*$/i))) return `${R.group} ${m[1]}`;
   return s;
 }
+// Category names come from the builder in English ("National Teams Women",
+// "Clubs Men U18"). Display-only translation; stored names stay English.
+const CAT = {
+  es: { nt: ["Selecciones femeninas", "Selecciones masculinas", "Selecciones mixtas"], cl: ["Clubes femeninos", "Clubes masculinos", "Clubes mixtos"], g: ["Femenino", "Masculino", "Mixto"] },
+  de: { nt: ["Nationalteams Frauen", "Nationalteams Männer", "Nationalteams Mixed"], cl: ["Vereine Frauen", "Vereine Männer", "Vereine Mixed"], g: ["Frauen", "Männer", "Mixed"] },
+  pt: { nt: ["Equipes nacionais femininas", "Equipes nacionais masculinas", "Equipes nacionais mistas"], cl: ["Clubes femininos", "Clubes masculinos", "Clubes mistos"], g: ["Feminino", "Masculino", "Misto"] },
+};
+const GI = { women: 0, female: 0, ladies: 0, men: 1, male: 1, mixed: 2 };
+export function tCategory(lang, category) {
+  const C = CAT[lang];
+  const s = String(category || "");
+  if (!C || !s) return s;
+  const m = s.match(/^\s*(national\s+teams?|clubs?)\s+(women|female|ladies|men|male|mixed)\b(.*)$/i);
+  if (m) return `${C[/^club/i.test(m[1]) ? "cl" : "nt"][GI[m[2].toLowerCase()]]}${m[3]}`;
+  return s.replace(/\b(women|female|ladies|men|male|mixed)\b/gi, (w) => C.g[GI[w.toLowerCase()]]);
+}
+
 // Bilingual helper for the PDF: "English / Deutsch" (English only when the
 // second language is English or none).
 export function makeBi(second) {

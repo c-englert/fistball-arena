@@ -65,3 +65,13 @@ export function flagFor(teamNameOrCountry) {
   if (!code) return "";
   return code.length === 2 ? codeFlag(code) : subdivisionFlag(code);
 }
+
+// A team's name for display in `lang`: a country name is written in that
+// language ("Brazil" → "Brasil"); clubs and anything else stay as they are.
+const regionNames = {};
+export function countryName(teamName, lang) {
+  const c = countryCode(teamName);
+  if (!c || !lang) return countryOf(teamName);
+  try { regionNames[lang] ||= new Intl.DisplayNames([lang], { type: "region" }); return regionNames[lang].of(c) || countryOf(teamName); }
+  catch { return countryOf(teamName); }
+}

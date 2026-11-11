@@ -2,8 +2,8 @@
 // translated block model (reportModel) shared by the screen/print view and
 // the Word document.
 import { isPlaceholder } from "../schedule/advance.js";
-import { flagFor } from "../flags.js";
-import { tRound, localeOf } from "../i18n.js";
+import { flagFor, countryName } from "../flags.js";
+import { tRound, tCategory, localeOf } from "../i18n.js";
 import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams, formatOf, playingDays, medalGames } from "./finalReport.js";
 
 export const GENDERS = ["Women", "Men", "Other"];
@@ -60,7 +60,13 @@ export function reportData({ games, results, rosterOf, reports, defaultMinutes }
       cards: perCat.reduce((s, c) => ({ y: s.y + c.cards.y, yr: s.yr + c.cards.yr, r: s.r + c.cards.r }), { y: 0, yr: 0, r: 0 }),
     };
     const order = new Map(cats.map((c, i) => [c, i]));
-    const medals = medalGames(results).sort((a, b) => (order.get(a.category) ?? 99) - (order.get(b.category) ?? 99) || a.place - b.place);
+    // Lineups of the medal games: the game report's when there is one, else the registered squad.
+    const lineup = (rep, team, cat) => {
+      const src = rep?.players?.length ? rep : rosterOf(team, cat) || {};
+      return { players: (src.players || []).map((p) => ({ nr: p.nr, name: p.name, first: p.first })), staff: (src.staff || []).map((x) => ({ role: x.role, name: x.name, first: x.first })) };
+    };
+    const medals = medalGames(results).sort((a, b) => (order.get(a.category) ?? 99) - (order.get(b.category) ?? 99) || a.place - b.place)
+      .map((m) => ({ ...m, lineupA: lineup(repById[m.id]?.teamA, m.teamA, m.category), lineupB: lineup(repById[m.id]?.teamB, m.teamB, m.category) }));
     return { perCat, durations, total, days, courts, medals };
 }
 
@@ -73,6 +79,11 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
     const dates = event?.dates || [event?.startDate, event?.endDate].filter(Boolean).join(" – ");
     const venue = [event?.place, event?.address].filter(Boolean).join(" · ");
     const sections = [];
+    const C = (cat) => tCategory(lang, cat);
+    // Country names in the report's language (national teams only); clubs as written.
+    const T = (team, cat) => (/club/i.test(cat || "") ? short(team) : countryName(team, lang));
+    const FT = (team, cat) => `${flagFor(team)} ${T(team, cat)}`.trim();
+    const full = (p) => [p.first, p.name].filter(Boolean).join(" ");
     const add = (heading, blocks, newPage) => sections.push({ heading: `${sections.length + 1}. ${heading}`, blocks, newPage });
 
     add(tr("Event details"), [{ type: "kv", rows: [
@@ -82,7 +93,7 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
 
     add(tr("Categories"), GENDERS.map((gen) => {
       const list = data.perCat.filter((c) => c.gender === gen);
-      return list.length ? { type: "p", text: `${tr(gen)}: ${list.map((c) => c.cat).join(", ")}` } : null;
+      return list.length ? { type: "p", text: `${tr(gen)}: ${list.map((c) => C(c.cat)).join(", ")}` } : null;
     }).filter(Boolean));
 
     // Format: overview + one paragraph block per category.
@@ -92,7 +103,7 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
     }) }];
     for (const c of data.perCat) {
       const f = c.format;
-      fmt.push({ type: "h3", text: c.cat });
+      fmt.push({ type: "h3", text: C(c.cat) });
       fmt.push({ type: "p", text: tr("{n} teams · {g} games.", { n: f.teams, g: f.games }) });
       if (f.groups.length) {
         const rr = f.groups.every((g) => g.double) ? tr("double round robin") : tr("round robin");
@@ -151,14 +162,14 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
 
     add(tr("Teams, players, officials and games"), [
       { type: "table", num: [1, 2, 3, 4], head: [tr("Category"), tr("Teams"), tr("Players"), tr("Team officials"), tr("Games played")],
-        rows: data.perCat.map((c) => [c.cat, of(c, "teams"), of(c, "players"), of(c, "staff"), `${c.played}${c.scheduled > c.played ? ` ${tr("of {n}", { n: c.scheduled })}` : ""}`]),
+        rows: data.perCat.map((c) => [C(c.cat), of(c, "teams"), of(c, "players"), of(c, "staff"), `${c.played}${c.scheduled > c.played ? ` ${tr("of {n}", { n: c.scheduled })}` : ""}`]),
         total: [tr("Total"), of(data.total, "teams"), of(data.total, "players"), of(data.total, "staff"), `${data.total.played}${data.total.scheduled > data.total.played ? ` ${tr("of {n}", { n: data.total.scheduled })}` : ""}`] },
       { type: "p", text: `${tr("Referees:")} ${refsCount} · ${tr("Players + team officials:")} ${data.total.players + data.total.staff}` },
     ]);
 
     const ct = (k) => k.y + k.yr + k.r;
     add(tr("Disciplinary — cards"), [{ type: "table", num: [1, 2, 3, 4], head: [tr("Category"), tr("Yellow"), tr("Yellow-red"), tr("Red"), tr("Total")],
-      rows: data.perCat.map((c) => [c.cat, String(c.cards.y), String(c.cards.yr), String(c.cards.r), String(ct(c.cards))]),
+      rows: data.perCat.map((c) => [C(c.cat), String(c.cards.y), String(c.cards.yr), String(c.cards.r), String(ct(c.cards))]),
       total: [tr("Total"), String(data.total.cards.y), String(data.total.cards.yr), String(data.total.cards.r), String(ct(data.total.cards))] }]);
 
     const anyEstimated = data.durations.some((d) => !d.measured.n && d.estimated.n);
@@ -178,22 +189,31 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
       if (!list.length) continue;
       rank.push({ type: "h3", text: tr(gen) });
       rank.push({ type: "ranks", items: list.map((c) => ({
-        title: `${c.cat}${c.ranking.decided ? (c.ranking.complete ? "" : ` ${tr("(provisional)")}`) : ` ${tr("(final not played yet)")}`}`,
+        title: `${C(c.cat)}${c.ranking.decided ? (c.ranking.complete ? "" : ` ${tr("(provisional)")}`) : ` ${tr("(final not played yet)")}`}`,
         rows: c.ranking.rows.map((x) => ({
           pos: c.ranking.decided ? (MEDAL[x.pos] ? `${MEDAL[x.pos]} ${x.pos}` : String(x.pos)) : "–",
-          team: `${flagFor(x.team)} ${short(x.team)}`.trim(), logo: teamLogos[x.team] || null,
+          team: FT(x.team, c.cat), logo: teamLogos[x.team] || null,
         })),
       })) });
     }
     add(tr("Final ranking"), rank, true);
 
-    if (data.medals.length) add(tr("Medal matches"), [{ type: "table", num: [],
-      head: [tr("Category"), tr("Round"), tr("Match"), tr("Sets")],
-      rows: data.medals.map((m) => [
-        m.category, R(m.round),
-        `${flagFor(m.teamA)} ${short(m.teamA)} ${m.setsA}:${m.setsB} ${short(m.teamB)} ${flagFor(m.teamB)}`.trim(),
-        m.sets.join(", ") || "—",
-      ]) }]);
+    if (data.medals.length) {
+      const blocks = [{ type: "table", num: [],
+        head: [tr("Category"), tr("Round"), tr("Match"), tr("Sets")],
+        rows: data.medals.map((m) => [C(m.category), R(m.round), `${FT(m.teamA, m.category)} ${m.setsA}:${m.setsB} ${T(m.teamB, m.category)} ${flagFor(m.teamB)}`.trim(), m.sets.join(", ") || "—"]) }];
+      // Players and coaches of both teams, one table per medal game.
+      for (const m of data.medals) {
+        const col = (l) => [...l.players.map((p) => `${p.nr != null && p.nr !== "" ? `#${p.nr} ` : ""}${full(p)}`),
+          ...l.staff.map((x) => `${x.role ? `${tr(x.role)}: ` : ""}${full(x)}`)];
+        const a = col(m.lineupA), b = col(m.lineupB);
+        if (!a.length && !b.length) continue;
+        blocks.push({ type: "h3", text: `${C(m.category)} — ${R(m.round)}` });
+        blocks.push({ type: "table", num: [], head: [FT(m.teamA, m.category), FT(m.teamB, m.category)],
+          rows: Array.from({ length: Math.max(a.length, b.length) }, (_, i) => [a[i] || "", b[i] || ""]) });
+      }
+      add(tr("Medal matches"), blocks);
+    }
 
     if (venueMap) add(tr("Venue map"), venueMap.kind === "image" ? [{ type: "image", src: venueMap.data }]
       : mapPages.length ? mapPages.map((src) => ({ type: "image", src }))
