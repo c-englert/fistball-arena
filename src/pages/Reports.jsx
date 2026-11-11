@@ -6,7 +6,7 @@ import { flagFor } from "../flags.js";
 import { isPlaceholder } from "../schedule/advance.js";
 import { reportData, reportModel } from "../report/reportModel.js";
 import { SumulasPDF } from "../pdf/SumulaPDF.jsx";
-import { useT, useLang } from "../i18n.js";
+import { useT, useLang, LANGS, langName } from "../i18n.js";
 
 // Reports: the event's final report (print / Word) and every game report
 // (súmula) of one team in a single PDF.
@@ -74,8 +74,26 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
   useEffect(() => subscribeTeamLogos(setTeamLogos), []);
   useEffect(() => { if (!dirty) setFields({ host: "", technical: "", notes: "", ...(event?.finalReport || {}) }); }, [event?.finalReport]);
   const set = (k) => (e) => { setFields((f) => ({ ...f, [k]: e.target.value })); setDirty(true); };
+  // Final remarks are written per report language; the report falls back to another language's text.
+  const notesOf = (l) => (fields.notesByLang || {})[l] ?? (l === "en" ? fields.notes : undefined) ?? "";
+  const setNotes = (text) => { setFields((f) => ({ ...f, notesByLang: { ...(f.notesByLang || {}), [lang]: text } })); setDirty(true); };
+  const otherNotes = LANGS.map((l) => l.code).filter((l) => l !== lang && notesOf(l).trim()).map((l) => ({ lang: l, text: notesOf(l) }));
+  const [translating, setTranslating] = useState(false);
+  const canTranslate = typeof self !== "undefined" && "Translator" in self;
+  const translateNotes = async () => {
+    const src = otherNotes[0];
+    if (!src) return;
+    setTranslating(true);
+    try {
+      const t = await self.Translator.create({ sourceLanguage: src.lang, targetLanguage: lang });
+      const out = [];
+      for (const line of src.text.split("\n")) out.push(line.trim() ? await t.translate(line) : line);
+      setNotes(out.join("\n"));
+    } catch (e) { alert(tr("Automatic translation is not available here — please write the text in this language.")); }
+    setTranslating(false);
+  };
   const save = async () => {
-    try { await saveFinalReportFields({ host: fields.host || "", technical: fields.technical || "", notes: fields.notes || "" }); setDirty(false); }
+    try { await saveFinalReportFields({ host: fields.host || "", technical: fields.technical || "", notes: fields.notes || "", notesByLang: fields.notesByLang || {} }); setDirty(false); }
     catch (e) { alert(tr("Could not save: {e}", { e: String(e?.message || e) })); }
   };
 
@@ -121,7 +139,16 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
           <label>{tr("Host")}<input className="fr-input" value={fields.host} onChange={set("host")} placeholder={tr("e.g. Federación Chilena de Fistball")} /></label>
           <label>{tr("Technical responsible")}<input className="fr-input" value={fields.technical} onChange={set("technical")} placeholder={tr("e.g. Technical delegate's name")} /></label>
         </div>
-        <label>{tr("Notes — what happened (shown at the end of the report)")}<textarea className="fr-input" rows={4} value={fields.notes} onChange={set("notes")} /></label>
+        <label>{tr("Final remarks in {lang} — shown at the end of the report", { lang: langName(lang) })}
+          <textarea className="fr-input" rows={4} value={notesOf(lang)} onChange={(e) => setNotes(e.target.value)}
+            placeholder={otherNotes[0] ? `${langName(otherNotes[0].lang)}: ${otherNotes[0].text}` : ""} /></label>
+        {otherNotes.length > 0 && !notesOf(lang).trim() && (
+          <p className="muted-sm">
+            {tr("No final remarks in {lang} yet — the report would show the {other} text.", { lang: langName(lang), other: langName(otherNotes[0].lang) })}{" "}
+            {canTranslate && <button className="btn sm" onClick={translateNotes} disabled={translating}>{translating ? tr("Translating…") : tr("Translate from {other}", { other: langName(otherNotes[0].lang) })}</button>}{" "}
+            <button className="btn sm" onClick={() => setNotes(otherNotes[0].text)}>{tr("Copy to edit")}</button>
+          </p>
+        )}
         <div className="fr-actions">
           <button className="btn sm primary" onClick={save} disabled={!dirty}>{dirty ? tr("Save") : tr("Saved")}</button>
           <span className="spacer" />

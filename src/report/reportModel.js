@@ -219,7 +219,9 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
       : mapPages.length ? mapPages.map((src) => ({ type: "image", src }))
         : [{ type: "p", text: tr("The venue map is a PDF ({name}) — attach it to the report.", { name: venueMap.name || "Venue map.pdf" }) }], true);
 
-    if (fields.notes?.trim()) add(tr("Notes"), fields.notes.split(/\n+/).filter((s) => s.trim()).map((text) => ({ type: "p", text })));
+    const byLang = fields.notesByLang || {};
+    const notes = [byLang[lang], lang === "en" ? fields.notes : null, ...Object.values(byLang), fields.notes].find((s) => s?.trim());
+    if (notes) add(tr("Final remarks"), notes.split(/\n+/).filter((s) => s.trim()).map((text) => ({ type: "p", text })));
 
     return {
       title: tr("Event final report"), eventName: event?.name || "",

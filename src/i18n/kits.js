@@ -102,6 +102,10 @@ export default {
     "the slot {start}–{end} · {place}": "el turno {start}–{end} · {place}", "Venue & training": "Sede y entrenamiento",
     // Reports
     "Reports": "Informes", "Event final report": "Informe final del evento", "Game reports by team": "Planillas por equipo",
+    "Final remarks": "Consideraciones finales", "Final remarks in {lang} — shown at the end of the report": "Consideraciones finales en {lang} — aparecen al final del informe",
+    "No final remarks in {lang} yet — the report would show the {other} text.": "Aún no hay consideraciones finales en {lang} — el informe mostraría el texto en {other}.",
+    "Translate from {other}": "Traducir del {other}", "Translating…": "Traduciendo…", "Copy to edit": "Copiar para editar",
+    "Automatic translation is not available here — please write the text in this language.": "La traducción automática no está disponible aquí — escribe el texto en este idioma.",
     "Event final report — {name}": "Informe final del evento — {name}",
     "Coach": "Entrenador",
     "Head Coach": "Entrenador principal",
@@ -270,6 +274,10 @@ export default {
     "the slot {start}–{end} · {place}": "das Zeitfenster {start}–{end} · {place}", "Venue & training": "Austragungsort & Training",
     // Reports
     "Reports": "Berichte", "Event final report": "Abschlussbericht des Events", "Game reports by team": "Spielberichte pro Team",
+    "Final remarks": "Schlussbemerkungen", "Final remarks in {lang} — shown at the end of the report": "Schlussbemerkungen auf {lang} — erscheinen am Ende des Berichts",
+    "No final remarks in {lang} yet — the report would show the {other} text.": "Noch keine Schlussbemerkungen auf {lang} — der Bericht würde den Text auf {other} zeigen.",
+    "Translate from {other}": "Aus {other} übersetzen", "Translating…": "Übersetze…", "Copy to edit": "Zum Bearbeiten kopieren",
+    "Automatic translation is not available here — please write the text in this language.": "Automatische Übersetzung ist hier nicht verfügbar — bitte den Text in dieser Sprache schreiben.",
     "Event final report — {name}": "Abschlussbericht des Events — {name}",
     "Coach": "Trainer",
     "Head Coach": "Cheftrainer",
@@ -438,6 +446,10 @@ export default {
     "the slot {start}–{end} · {place}": "o horário {start}–{end} · {place}", "Venue & training": "Local e treino",
     // Reports
     "Reports": "Relatórios", "Event final report": "Relatório final do evento", "Game reports by team": "Súmulas por equipe",
+    "Final remarks": "Considerações finais", "Final remarks in {lang} — shown at the end of the report": "Considerações finais em {lang} — aparecem no final do relatório",
+    "No final remarks in {lang} yet — the report would show the {other} text.": "Ainda não há considerações finais em {lang} — o relatório mostraria o texto em {other}.",
+    "Translate from {other}": "Traduzir do {other}", "Translating…": "Traduzindo…", "Copy to edit": "Copiar para editar",
+    "Automatic translation is not available here — please write the text in this language.": "A tradução automática não está disponível aqui — escreva o texto neste idioma.",
     "Event final report — {name}": "Relatório final do evento — {name}",
     "Coach": "Técnico",
     "Head Coach": "Técnico principal",
