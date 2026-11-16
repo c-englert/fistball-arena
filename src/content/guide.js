@@ -20,7 +20,7 @@ export const UI = {
   pt: { menu: "Guia", heading: "Guia", sub: "Criar um evento e conduzir o torneio", back: "‹ Voltar", lang: "Idioma", updated: "Atualizado conforme as mudanças no app." },
   en: { menu: "Guide", heading: "Guide", sub: "Create an event & run the tournament", back: "‹ Back", lang: "Language", updated: "Kept in sync with app changes." },
   es: { menu: "Guía", heading: "Guía", sub: "Crear un evento y llevar el torneo", back: "‹ Volver", lang: "Idioma", updated: "Se mantiene al día con los cambios del app." },
-  de: { menu: "Anleitung", heading: "Anleitung", sub: "Event anlegen und Turnier durchführen", back: "‹ Zurück", lang: "Sprache", updated: "Wird mit App-Änderungen aktuell gehalten." },
+  de: { menu: "Anleitung", heading: "Anleitung", sub: "Veranstaltung anlegen und Turnier durchführen", back: "‹ Zurück", lang: "Sprache", updated: "Wird mit App-Änderungen aktuell gehalten." },
 };
 
 export const GUIDE = {
@@ -356,111 +356,111 @@ export const GUIDE = {
 
   /* -------------------------------- DEUTSCH -------------------------------- */
   de: {
-    title: "Event anlegen und Turnier durchführen",
-    subtitle: "Von der Anlage des Events bis zu den Endspielen — Spiele, Schiedsrichter, Trikots und Pläne",
-    intro: "Diese Anleitung beschreibt in der richtigen Reihenfolge, wie man in Fistball Arena ein neues Event anlegt, es Schritt für Schritt einrichtet (Kategorien, Teams, Modus, Felder, Spielplan), Spieler und Schiedsrichter importiert, Schiedsrichter und Trikots plant und alles in Fistball Live veröffentlicht.",
+    title: "Veranstaltung anlegen und Turnier durchführen",
+    subtitle: "Von der Anlage der Veranstaltung bis zu den Endspielen — Spiele, Schiedsrichter, Trikots und Pläne",
+    intro: "Diese Anleitung beschreibt in der richtigen Reihenfolge, wie man in Fistball Arena eine neue Veranstaltung anlegt, sie Schritt für Schritt einrichtet (Kategorien, Teams, Modus, Felder, Spielplan), Spieler und Schiedsrichter importiert, Schiedsrichter und Trikots plant und alles in Fistball Live veröffentlicht.",
     sections: [
-      { h: "Teil A — Event anlegen", blocks: [
+      { h: "Teil A — Veranstaltung anlegen", blocks: [
         { t: "ol", start: 1, items: [
-          'In der Eventliste auf <b>„+ New event“</b> klicken (nur für Org-Admins sichtbar). <b>Name</b>, <b>Ort</b> und Daten (<b>Starts</b> / <b>Ends</b>) eingeben und bestätigen. Das Event öffnet sich und hat den Status <b>aktiv</b>.',
-          'Im Event enthält die <b>Seitenleiste links</b> seine Seiten: <b>Games</b>, <b>Standings</b>, <b>Plans</b> und für Admins <b>Schedule</b>, <b>Players &amp; staff</b>, <b>Referees</b>, <b>Uniforms</b> und <b>Settings</b>. Auf dem Handy öffnet sie der Knopf <b>☰</b>.',
-          '<b>Settings</b> öffnen: Das ist eine geführte Einrichtung in <b>9 nummerierten Schritten</b>. Der aktuelle Schritt ist offen, die nächsten werden nach und nach freigeschaltet, erledigte Schritte werden grün. Die Teile B bis D folgen diesen Schritten.',
+          'In der Liste der Veranstaltungen auf <b>„+ Neue Veranstaltung“</b> klicken (nur für Org-Admins sichtbar). <b>Name</b>, <b>Ort</b> und Zeitraum (<b>Beginn</b> / <b>Ende</b>) eingeben und bestätigen. Die Veranstaltung öffnet sich und hat den Status <b>Aktiv</b>.',
+          'In der Veranstaltung enthält die <b>Seitenleiste links</b> ihre Seiten: <b>Spiele</b>, <b>Tabelle</b>, <b>Pläne</b> und für Admins <b>Spielplan</b>, <b>Spieler &amp; Betreuer</b>, <b>Schiedsrichter</b>, <b>Trikots</b> und <b>Einstellungen</b>. Auf dem Handy öffnet sie der Knopf <b>☰</b>.',
+          '<b>Einstellungen</b> öffnen: Das ist eine geführte Einrichtung in <b>9 nummerierten Schritten</b>. Der aktuelle Schritt ist offen, die nächsten werden nach und nach freigeschaltet, erledigte Schritte werden grün. Die Teile B bis D folgen diesen Schritten.',
         ] },
-        { t: "note", text: 'Um ein <b>vergangenes</b> Event mit Ergebnissen zu übernehmen, gibt es für Org-Admins <b>„⬇ Import from Google Sheet“</b> in der Eventliste.' },
+        { t: "note", text: 'Um eine <b>vergangene</b> Veranstaltung mit Ergebnissen zu übernehmen, gibt es für Org-Admins <b>„⬇ Aus Google-Tabelle importieren“</b> in der Liste der Veranstaltungen.' },
       ] },
-      { h: "Teil B — Settings: Details, Kategorien, Teams, Modus (Schritte 1–4)", blocks: [
+      { h: "Teil B — Einstellungen: Angaben, Kategorien, Teams, Modus (Schritte 1–4)", blocks: [
         { t: "ol", start: 1, items: [
-          '<b>Event details</b> — Name, Ort, <b>Adresse der Halle/Anlage</b> (in Fistball Live mit Wegbeschreibung) und Daten. <b>Save details</b> klicken.',
-          '<b>Categories</b> — Chips markieren: <b>Type</b> (National Teams / Clubs), <b>Gender</b> (Men / Women) und optional <b>Ages</b> (U18, U14 … oder „+ custom“). Die App erzeugt jede Kategorie (Typ × Alter × Geschlecht) und zeigt sie als Vorschau. <b>Save categories</b> klicken.',
-          '<b>Teams &amp; categories</b> — jeden Verein / jedes Nationalteam hinzufügen und die Kategorien ankreuzen, in denen es spielt. Optional pro Team: ein <b>Kurzname</b> für den Spielplan, <b>Nation</b> und <b>Verein</b> (Schiedsrichter dieser Nation oder dieses Vereins pfeifen das Team nie; leer = Teamname) und ein <b>Logo</b> („+ logo“, erscheint auf dem Broadcast-Scoreboard). <b>Save teams</b> klicken.',
-          '<b>Format</b> — pro Kategorie: Modus-Variante, <b>Group best of</b> und <b>Finals best of</b> (1/3/5/7) und die Zahl der <b>Groups</b> (1 = jeder gegen jeden, oder aufteilen, z. B. 2 Gruppen à 6). Bei mehreren Gruppen <b>Qualify per group</b> wählen und ob es <b>Placement games</b> (Platz 5 und tiefer) gibt; Teams wechseln die Gruppe über das Auswahlfeld neben dem Namen. <b>View bracket</b> / <b>„👁 Review each bracket“</b> zeigt die K.-o.-Runde und erlaubt Feinanpassungen. Ein <b>⚠️ check</b>-Hinweis markiert einen Modus, den man prüfen sollte. Dann <b>„Looks good — continue“</b>.',
+          '<b>Angaben zur Veranstaltung</b> — Name, Ort, <b>Adresse der Spielstätte</b> (in Fistball Live mit Wegbeschreibung) und Zeitraum. <b>Angaben speichern</b> klicken.',
+          '<b>Kategorien</b> — Optionen antippen: <b>Typ</b> (National Teams / Clubs), <b>Geschlecht</b> (♂ Männer / ♀ Frauen) und optional <b>Altersklassen</b> (U18, U14 … oder „+ eigene“). Die App erzeugt jede Kategorie (Typ × Alter × Geschlecht) und zeigt sie als Vorschau. <b>Kategorien speichern</b> klicken.',
+          '<b>Teams &amp; Kategorien</b> — jeden Verein / jede Nationalmannschaft hinzufügen und die Kategorien ankreuzen, in denen er bzw. sie spielt. Optional pro Team: ein <b>Kurzname</b> für den Spielplan, <b>Nation</b> und <b>Verein</b> (Schiedsrichter dieser Nation oder dieses Vereins pfeifen das Team nie; leer = Teamname) und ein <b>Logo</b> („+ Logo“, erscheint auf der Stream-Anzeigetafel). <b>Teams speichern</b> klicken.',
+          '<b>Modus</b> — pro Kategorie: Modus-Variante, <b>Gruppenspiele Best of</b> und <b>Finalspiele Best of</b> (1/3/5/7) und die Zahl der <b>Gruppen</b> (1 = jeder gegen jeden, oder aufteilen, z. B. 2 Gruppen à 6). Bei mehreren Gruppen <b>Qualifiziert pro Gruppe</b> wählen und ob es <b>Platzierungsspiele</b> (ab Platz 5) gibt; Teams wechseln die Gruppe über das Auswahlfeld neben dem Namen. <b>Turnierbaum ansehen</b> / <b>„👁 Jeden Turnierbaum prüfen“</b> zeigt die K.-o.-Runde und erlaubt Feinanpassungen. Ein Hinweis <b>⚠️ prüfen</b> markiert einen Modus, den man prüfen sollte. Dann <b>„Passt — weiter“</b>.',
         ] },
-        { t: "note", text: 'Die hier eingegebenen Teamnamen sind der Schlüssel für alles Weitere (Kader, Schiri-Konflikte, Trikots). <b>Dieselben Namen</b> wie in den später importierten Excel-Dateien verwenden.' },
+        { t: "note", text: 'Die hier eingegebenen Teamnamen sind der Schlüssel für alles Weitere (Kader, Schiedsrichter-Konflikte, Trikots). <b>Dieselben Namen</b> wie in den später importierten Excel-Dateien verwenden.' },
       ] },
       { h: "Teil C — Felder, Spielplan und Veröffentlichen (Schritte 5–6)", blocks: [
         { t: "ol", start: 1, items: [
-          '<b>Courts &amp; schedule</b> — die <b>Felder</b> und die <b>Tage</b> mit Start- und Endzeit anlegen. Pro Tag lässt sich eine eigene <b>Spieldauer</b> setzen (z. B. Finaltag mit Best of 5), die <b>Phasen</b> ankreuzen, für die er gedacht ist (Gruppen an den ersten Tagen, Halbfinale und Finale am letzten; nichts angekreuzt = jedes Spiel), oder <b>„No new games“</b> markieren. Darunter: <b>Default game duration</b> und <b>Break between games</b>. <b>Save courts &amp; continue</b> klicken.',
-          '<b>Generate &amp; publish schedule</b> — erzeugt alle Spiele aus Kategorien, Teams, Modus und Feldern und verteilt sie auf Tage, Felder und Zeiten. Per Ziehen oder Eintippen anpassen, dann <b>veröffentlichen</b>: Die Spiele erscheinen in der Spielliste und in Fistball Live.',
-          'Spätere Änderungen: Auf der Seite <b>Schedule</b> (Seitenleiste) lässt sich für jedes Spiel Tag · Feld · Zeit setzen. Wenn alles passt, die Spiele <b>neu nummerieren</b>, damit #1…N der zeitlichen Reihenfolge folgen.',
+          '<b>Felder &amp; Zeiten</b> — die <b>Felder</b> und die <b>Tage</b> mit Beginn und Ende anlegen. Pro Tag lässt sich eine eigene <b>Spieldauer</b> setzen (z. B. Finaltag mit Best of 5), die <b>Phasen</b> ankreuzen, für die er gedacht ist (Gruppen an den ersten Tagen, Halbfinale und Finale am letzten; nichts angekreuzt = jedes Spiel), oder <b>„Keine neuen Spiele“</b> markieren. Darunter: <b>Standard-Spieldauer</b> und <b>Pause zwischen Spielen</b>. <b>Felder speichern &amp; weiter</b> klicken.',
+          '<b>Spielplan erstellen &amp; veröffentlichen</b> — erzeugt alle Spiele aus Kategorien, Teams, Modus und Feldern und verteilt sie auf Tage, Felder und Zeiten. Per Ziehen oder Eintippen anpassen, dann <b>veröffentlichen</b>: Die Spiele erscheinen in der Spielliste und in Fistball Live.',
+          'Spätere Änderungen: Auf der Seite <b>Spielplan</b> (Seitenleiste) lässt sich für jedes Spiel Tag · Feld · Uhrzeit setzen. Wenn alles passt, die Spiele <b>neu nummerieren</b>, damit #1…N der zeitlichen Reihenfolge folgen.',
         ] },
-        { t: "note", text: '<b>Ein zweiter Teil später</b> (z. B. Vereine nach den Nationalteams): <b>„+ Add new categories (keep current)“</b> erzeugt nur die Kategorien ohne Spiele, nummeriert sie nach den bestehenden und weicht deren Feldern und Zeiten aus. Tage mit <b>„No new games“</b> bleiben dem bestehenden Teil vorbehalten.' },
+        { t: "note", text: '<b>Ein zweiter Teil später</b> (z. B. Vereine nach den Nationalteams): <b>„+ Neue Kategorien hinzufügen (Bestehendes behalten)“</b> erzeugt nur die Kategorien ohne Spiele, nummeriert sie nach den bestehenden und weicht deren Feldern und Zeiten aus. Tage mit <b>„Keine neuen Spiele“</b> bleiben dem bestehenden Teil vorbehalten.' },
       ] },
       { h: "Teil D — Wie die Endspiele erzeugt werden", blocks: [
-        { t: "p", text: 'Bei einem Modus mit K.-o.-Runde erzeugt der Generator die Endspiele als <b>Turnierbaum</b> mit <b>Platzhaltern</b> („1st Group A“, „Winner SF1“, „Loser SF2“). Der Schritt Format zeigt die Runden pro Kategorie schon vor dem Veröffentlichen:' },
+        { t: "p", text: 'Bei einem Modus mit K.-o.-Runde erzeugt der Generator die Endspiele als <b>Turnierbaum</b> mit <b>Platzhaltern</b> („1st Group A“, „Winner SF1“, „Loser SF2“). Der Schritt Modus zeigt die Runden pro Kategorie schon vor dem Veröffentlichen:' },
         { t: "ul", items: [
-          '<b>Eine Gruppe</b> (jeder gegen jeden) → eine K.-o.-Vorlage passend zur Teamzahl, anpassbar über „View bracket“.',
+          '<b>Eine Gruppe</b> (jeder gegen jeden) → eine K.-o.-Vorlage passend zur Teamzahl, anpassbar über „Turnierbaum ansehen“.',
           '<b>2, 4 oder 8 Gruppen</b> → Überkreuz-K.-o. (Viertelfinale, Halbfinale, Spiel um Platz 3, Finale), auf Wunsch mit Platzierungsspielen ab Platz 5.',
-          'Andere Gruppenzahlen oder eine Variante „round-robin only“ → keine K.-o.-Runde; die Endplatzierung ergibt sich aus den Gruppen.',
+          'Andere Gruppenzahlen oder eine Variante „nur jeder gegen jeden“ → keine K.-o.-Runde; die Endplatzierung ergibt sich aus den Gruppen.',
         ] },
-        { t: "p", text: '<b>Der Turnierbaum füllt sich selbst:</b> Bei jedem abgeschickten Spielbericht setzt die App die qualifizierten Teams in jedes K.-o.-Spiel ein, dessen Teams feststehen. Bleibt ein Platz leer (z. B. nach einem Netzwerkfehler), klicken Admins in der Spielliste auf <b>„↻ Advance bracket“</b>.' },
+        { t: "p", text: '<b>Der Turnierbaum füllt sich selbst:</b> Bei jedem abgeschickten Spielbericht setzt die App die qualifizierten Teams in jedes K.-o.-Spiel ein, dessen Teams feststehen. Bleibt ein Platz leer (z. B. nach einem Netzwerkfehler), klicken Admins in der Spielliste auf <b>„↻ Turnierbaum fortschreiben“</b>.' },
       ] },
       { h: "Teil E — Spieler, Betreuer und Schiedsrichter importieren", blocks: [
         { t: "ol", start: 1, items: [
-          '<b>Settings → Tools (optional) → Import players &amp; staff from Excel</b>: <b>„+ Add file…“</b>, eine Datei pro Kategorie (die „…DATA.xlsx“-Dateien). Für jede Datei die Kategorie wählen — oder <b>„referees only“</b> für eine Datei nur mit Schiedsrichtern. Das bringt Spieler, Betreuer und Schiedsrichter auf einmal; prüfen und speichern.',
-          '<b>Players &amp; staff</b> zeigt das Register pro Team. Rückennummern lassen sich dort ändern und werden sofort gespeichert; in einem schon geöffneten Spielbericht holt <b>„↻ Load roster“</b> die Änderung.',
-          'Erscheint der Kasten <b>„⚠️ Teams in the schedule without players“</b>, passt ein Teamname in den Spielen nicht zum Register (meist Schreibweise): das registrierte Team wählen und <b>Rename in games</b> klicken.',
+          '<b>Einstellungen → Werkzeuge (optional) → Spieler &amp; Betreuer aus Excel importieren</b>: <b>„+ Datei hinzufügen…“</b>, eine Datei pro Kategorie (die „…DATA.xlsx“-Dateien). Für jede Datei die Kategorie wählen — oder <b>„nur Schiedsrichter“</b> für eine Datei nur mit Schiedsrichtern. Das bringt Spieler, Betreuer und Schiedsrichter auf einmal; prüfen und speichern.',
+          '<b>Spieler &amp; Betreuer</b> zeigt das Verzeichnis pro Team. Trikotnummern lassen sich dort ändern und werden sofort gespeichert; in einem schon geöffneten Spielbericht holt <b>„↻ Kader laden“</b> die Änderung.',
+          'Erscheint der Kasten <b>„⚠️ Teams im Spielplan ohne Spieler“</b>, passt ein Teamname in den Spielen nicht zum Verzeichnis (meist die Schreibweise): das registrierte Team wählen und <b>In den Spielen umbenennen</b> klicken.',
         ] },
-        { t: "note", text: '<b>Alt:</b> Der Import aus dem Tab „DB“ eines Google Sheets (Seite Players &amp; staff) ist nur für Kader gedacht, die schon in einer Tabelle stehen. Für ein neues Event Excel verwenden.' },
+        { t: "note", text: '<b>Alt:</b> Der Import aus dem Tab „DB“ einer Google-Tabelle (Seite Spieler &amp; Betreuer) ist nur für Kader gedacht, die schon in einer Tabelle stehen. Für eine neue Veranstaltung Excel verwenden.' },
       ] },
       { h: "Teil F — Logos, Fistball Live und Zugang (Schritte 7–9)", blocks: [
         { t: "ol", start: 1, items: [
-          '<b>Event logos</b> — Event-Logo und Logos der Veranstalter hochladen. Sie erscheinen im Spielbericht (PDF), in der Kopfzeile der App und in Fistball Live.',
-          '<b>Publish to Fistball Live</b> — <b>„Publish to Live“</b> bringt das Event auf die öffentliche Anzeige, <b>„Stop showing“</b> nimmt es wieder herunter. Mehrere Events können gleichzeitig live sein; die Zuschauer wählen das Event in Fistball Live. Darunter stehen die Links für das <b>📺 Broadcast-Overlay</b> (einer pro Feld) für OBS/vMix.',
-          '<b>Access to this event</b> — wer erfassen und verwalten darf; siehe „Zugang“ am Ende dieser Anleitung.',
+          '<b>Veranstaltungslogos</b> — das Veranstaltungslogo und die Logos der Sponsoren hochladen. Sie erscheinen im Spielbericht (PDF), in der Kopfleiste der App und in Fistball Live.',
+          '<b>Auf Fistball Live veröffentlichen</b> — <b>„Auf Live veröffentlichen“</b> bringt die Veranstaltung auf die öffentliche Anzeigetafel, <b>„Nicht mehr zeigen“</b> nimmt sie wieder herunter. Mehrere Veranstaltungen können gleichzeitig live sein; die Zuschauer wählen die Veranstaltung in Fistball Live. Darunter stehen die Links für das <b>📺 Stream-Overlay</b> (einer pro Feld) für OBS/vMix.',
+          '<b>Zugang zu dieser Veranstaltung</b> — wer protokollieren und verwalten darf; siehe „Zugang“ am Ende dieser Anleitung.',
         ] },
       ] },
-      { h: "Teil G — Schiedsrichter und Officials", blocks: [
-        { t: "p", text: 'Auf der Seite <b>Referees</b> wird geplant, wer jedes Spiel leitet: <b>Referee 1</b>, <b>Referee 2</b>, <b>Clerk</b> (Schreiber; auf manchen Feldern ein <b>Clerk 2</b>), <b>Assistant 1 / 2</b> (Linienrichter) und der <b>Court manager</b>. Alles wird sofort gespeichert und füllt den Spielbericht vor.' },
+      { h: "Teil G — Schiedsrichter und Offizielle", blocks: [
+        { t: "p", text: 'Auf der Seite <b>Schiedsrichter</b> wird geplant, wer jedes Spiel leitet: <b>Schiedsrichter 1</b>, <b>Schiedsrichter 2</b>, <b>Schreiber</b> (auf manchen Feldern ein <b>Schreiber 2</b>), <b>Linienrichter 1 / 2</b> und der <b>Feldverantwortliche</b>. Alles wird sofort gespeichert und füllt den Spielbericht vor.' },
         { t: "ol", start: 1, items: [
-          '<b>Officials-Register</b> (gefüllt durch den Excel-Import oder „Add official“): pro Person die <b>Rollen</b> (leer = jede Position), der <b>Rang</b> (Top / Good / Normal, für Schiedsrichter und Linienrichter), <b>Geschlecht</b>, <b>Nation</b>, <b>Verein</b>, ein <b>Linienrichter-Partner</b> (die beiden stehen immer zusammen an den Linien), <b>Max/day</b> und die <b>Verfügbarkeit pro Tag</b>: verfügbar, Reserve oder nicht verfügbar — auf Wunsch nur zwischen zwei Uhrzeiten (das ganze Spiel muss hineinpassen).',
-          '<b>Assignment settings</b>: Referee 2 <b>in jedem Spiel</b> oder <b>nur Halbfinale, Spiel um Platz 3 und Finale</b>; im K.-o. ein Referee 2 aus einer spielenden Nation <b>nur wenn kein neutraler verfügbar ist</b> oder <b>erlaubt</b>; auf welchen Feldern ein <b>Clerk 2</b> gebraucht wird; und ob <b>im Finale die Schiedsrichter an den Linien stehen</b>.',
-          '<b>Spielrang</b>: neben jedem Spiel sein Rang (standardmäßig sind Halbfinale, Spiel um Platz 3 und Finale Top). Die automatische Einteilung gibt ihm einen Referee 1 mit mindestens diesem Rang.',
-          '<b>„Auto-assign…“</b>: Tag wählen (oder alle Tage); die App füllt die leeren Positionen — ohne Konflikte, Linienrichter-Paare zusammen, Einsätze gleichmäßig verteilt, möglichst mit Pausen zwischen den Spielen. Der Vorschlag zeigt vorher/nachher; <b>gespeichert wird erst mit Apply</b>. Von Hand gesetzte Officials bleiben immer. <b>„Clear auto-assigned…“</b> entfernt nur, was die automatische Einteilung eingetragen hat.',
-          'Von Hand: einen Namen in eine Position tippen oder auswählen (markiert mit <b>✎ manual</b>). Die Zähler über der Tabelle zeigen <b>Konflikte</b>, <b>Warnungen</b> und <b>leere Pflichtpositionen</b>; ein Klick zeigt die Liste, oder <b>Only games with issues</b> ankreuzen.',
-          '<b>Load per official</b>: wie viele Spiele jede Person pro Tag und insgesamt hat.',
+          '<b>Offiziellenverzeichnis</b> (gefüllt durch den Excel-Import oder „Offiziellen hinzufügen“): pro Person die <b>Rollen</b> (leer = jede Position), der <b>Rang</b> (Top / Gut / Normal, für Schiedsrichter und Linienrichter), <b>Geschlecht</b>, <b>Nation</b>, <b>Verein</b>, ein <b>Linienrichter-Partner</b> (die beiden stehen immer zusammen an den Linien), <b>Max./Tag</b> und die <b>Verfügbarkeit pro Tag</b>: verfügbar, Reserve oder abwesend — auf Wunsch nur zwischen zwei Uhrzeiten (das ganze Spiel muss hineinpassen).',
+          '<b>Zuweisungseinstellungen</b>: Schiedsrichter 2 <b>in jedem Spiel</b> oder <b>nur Halbfinale, Bronze / Platz 3 und Finale</b>; in K.-o.-Spielen ein Schiedsrichter 2 aus einer beteiligten Nation <b>nur wenn kein neutraler Schiedsrichter verfügbar ist</b> oder <b>erlaubt</b>; auf welchen Feldern ein <b>Schreiber 2</b> gebraucht wird; und ob <b>im Finale die Schiedsrichter Linienrichter sind</b>.',
+          '<b>Spielkategorie</b>: neben jedem Spiel seine Kategorie (standardmäßig sind Halbfinale, Bronze und Finale Top). Die automatische Zuweisung gibt dem Spiel einen Schiedsrichter 1 mit mindestens diesem Rang.',
+          '<b>„Automatisch zuweisen…“</b>: Tag wählen (oder alle Tage); die App füllt die leeren Positionen — ohne Konflikte, Linienrichter-Paare zusammen, Einsätze gleichmäßig verteilt, möglichst mit Pausen zwischen den Spielen. Der Vorschlag zeigt vorher/nachher; <b>gespeichert wird erst mit „Übernehmen“</b>. Von Hand gesetzte Offizielle bleiben immer. <b>„Automatische leeren…“</b> entfernt nur, was die automatische Zuweisung eingetragen hat.',
+          'Von Hand: einen Namen in eine Position tippen oder auswählen (markiert mit <b>✎ manuell</b>). Die Zähler über der Tabelle zeigen <b>Konflikte</b>, <b>Warnungen</b> und <b>leere Pflichtpositionen</b>; ein Klick zeigt die Liste, oder <b>Nur Spiele mit Problemen</b> ankreuzen.',
+          '<b>Einsätze pro Offiziellem</b>: wie viele Spiele jede Person pro Tag und insgesamt hat.',
         ] },
         { t: "warn", title: "Rot = nie erlaubt · Orange = erlaubt mit Warnung", items: [
-          '<b>Rot (Konflikt):</b> ein Schiedsrichter aus der Nation eines Teams (Referee 1 immer; Referee 2 in Gruppenspielen); Schiedsrichter, Linienrichter oder Schreiber aus dem Verein eines Teams; dieselbe Person zweimal zur selben Zeit; an dem Tag oder zu der Zeit nicht verfügbar; eine Rolle, die die Person nicht ausüben darf; 3 oder mehr Spiele am Stück; eine leere Pflichtposition.',
-          '<b>Orange (Warnung):</b> 2 Spiele am Stück (eine Pause nach jedem Spiel ist erwünscht); an dem Tag Reserve; mehr Spiele als Max/day; ein Schiedsrichter unter dem Rang des Spiels; Linienrichter-Paar getrennt; ein K.-o.-Referee 2 aus einer spielenden Nation; bei Vereinswettbewerben ein Schiedsrichter aus der Nation eines Vereins; im Halbfinale oder Finale der Frauen noch keine Schiedsrichterin.',
+          '<b>Rot (Konflikt):</b> ein Schiedsrichter aus der Nation eines Teams (Schiedsrichter 1 immer; Schiedsrichter 2 in Gruppenspielen); Schiedsrichter, Linienrichter oder Schreiber aus dem Verein eines Teams; dieselbe Person zweimal zur selben Zeit; an dem Tag oder zu der Zeit nicht verfügbar; eine Rolle, die die Person nicht ausüben darf; 3 oder mehr Spiele am Stück; eine leere Pflichtposition.',
+          '<b>Orange (Warnung):</b> 2 Spiele am Stück (eine Pause nach jedem Spiel ist erwünscht); an dem Tag Reserve; mehr Spiele als Max./Tag; ein Schiedsrichter unter dem Rang des Spiels; Linienrichter-Paar getrennt; in einem K.-o.-Spiel ein Schiedsrichter 2 aus einer beteiligten Nation; bei Vereinswettbewerben ein Schiedsrichter aus der Nation eines Vereins; im Halbfinale oder Finale der Frauen noch keine Schiedsrichterin.',
         ] },
       ] },
       { h: "Teil H — Trikots", blocks: [
-        { t: "p", text: 'Auf der Seite <b>Uniforms</b> wird festgelegt, welches Trikot jedes Team trägt, damit sich die beiden Teams — und die Schiedsrichter — unterscheiden lassen.' },
+        { t: "p", text: 'Auf der Seite <b>Trikots</b> wird festgelegt, welches Trikot jedes Team trägt, damit sich die beiden Teams — und die Schiedsrichter — unterscheiden lassen.' },
         { t: "ol", start: 1, items: [
-          '<b>Team uniforms</b>: bis zu <b>zwei Trikots</b> pro Team und Kategorie, jedes mit bis zu <b>3 Farben</b> (z. B. Streifen). Auf ein Farbfeld klicken und aus der Palette wählen.',
-          '<b>Referee shirts</b>: die Shirtfarben der Schiedsrichter im Event (mit Namen). Alle Officials eines Spiels tragen eine davon.',
-          '<b>Uniform of the day</b>: Team und Tag (oder jeden Tag) wählen, auf das Trikot klicken — die Knöpfe zeigen seine Farben — und <b>Apply</b>.',
-          '<b>Pro Spiel</b>: bei Team A und Team B auf den Knopf des Trikots (seine Farben) klicken; ein zweiter Klick hebt die Auswahl auf. Das Schiri-Shirt funktioniert genauso.',
-          '<b>Prüfungen</b>: Die Zähler zeigen <b>Farbkonflikte</b> (zwei Trikots zu ähnlich), Spiele, die sich <b>nicht lösen lassen</b>, und Konflikte mit dem Schiri-Shirt. <b>Clash below ΔE</b> legt fest, ab wann Farben als zu ähnlich gelten (höher = strenger). Trikotwechsel eines Teams im Lauf eines Tages werden ebenfalls aufgelistet.',
-          '<b>„Suggest uniforms…“</b>: schlägt für einen oder alle Tage Trikots und Schiri-Shirts mit möglichst wenigen Wechseln vor; prüfen und übernehmen.',
+          '<b>Trikots der Teams</b>: bis zu <b>zwei Trikots</b> pro Team und Kategorie, jedes mit bis zu <b>3 Farben</b> (z. B. Streifen). Auf ein Farbfeld klicken und aus der Palette wählen.',
+          '<b>Schiedsrichter-Shirts</b>: die Shirtfarben der Schiedsrichter bei der Veranstaltung (mit Namen). Alle Offiziellen eines Spiels tragen eine davon.',
+          '<b>Trikot des Tages</b>: Team und Tag (oder alle Tage) wählen, auf das Trikot klicken — die Knöpfe zeigen seine Farben — und <b>Übernehmen</b>.',
+          '<b>Pro Spiel</b>: bei Team A und Team B auf den Knopf des Trikots (seine Farben) klicken; ein zweiter Klick hebt die Auswahl auf. Das Schiedsrichter-Shirt funktioniert genauso.',
+          '<b>Prüfungen</b>: Die Zähler zeigen <b>Farbkonflikte</b> (zwei Trikots zu ähnlich), Spiele, die <b>nicht lösbar</b> sind, und Konflikte mit dem Schiedsrichter-Shirt. <b>Konflikt unter ΔE</b> legt fest, ab wann Farben als zu ähnlich gelten (höher = strenger). Trikotwechsel eines Teams im Lauf eines Tages werden ebenfalls aufgelistet.',
+          '<b>„Trikots vorschlagen…“</b>: schlägt für einen oder alle Tage Trikots und Schiedsrichter-Shirts mit möglichst wenigen Wechseln vor; prüfen und übernehmen.',
         ] },
       ] },
       { h: "Teil I — Pläne", blocks: [
-        { t: "p", text: 'Die Seite <b>Plans</b> steht allen Mitgliedern des Events offen und ist zum Ausdrucken gedacht:' },
+        { t: "p", text: 'Die Seite <b>Pläne</b> steht allen Mitgliedern der Veranstaltung offen und ist zum Ausdrucken gedacht:' },
         { t: "ul", items: [
-          '<b>Teams — uniforms</b>: pro Team seine Spiele mit Feld, Gegner und dem zu tragenden Trikot.',
-          '<b>Officials — day plan</b>: pro Person ihre Spiele des Tages mit Feld, Rolle und Shirtfarbe.',
+          '<b>Teams — Trikots</b>: pro Team seine Spiele mit Feld, Gegner und dem zu tragenden Trikot.',
+          '<b>Offizielle — Tagesplan</b>: pro Person ihre Spiele des Tages mit Feld, Rolle und Shirtfarbe.',
         ] },
         { t: "p", text: '<b>Drucken</b> oder als <b>PDF</b> herunterladen — ein Team bzw. eine Person pro Seite, fertig zum Verteilen.' },
       ] },
       { h: "Teil J — Während des Turniers", blocks: [
         { t: "ol", start: 1, items: [
-          'Jeder Official öffnet ein Spiel aus der Liste → füllt den <b>Spielbericht</b> aus (Aufstellungen aus dem Register vorausgefüllt; <b>„↻ Load roster“</b> holt Änderungen), erfasst Ballwechsel/Sätze und Karten und <b>schickt ab</b>.',
+          'Jeder Offizielle öffnet ein Spiel aus der Liste → füllt den <b>Spielbericht</b> aus (Aufstellungen aus dem Verzeichnis vorausgefüllt; <b>„↻ Kader laden“</b> holt Änderungen), erfasst Ballwechsel/Sätze und Karten und <b>schickt ihn ab</b>.',
           'Bei jedem Speichern/Abschicken gehen Ergebnis und Karten automatisch an Fistball Live (Tabelle, Turnierbaum und Tab <b>Cards</b>), und der Turnierbaum rückt nach.',
-          'Erfassung geprobt? <b>Settings → Event status → „Reset all game reports“</b> setzt alles zurück (Spiele und Kader bleiben); ein einzelnes Spiel: <b>„Reset this report“</b> im Spiel.',
-          'Am Ende <b>Settings → Event status → Archive</b>: Das Event wird schreibgeschützt (<b>Re-activate</b> macht es rückgängig).',
+          'Probelauf gemacht? <b>Einstellungen → Veranstaltungsstatus → „Alle Spielberichte zurücksetzen“</b> setzt alles zurück (Spiele und Kader bleiben); ein einzelnes Spiel: <b>„Spielbericht zurücksetzen“</b> im Spiel.',
+          'Am Ende <b>Einstellungen → Veranstaltungsstatus → Archivieren</b>: Die Veranstaltung wird schreibgeschützt (<b>Wieder aktivieren</b> macht es rückgängig).',
         ] },
       ] },
-      { h: "Zugang — Benutzer hinzufügen (wer erfasst)", blocks: [
-        { t: "p", text: 'Die App <b>legt keine Konten mit Passwort an</b>: Jede Person meldet sich mit ihrem <b>eigenen Google-Konto</b> an („Sign in with Google“). Du <b>berechtigst nur ihre E-Mail</b> in einem Event.' },
+      { h: "Zugang — Benutzer hinzufügen (wer protokolliert)", blocks: [
+        { t: "p", text: 'Die App <b>legt keine Konten mit Passwort an</b>: Jede Person meldet sich mit ihrem <b>eigenen Google-Konto</b> an („Mit Google anmelden“). Du <b>berechtigst nur ihre E-Mail</b> in einer Veranstaltung.' },
         { t: "ol", start: 1, items: [
-          'Event öffnen → <b>Settings → Schritt 9 „Access to this event“</b>.',
-          'Die <b>genaue E-Mail des Google-Kontos</b> eingeben, einen <b>Namen</b> (optional), und eine <b>Rolle</b> wählen: <b>admin</b> (Event verwalten) · <b>official</b> (Spielberichte erfassen) · <b>viewer</b> (nur lesen). <b>Authorize</b> klicken.',
-          'Meldet sich die Person mit dieser E-Mail über <b>Sign in with Google</b> an, ist sie mit dieser Rolle im Event.',
+          'Veranstaltung öffnen → <b>Einstellungen → Schritt 9 „Zugang zu dieser Veranstaltung“</b>.',
+          'Die <b>genaue E-Mail des Google-Kontos</b> eingeben, optional einen <b>Namen</b>, und eine <b>Rolle</b> wählen: <b>Admin</b> (Veranstaltung verwalten) · <b>Offizieller</b> (Spielberichte ausfüllen) · <b>Betrachter</b> (nur lesen). <b>Berechtigen</b> klicken.',
+          'Meldet sich die Person mit dieser E-Mail über <b>Mit Google anmelden</b> an, ist sie mit dieser Rolle in der Veranstaltung.',
         ] },
-        { t: "note", text: 'Das gilt <b>pro Event</b>. <b>„People used in other events“</b> berechtigt jemanden mit einem Klick erneut, und auf <b>Players &amp; staff</b> hat die Karte einer Person <b>„Give access“</b>. Die <b>E-Mail muss exakt</b> zum Google-Konto passen. Wer das Event angelegt hat und <b>Org-Admins</b> haben ohne Eintrag Zugriff auf alles. Das Event muss <b>aktiv</b> sein, um Mitglieder hinzuzufügen/zu entfernen.' },
+        { t: "note", text: 'Das gilt <b>pro Veranstaltung</b>. Unter <b>„Aus dem Verzeichnis“</b> lassen sich Personen aus anderen Veranstaltungen mit einem Klick erneut berechtigen, und auf <b>Spieler &amp; Betreuer</b> hat die Karte einer Person <b>„Zugang geben“</b>. Die <b>E-Mail muss exakt</b> zum Google-Konto passen. Der Ersteller der Veranstaltung und die <b>Org-Admins</b> haben ohne Eintrag Zugriff auf alles. Die Veranstaltung muss <b>aktiv</b> sein, um Mitglieder hinzuzufügen oder zu entfernen.' },
       ] },
     ],
-    summary: "<b>Ablauf in Kürze:</b> Neues Event → Settings: Details → Kategorien → Teams → Modus → Felder → Spielplan erzeugen &amp; veröffentlichen → Excel importieren (Spieler, Betreuer, Schiedsrichter) → Logos → Fistball Live → Zugang → Referees (automatisch einteilen) → Uniforms → Plans (drucken) → Spielberichte erfassen.",
+    summary: "<b>Ablauf in Kürze:</b> Neue Veranstaltung → Einstellungen: Angaben → Kategorien → Teams → Modus → Felder → Spielplan erstellen &amp; veröffentlichen → Excel importieren (Spieler, Betreuer, Schiedsrichter) → Logos → Fistball Live → Zugang → Schiedsrichter (automatisch zuweisen) → Trikots → Pläne (drucken) → Spielberichte ausfüllen.",
   },
 };
