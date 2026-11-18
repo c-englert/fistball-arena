@@ -4,7 +4,7 @@
 import { isPlaceholder } from "../schedule/advance.js";
 import { flagFor, countryName } from "../flags.js";
 import { tRound, tCategory, localeOf } from "../i18n.js";
-import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams, formatOf, playingDays, medalGames } from "./finalReport.js";
+import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams, formatOf, playingDays, medalGames, mediaImpact } from "./finalReport.js";
 
 export const GENDERS = ["Women", "Men", "Other"];
 const MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -213,6 +213,23 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
           rows: Array.from({ length: Math.max(a.length, b.length) }, (_, i) => [a[i] || "", b[i] || ""]) });
       }
       add(tr("Medal matches"), blocks);
+    }
+
+    const media = mediaImpact(fields.media);
+    if (media) {
+      const N = (x, d = 0) => (x == null ? "—" : x.toLocaleString(loc, { minimumFractionDigits: d, maximumFractionDigits: d }));
+      const P = (x, d = 0) => (x == null ? "" : ` (${N(x, d)}%)`);
+      const group = (title, list) => {
+        const rows = list.filter(([, v]) => v != null).map(([k, v, x]) => [k, x || N(v)]);
+        return rows.length ? [{ type: "h3", text: title }, { type: "kv", rows }] : [];
+      };
+      add(tr("Media impact: {platform} Insights", { platform: media.platform }), [
+        ...group(tr("Reach & visibility"), [[tr("Total views"), media.views], [tr("Views from followers"), media.followers, media.followers != null && N(media.followers) + P(media.followersPct)],
+          [tr("Views from non-followers"), media.nonFollowers, media.nonFollowers != null && N(media.nonFollowers) + P(media.nonFollowersPct)]]),
+        ...group(tr("Content & engagement"), [[tr("Posts published"), media.posts], [tr("Likes"), media.likes], [tr("Comments"), media.comments], [tr("Shares"), media.shares], [tr("Total interactions"), media.interactions]]),
+        ...group(tr("Performance metrics"), [[tr("Average views per post"), media.viewsPerPost], [tr("Average likes per post"), media.likesPerPost],
+          [tr("Engagement rate (by views)"), media.engagementRate, media.engagementRate != null && `${N(media.engagementRate, 2)}%`]]),
+      ]);
     }
 
     if (venueMap) add(tr("Venue map"), venueMap.kind === "image" ? [{ type: "image", src: venueMap.data }]

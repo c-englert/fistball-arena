@@ -6,7 +6,9 @@ import { flagFor } from "../flags.js";
 import { isPlaceholder } from "../schedule/advance.js";
 import { reportData, reportModel } from "../report/reportModel.js";
 import { SumulasPDF } from "../pdf/SumulaPDF.jsx";
-import { useT, useLang, LANGS, langName } from "../i18n.js";
+import { useT, useLang, LANGS, langName, localeOf, tCategory } from "../i18n.js";
+import { overlayUrl } from "../broadcast.js";
+import { scheduledStart } from "../report/finalReport.js";
 
 // Reports: the event's final report (print / Word) and every game report
 // (súmula) of one team in a single PDF.
@@ -16,7 +18,7 @@ const short = (n) => String(n || "").split(" - ")[0];
 const byNr = (a, b) => (Number(a.nr) || 0) - (Number(b.nr) || 0);
 
 export default function Reports() {
-  const { event, branding } = useEvent();
+  const { event, branding, eventId } = useEvent();
   const tr = useT();
   const [view, setView] = useState("final");
   const [games, setGames] = useState([]);
@@ -39,11 +41,13 @@ export default function Reports() {
         <span className="filter-pill-group">
           <button className={`filter-pill ${view === "final" ? "active" : ""}`} onClick={() => setView("final")}>{tr("Event final report")}</button>
           <button className={`filter-pill ${view === "team" ? "active" : ""}`} onClick={() => setView("team")}>{tr("Game reports by team")}</button>
+          <button className={`filter-pill ${view === "links" ? "active" : ""}`} onClick={() => setView("links")}>{tr("Broadcast links")}</button>
         </span>
       </div>
       {view === "final"
         ? <FinalReport event={event} branding={branding} games={games} results={results} rosters={rosters} refs={refs} reports={reports} />
-        : <TeamReports event={event} branding={branding} games={games} reports={reports} reload={loadReports} />}
+        : view === "links" ? <BroadcastList eventId={eventId} event={event} games={games} />
+          : <TeamReports event={event} branding={branding} games={games} reports={reports} reload={loadReports} />}
     </>
   );
 }
@@ -74,6 +78,7 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
   useEffect(() => subscribeTeamLogos(setTeamLogos), []);
   useEffect(() => { if (!dirty) setFields({ host: "", technical: "", notes: "", ...(event?.finalReport || {}) }); }, [event?.finalReport]);
   const set = (k) => (e) => { setFields((f) => ({ ...f, [k]: e.target.value })); setDirty(true); };
+  const setMedia = (k) => (e) => { setFields((f) => ({ ...f, media: { ...(f.media || {}), [k]: e.target.value } })); setDirty(true); };
   // Final remarks are written per report language; the report falls back to another language's text.
   const notesOf = (l) => (fields.notesByLang || {})[l] ?? (l === "en" ? fields.notes : undefined) ?? "";
   const setNotes = (text) => { setFields((f) => ({ ...f, notesByLang: { ...(f.notesByLang || {}), [lang]: text } })); setDirty(true); };
@@ -93,7 +98,7 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
     setTranslating(false);
   };
   const save = async () => {
-    try { await saveFinalReportFields({ host: fields.host || "", technical: fields.technical || "", notes: fields.notes || "", notesByLang: fields.notesByLang || {} }); setDirty(false); }
+    try { await saveFinalReportFields({ host: fields.host || "", technical: fields.technical || "", notes: fields.notes || "", notesByLang: fields.notesByLang || {}, media: fields.media || {} }); setDirty(false); }
     catch (e) { alert(tr("Could not save: {e}", { e: String(e?.message || e) })); }
   };
 
@@ -149,6 +154,16 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
             <button className="btn sm" onClick={() => setNotes(otherNotes[0].text)}>{tr("Copy to edit")}</button>
           </p>
         )}
+        <fieldset className="fr-media">
+          <legend>{tr("Media impact (social media insights, typed in after the event)")}</legend>
+          <div className="fr-media-grid">
+            {[["platform", "Platform", "Instagram"], ["views", "Total views"], ["followers", "Views from followers"], ["posts", "Posts published"],
+              ["likes", "Likes"], ["comments", "Comments"], ["shares", "Shares"]].map(([k, label, ph]) => (
+              <label key={k}>{tr(label)}<input className="fr-input" inputMode={k === "platform" ? undefined : "numeric"} value={fields.media?.[k] || ""} onChange={setMedia(k)} placeholder={ph || ""} /></label>
+            ))}
+          </div>
+          <p className="muted-sm">{tr("Non-followers, percentages, total interactions, averages per post and the engagement rate are calculated.")}</p>
+        </fieldset>
         <div className="fr-actions">
           <button className="btn sm primary" onClick={save} disabled={!dirty}>{dirty ? tr("Save") : tr("Saved")}</button>
           <span className="spacer" />
@@ -296,5 +311,85 @@ function TeamReports({ event, branding, games, reports, reload }) {
         </tbody>
       </table>
     </section>
+  );
+}
+
+/* ---------------- broadcast links of a day ---------------- */
+// Every game's broadcast scoreboard link for one day (or the whole event),
+// to print / save as PDF or paste into a spreadsheet instead of copying them one by one.
+function BroadcastList({ eventId, event, games }) {
+  const tr = useT();
+  const [lang] = useLang();
+  const loc = localeOf(lang);
+  const rows = useMemo(() => games
+    .map((g) => ({ g, start: scheduledStart(g.date, g.time) }))
+    .sort((a, b) => (a.start?.getTime() ?? Infinity) - (b.start?.getTime() ?? Infinity) || String(a.g.court).localeCompare(String(b.g.court), undefined, { numeric: true }) || byNr(a.g, b.g))
+    .map(({ g, start }) => ({
+      id: g.id, start, nr: g.nr ?? "", time: g.time || "", court: g.court ?? "",
+      day: start ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}` : String(g.date || ""),
+      category: tCategory(lang, g.category || ""), round: g.round || "",
+      match: `${short(g.teamA)} ${tr("vs")} ${short(g.teamB)}`,
+      url: overlayUrl(eventId, { game: g.id }),
+    })), [games, eventId, lang, tr]);
+  const days = [...new Set(rows.map((r) => r.day))];
+  const [day, setDay] = useState("");
+  const pick = day && days.includes(day) ? day : days[0] || "all";
+  const list = pick === "all" ? rows : rows.filter((r) => r.day === pick);
+  const dayName = (key) => {
+    const r = rows.find((x) => x.day === key);
+    return r?.start ? r.start.toLocaleDateString(loc, { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }) : key || "—";
+  };
+  const head = [tr("Day"), tr("Time"), tr("Court"), tr("Game"), tr("Category"), tr("Match"), tr("Broadcast link")];
+  const cells = (r) => [dayName(r.day), r.time, r.court, r.nr, r.category, r.match, r.url];
+  const copyAll = async () => {
+    const tsv = [head, ...list.map(cells)].map((l) => l.map((c) => String(c ?? "").replace(/\s+/g, " ")).join("\t")).join("\n");
+    try { await navigator.clipboard.writeText(tsv); alert(tr("{n} links copied — paste them into Excel or Google Sheets.", { n: list.length })); }
+    catch (_) { window.prompt(tr("Copy the link:"), tsv); }
+  };
+  const csv = () => {
+    const q = (c) => `"${String(c ?? "").replace(/"/g, '""')}"`;
+    const blob = new Blob(["\ufeff" + [head, ...list.map(cells)].map((l) => l.map(q).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${fileSafe(`Broadcast-links-${event?.name || "event"}-${pick}`)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+  return (
+    <>
+      <section className="card no-print">
+        <div className="fr-actions" style={{ flexWrap: "wrap", gap: 8 }}>
+          <label>{tr("Day")}{" "}
+            <select className="lang-pick" value={pick} onChange={(e) => setDay(e.target.value)}>
+              {days.map((d) => <option key={d} value={d}>{dayName(d)}</option>)}
+              <option value="all">{tr("Whole event")}</option>
+            </select>
+          </label>
+          <span className="spacer" />
+          <button className="btn sm" onClick={() => window.print()} disabled={!list.length}>{tr("Print / PDF")}</button>
+          <button className="btn sm" onClick={copyAll} disabled={!list.length}>{tr("Copy for Excel")}</button>
+          <button className="btn sm" onClick={csv} disabled={!list.length}>{tr("Download CSV")}</button>
+        </div>
+        <p className="muted-sm">{tr("Each link shows the live scoreboard of that game (OBS/vMix browser source) — the same link as “📺 Broadcast link” in the game report.")}</p>
+      </section>
+      <section className="card fr-doc">
+        <h2>{tr("Broadcast links")} — {event?.name || ""}</h2>
+        <p className="muted-sm">{pick === "all" ? tr("Whole event") : dayName(pick)} · {tr("{n} games", { n: list.length })}</p>
+        {!list.length ? <p className="muted-sm">{tr("No games yet.")}</p> : (
+          <table className="fr-table bl-table">
+            <thead><tr>{(pick === "all" ? head : head.slice(1)).map((h) => <th key={h}>{h}</th>)}</tr></thead>
+            <tbody>
+              {list.map((r) => (
+                <tr key={r.id}>
+                  {pick === "all" && <td>{dayName(r.day)}</td>}
+                  <td>{r.time}</td><td>{r.court}</td><td>{r.nr}</td><td>{r.category}</td><td>{r.match}</td>
+                  <td className="bl-url"><a href={r.url} target="_blank" rel="noreferrer">{r.url}</a></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </>
   );
 }

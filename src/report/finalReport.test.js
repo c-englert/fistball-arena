@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { finalRanking, placeOfRound, genderOf, gameMinutes, durationByBestOf, cardsByCategory, scheduledStart, formatOf, playingDays, stageOf, medalGames } from "./finalReport.js";
+import { finalRanking, placeOfRound, genderOf, gameMinutes, durationByBestOf, cardsByCategory, scheduledStart, formatOf, playingDays, stageOf, medalGames, mediaImpact } from "./finalReport.js";
 
 const R = (round, a, b, sa, sb, over = {}) => ({ round, teamA: a, teamB: b, setsA: sa, setsB: sb, pointsA: sa * 11, pointsB: sb * 11, status: "Finished", ...over });
 
@@ -103,4 +103,16 @@ test("medalGames: gold before bronze, with set scores", () => {
   const g = medalGames(m);
   assert.deepEqual(g.map((x) => x.round), ["Gold medal match", "Bronze medal match"]);
   assert.deepEqual(g[1].sets, ["11/4", "7/11", "11/8", "11/1"]);
+});
+
+test("mediaImpact derives shares, interactions and per-post figures", () => {
+  const m = mediaImpact({ views: "268,227", followers: "160962", posts: 37, likes: 4800, comments: 74, shares: 607 });
+  assert.equal(m.platform, "Instagram");
+  assert.equal(m.nonFollowers, 107265);
+  assert.equal(Math.round(m.followersPct), 60);
+  assert.equal(m.interactions, 5481);
+  assert.equal(Math.round(m.viewsPerPost), 7249);
+  assert.equal(Math.round(m.likesPerPost), 130);
+  assert.equal(m.engagementRate.toFixed(2), "2.04");
+  assert.equal(mediaImpact({ platform: "Instagram" }), null);
 });

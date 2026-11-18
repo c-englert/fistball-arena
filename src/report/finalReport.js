@@ -192,3 +192,24 @@ export function medalGames(results) {
     }))
     .sort((a, b) => a.place - b.place);
 }
+
+// Media impact (social media insights typed in by the event head). Inputs:
+// { platform, views, followers (views from followers), posts, likes, comments, shares }.
+// Everything else is derived. Returns null when nothing was typed.
+export function mediaImpact(media) {
+  const n = (v) => { const x = Number(String(v ?? "").replace(/[^\d.-]/g, "")); return String(v ?? "").trim() !== "" && Number.isFinite(x) ? x : null; };
+  const m = media || {};
+  const views = n(m.views), followers = n(m.followers), posts = n(m.posts), likes = n(m.likes), comments = n(m.comments), shares = n(m.shares);
+  if ([views, followers, posts, likes, comments, shares].every((x) => x == null)) return null;
+  const nonFollowers = views != null && followers != null ? Math.max(0, views - followers) : null;
+  const pct = (x) => (views && x != null ? (x / views) * 100 : null);
+  const interactions = [likes, comments, shares].some((x) => x != null) ? (likes || 0) + (comments || 0) + (shares || 0) : null;
+  return {
+    platform: String(m.platform || "").trim() || "Instagram",
+    views, followers, nonFollowers, followersPct: pct(followers), nonFollowersPct: pct(nonFollowers),
+    posts, likes, comments, shares, interactions,
+    viewsPerPost: posts && views != null ? views / posts : null,
+    likesPerPost: posts && likes != null ? likes / posts : null,
+    engagementRate: views && interactions != null ? (interactions / views) * 100 : null,
+  };
+}

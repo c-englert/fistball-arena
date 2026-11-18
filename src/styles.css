@@ -1173,3 +1173,10 @@ tr.fr-skip td { opacity: .45; }
 .lang-pick { font: inherit; font-size: 13px; font-weight: 700; padding: 5px 6px; border-radius: 8px; border: 1px solid var(--line, #d6d9e0); background: var(--card, #fff); color: inherit; cursor: pointer; }
 .sb-foot .lang-pick { background: transparent; color: #fff; border-color: rgba(255,255,255,.3); padding: 3px 4px; font-size: 12px; }
 .sb-foot .lang-pick option { color: #111; }
+.fr-media { border: 1px solid var(--line, #d6dce4); border-radius: 8px; padding: 8px 12px 4px; margin: 10px 0; }
+.fr-media legend { font-weight: 600; padding: 0 4px; }
+.fr-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.fr-media-grid label { display: flex; flex-direction: column; font-size: 13px; }
+.bl-table { width: 100%; font-size: 13px; }
+.bl-table td.bl-url { word-break: break-all; font-size: 12px; }
+@media print { .bl-table { font-size: 10px; } .bl-table td.bl-url { font-size: 9px; } }
