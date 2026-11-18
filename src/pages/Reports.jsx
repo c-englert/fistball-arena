@@ -343,7 +343,7 @@ function BroadcastList({ eventId, event, games }) {
       id: g.id, start, nr: g.nr ?? "", time: g.time || "", court: g.court ?? "",
       day: start ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}` : String(g.date || ""),
       category: tCategory(lang, g.category || ""), round: g.round || "",
-      match: `${short(g.teamA)} ${tr("vs")} ${short(g.teamB)}`,
+      match: `${short(g.teamA?.name ?? g.teamA)} ${tr("vs")} ${short(g.teamB?.name ?? g.teamB)}`,
       url: overlayUrl(eventId, { game: g.id }),
     })), [games, eventId, lang, tr]);
   const days = [...new Set(rows.map((r) => r.day))];
