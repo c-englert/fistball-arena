@@ -1180,3 +1180,4 @@ tr.fr-skip td { opacity: .45; }
 .bl-table { width: 100%; font-size: 13px; }
 .bl-table td.bl-url { word-break: break-all; font-size: 12px; }
 @media print { .bl-table { font-size: 10px; } .bl-table td.bl-url { font-size: 9px; } }
+.fr-doc .fr-kv thead th.fr-kv-title { background: #1f3a5f; color: #fff; width: auto; text-align: left; }

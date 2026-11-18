@@ -9,6 +9,7 @@ import { SumulasPDF } from "../pdf/SumulaPDF.jsx";
 import { useT, useLang, LANGS, langName, localeOf, tCategory } from "../i18n.js";
 import { overlayUrl } from "../broadcast.js";
 import { scheduledStart } from "../report/finalReport.js";
+import { dayKey } from "../report/weather.js";
 
 // Reports: the event's final report (print / Word) and every game report
 // (súmula) of one team in a single PDF.
@@ -78,6 +79,8 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
   useEffect(() => subscribeTeamLogos(setTeamLogos), []);
   useEffect(() => { if (!dirty) setFields({ host: "", technical: "", notes: "", ...(event?.finalReport || {}) }); }, [event?.finalReport]);
   const set = (k) => (e) => { setFields((f) => ({ ...f, [k]: e.target.value })); setDirty(true); };
+  const setStream = (k) => (e) => { setFields((f) => ({ ...f, stream: { ...(f.stream || {}), [k]: e.target.value } })); setDirty(true); };
+  const setStreamDay = (key) => (e) => { setFields((f) => ({ ...f, stream: { ...(f.stream || {}), days: { ...(f.stream?.days || {}), [key]: e.target.value } } })); setDirty(true); };
   const setMedia = (k) => (e) => { setFields((f) => ({ ...f, media: { ...(f.media || {}), [k]: e.target.value } })); setDirty(true); };
   // Final remarks are written per report language; the report falls back to another language's text.
   const notesOf = (l) => (fields.notesByLang || {})[l] ?? (l === "en" ? fields.notes : undefined) ?? "";
@@ -98,7 +101,7 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
     setTranslating(false);
   };
   const save = async () => {
-    try { await saveFinalReportFields({ host: fields.host || "", technical: fields.technical || "", notes: fields.notes || "", notesByLang: fields.notesByLang || {}, media: fields.media || {} }); setDirty(false); }
+    try { await saveFinalReportFields({ host: fields.host || "", technical: fields.technical || "", notes: fields.notes || "", notesByLang: fields.notesByLang || {}, media: fields.media || {}, stream: fields.stream || {} }); setDirty(false); }
     catch (e) { alert(tr("Could not save: {e}", { e: String(e?.message || e) })); }
   };
 
@@ -164,6 +167,18 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
           </div>
           <p className="muted-sm">{tr("Non-followers, percentages, total interactions, averages per post and the engagement rate are calculated.")}</p>
         </fieldset>
+        <fieldset className="fr-media">
+          <legend>{tr("Livestream views per day")}</legend>
+          <div className="fr-media-grid">
+            <label>{tr("Platform")}<input className="fr-input" value={fields.stream?.platform || ""} onChange={setStream("platform")} placeholder="YouTube" /></label>
+            {data.days.map((d, i) => {
+              const key = dayKey(d.day);
+              return <label key={key}>{tr("Day {n}", { n: i + 1 })} · {d.day.toLocaleDateString(localeOf(lang), { day: "2-digit", month: "2-digit" })}
+                <input className="fr-input" inputMode="numeric" value={fields.stream?.days?.[key] || ""} onChange={setStreamDay(key)} /></label>;
+            })}
+          </div>
+          <p className="muted-sm">{data.days.length ? tr("Total, most watched day, average per day and the total media impact (social media + livestream views) are calculated.") : tr("The playing days appear here once games have been played.")}</p>
+        </fieldset>
         <div className="fr-actions">
           <button className="btn sm primary" onClick={save} disabled={!dirty}>{dirty ? tr("Save") : tr("Saved")}</button>
           <span className="spacer" />
@@ -200,7 +215,7 @@ function Block({ b }) {
   if (b.type === "p") return <p className={b.small ? "fr-foot" : ""}>{b.text}</p>;
   if (b.type === "h3") return <h3>{b.text}</h3>;
   if (b.type === "kv") return (
-    <table className="fr-table fr-kv"><tbody>{b.rows.map(([k, v]) => <tr key={k}><th>{k}</th><td>{v}</td></tr>)}</tbody></table>
+    <table className="fr-table fr-kv">{b.title && <thead><tr><th colSpan={2} className="fr-kv-title">{b.title}</th></tr></thead>}<tbody>{b.rows.map(([k, v]) => <tr key={k}><th>{k}</th><td>{v}</td></tr>)}</tbody></table>
   );
   if (b.type === "table") return (
     <table className="fr-table fr-wide">

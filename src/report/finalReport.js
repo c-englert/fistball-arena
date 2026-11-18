@@ -213,3 +213,17 @@ export function mediaImpact(media) {
     engagementRate: views && interactions != null ? (interactions / views) * 100 : null,
   };
 }
+
+// Livestream views per playing day (typed in), with total, most watched day and
+// average per day. stream: { platform, days: { "<dayKey>": views } }; keys: the
+// event's playing days in order. Returns null when no day has a number.
+export function streamImpact(stream, keys) {
+  const n = (v) => { const x = Number(String(v ?? "").replace(/[^\d.-]/g, "")); return String(v ?? "").trim() !== "" && Number.isFinite(x) ? x : null; };
+  const s = stream || {};
+  const days = keys.map((key, i) => ({ n: i + 1, key, views: n(s.days?.[key]) }));
+  const counted = days.filter((d) => d.views != null);
+  if (!counted.length) return null;
+  const total = counted.reduce((a, d) => a + d.views, 0);
+  const best = counted.reduce((a, d) => (d.views > a.views ? d : a));
+  return { platform: String(s.platform || "").trim() || "YouTube", days, total, best, avg: total / counted.length };
+}

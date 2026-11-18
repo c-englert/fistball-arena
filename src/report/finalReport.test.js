@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { finalRanking, placeOfRound, genderOf, gameMinutes, durationByBestOf, cardsByCategory, scheduledStart, formatOf, playingDays, stageOf, medalGames, mediaImpact } from "./finalReport.js";
+import { finalRanking, placeOfRound, genderOf, gameMinutes, durationByBestOf, cardsByCategory, scheduledStart, formatOf, playingDays, stageOf, medalGames, mediaImpact, streamImpact } from "./finalReport.js";
 
 const R = (round, a, b, sa, sb, over = {}) => ({ round, teamA: a, teamB: b, setsA: sa, setsB: sb, pointsA: sa * 11, pointsB: sb * 11, status: "Finished", ...over });
 
@@ -115,4 +115,14 @@ test("mediaImpact derives shares, interactions and per-post figures", () => {
   assert.equal(Math.round(m.likesPerPost), 130);
   assert.equal(m.engagementRate.toFixed(2), "2.04");
   assert.equal(mediaImpact({ platform: "Instagram" }), null);
+});
+
+test("streamImpact totals the days, finds the most watched and averages", () => {
+  const keys = ["d1", "d2", "d3", "d4", "d5"];
+  const s = streamImpact({ days: { d1: "4,900", d2: 3400, d3: 3200, d4: 3100, d5: 6300 } }, keys);
+  assert.equal(s.platform, "YouTube");
+  assert.equal(s.total, 20900);
+  assert.deepEqual([s.best.n, s.best.views], [5, 6300]);
+  assert.equal(s.avg, 4180);
+  assert.equal(streamImpact({ days: {} }, keys), null);
 });

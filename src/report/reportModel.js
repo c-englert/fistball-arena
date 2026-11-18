@@ -4,7 +4,8 @@
 import { isPlaceholder } from "../schedule/advance.js";
 import { flagFor, countryName } from "../flags.js";
 import { tRound, tCategory, localeOf } from "../i18n.js";
-import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams, formatOf, playingDays, medalGames, mediaImpact } from "./finalReport.js";
+import { dayKey } from "./weather.js";
+import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams, formatOf, playingDays, medalGames, mediaImpact, streamImpact } from "./finalReport.js";
 
 export const GENDERS = ["Women", "Men", "Other"];
 const MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -215,21 +216,46 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
       add(tr("Medal matches"), blocks);
     }
 
+    // Media impact: social media insights + livestream views per day, then the total.
     const media = mediaImpact(fields.media);
-    if (media) {
+    const stream = streamImpact(fields.stream, data.days.map((d) => dayKey(d.day)));
+    if (media || stream) {
       const N = (x, d = 0) => (x == null ? "—" : x.toLocaleString(loc, { minimumFractionDigits: d, maximumFractionDigits: d }));
       const P = (x, d = 0) => (x == null ? "" : ` (${N(x, d)}%)`);
       const group = (title, list) => {
         const rows = list.filter(([, v]) => v != null).map(([k, v, x]) => [k, x || N(v)]);
-        return rows.length ? [{ type: "h3", text: title }, { type: "kv", rows }] : [];
+        return rows.length ? [{ type: "kv", title, rows }] : [];
       };
-      add(tr("Media impact: {platform} Insights", { platform: media.platform }), [
+      const blocks = [];
+      if (media) blocks.push(
+        { type: "h3", text: tr("{platform} Insights", { platform: media.platform }) },
         ...group(tr("Reach & visibility"), [[tr("Total views"), media.views], [tr("Views from followers"), media.followers, media.followers != null && N(media.followers) + P(media.followersPct)],
           [tr("Views from non-followers"), media.nonFollowers, media.nonFollowers != null && N(media.nonFollowers) + P(media.nonFollowersPct)]]),
         ...group(tr("Content & engagement"), [[tr("Posts published"), media.posts], [tr("Likes"), media.likes], [tr("Comments"), media.comments], [tr("Shares"), media.shares], [tr("Total interactions"), media.interactions]]),
         ...group(tr("Performance metrics"), [[tr("Average views per post"), media.viewsPerPost], [tr("Average likes per post"), media.likesPerPost],
           [tr("Engagement rate (by views)"), media.engagementRate, media.engagementRate != null && `${N(media.engagementRate, 2)}%`]]),
-      ]);
+      );
+      if (stream) {
+        const dateOf = (i) => data.days[i].day.toLocaleDateString(loc, { weekday: "short", day: "2-digit", month: "2-digit" });
+        blocks.push(
+          { type: "h3", text: tr("{platform} livestream views", { platform: stream.platform }) },
+          { type: "table", num: [2], head: [tr("Day"), tr("Date"), tr("Views")],
+            rows: stream.days.map((d, i) => [tr("Day {n}", { n: d.n }), dateOf(i), N(d.views)]), total: [tr("Total"), "", N(stream.total)] },
+          { type: "kv", rows: [
+            [tr("Most watched day"), `${tr("Day {n}", { n: stream.best.n })} (${tr("{n} views", { n: N(stream.best.views) })})`],
+            [tr("Average views per day"), N(stream.avg)],
+          ] },
+        );
+      }
+      if (media?.views != null && stream) blocks.push(
+        { type: "h3", text: tr("Total media impact") },
+        { type: "kv", rows: [
+          [tr("{platform} views", { platform: media.platform }), N(media.views)],
+          [tr("{platform} livestream views", { platform: stream.platform }), N(stream.total)],
+          [tr("Total views"), N(media.views + stream.total)],
+        ] },
+      );
+      add(tr("Media impact"), blocks);
     }
 
     if (venueMap) add(tr("Venue map"), venueMap.kind === "image" ? [{ type: "image", src: venueMap.data }]

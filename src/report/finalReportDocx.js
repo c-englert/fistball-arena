@@ -3,7 +3,7 @@
 //
 // model: { title, eventName, lines: [string], eventLogo, promoters: [dataUrl],
 //          sections: [{ heading, newPage?, blocks: [...] }] }
-// blocks: { type: "p", text, small? } · { type: "h3", text } · { type: "kv", rows: [[k, v]] }
+// blocks: { type: "p", text, small? } · { type: "h3", text } · { type: "kv", title?, rows: [[k, v]] }
 //         { type: "table", head: [..], rows: [[cell]], total?: [cell], num: [colIdx] }
 //         { type: "ranks", items: [{ title, rows: [{ pos, team, logo }] }] } · { type: "image", src }
 // cell: string | { text, logo }
@@ -87,10 +87,11 @@ export async function buildFinalReportDocx(model) {
     borders: gridBorders,
     columnWidths: [2800, 6800],
     layout: TableLayoutType.FIXED,
-    rows: b.rows.map(([k, v]) => new TableRow({ children: [
+    rows: [...(b.title ? [new TableRow({ tableHeader: true, children: [new TableCell({ columnSpan: 2, shading: { type: ShadingType.CLEAR, fill: NAVY, color: "auto" }, margins, children: [new Paragraph({ children: [run(b.title, { bold: true, color: "FFFFFF", size: 20 })] })] })] })] : []),
+      ...b.rows.map(([k, v]) => new TableRow({ children: [
       new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { type: ShadingType.CLEAR, fill: LIGHT, color: "auto" }, margins, children: [new Paragraph({ children: [run(k, { bold: true, color: NAVY, size: 20 })] })] }),
       new TableCell({ width: { size: 70, type: WidthType.PERCENTAGE }, margins, children: [new Paragraph({ children: [run(v, { size: 20 })] })] }),
-    ] })),
+    ] }))],
   });
   const rankTable = (it) => new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
