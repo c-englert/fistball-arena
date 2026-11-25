@@ -151,7 +151,7 @@ export default {
     "Match & card history": "Historial de partidos y tarjetas", "No matches recorded for {team} yet.": "Aún no hay partidos registrados para {team}.",
     "W": "G", "L": "P",
     "Give access": "Dar acceso", "Authorize this person as a member of the event.": "Autoriza a esta persona como miembro del evento.",
-    "admin": "administrador", "official": "oficial", "viewer": "lector", "Authorize": "Autorizar",
+    "admin": "administrador", "official": "oficial", "viewer": "lector", "scout": "scout", "Authorize": "Autorizar",
     // Excel import
     "Delete ALL {n} rosters currently saved in this event? This only clears the players & staff registry — games and results are untouched. Cannot be undone.":
       "¿Borrar TODAS las {n} listas guardadas en este evento? Solo se vacía el registro de jugadores y cuerpo técnico — partidos y resultados no se tocan. No se puede deshacer.",
@@ -323,7 +323,7 @@ export default {
     "Match & card history": "Spiel- & Kartenhistorie", "No matches recorded for {team} yet.": "Noch keine Spiele für {team} erfasst.",
     "W": "S", "L": "N",
     "Give access": "Zugang geben", "Authorize this person as a member of the event.": "Diese Person als Mitglied des Events berechtigen.",
-    "admin": "Admin", "official": "Offizieller", "viewer": "Betrachter", "Authorize": "Berechtigen",
+    "admin": "Admin", "official": "Offizieller", "viewer": "Betrachter", "scout": "Scout", "Authorize": "Berechtigen",
     "Delete ALL {n} rosters currently saved in this event? This only clears the players & staff registry — games and results are untouched. Cannot be undone.":
       "ALLE {n} in diesem Event gespeicherten Kader löschen? Nur das Verzeichnis Spieler & Betreuer wird geleert — Spiele und Ergebnisse bleiben unberührt. Kann nicht rückgängig gemacht werden.",
     "Clearing registry…": "Leere Verzeichnis…", "Registry cleared.": "Verzeichnis geleert.", "Clear failed: {err}": "Leeren fehlgeschlagen: {err}",
@@ -494,7 +494,7 @@ export default {
     "Match & card history": "Histórico de jogos e cartões", "No matches recorded for {team} yet.": "Ainda não há jogos registrados para {team}.",
     "W": "V", "L": "D",
     "Give access": "Dar acesso", "Authorize this person as a member of the event.": "Autorize esta pessoa como membro do evento.",
-    "admin": "administrador", "official": "oficial", "viewer": "leitor", "Authorize": "Autorizar",
+    "admin": "administrador", "official": "oficial", "viewer": "leitor", "scout": "scout", "Authorize": "Autorizar",
     "Delete ALL {n} rosters currently saved in this event? This only clears the players & staff registry — games and results are untouched. Cannot be undone.":
       "Excluir TODAS as {n} listas salvas neste evento? Só o cadastro de jogadores e comissão técnica é limpo — jogos e resultados não são alterados. Não pode ser desfeito.",
     "Clearing registry…": "Limpando cadastro…", "Registry cleared.": "Cadastro limpo.", "Clear failed: {err}": "Falha ao limpar: {err}",

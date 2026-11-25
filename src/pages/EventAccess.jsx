@@ -3,7 +3,7 @@ import { subscribeMembers, addMember, removeMember, subscribePeople, subscribeOr
 import { useEvent } from "../eventContext.js";
 import { useT, tNow } from "../i18n.js";
 
-const ROLES = ["admin", "official", "viewer"];
+const ROLES = ["admin", "official", "scout", "viewer"];
 
 // Translated rich text: **bold** markers become <b>.
 const rich = (s) => String(s).split(/(\*\*[^*]+\*\*)/).map((p, i) => (p.startsWith("**") ? <b key={i}>{p.slice(2, -2)}</b> : p));
@@ -112,7 +112,7 @@ export default function EventAccess({ me }) {
               <button className="btn sm" style={{ marginLeft: 4 }} onClick={() => onEmail(memberSuggest)}>{tr("Use {email}", { email: memberSuggest })}</button>
             </div>
           )}
-          <p className="muted-sm">{tr("admin = manage event · official = fill game reports · viewer = read only.")} {status}</p>
+          <p className="muted-sm">{tr("admin = manage event · official = fill game reports · scout = MDP point scouting · viewer = read only.")} {status}</p>
         </>
       )}
 

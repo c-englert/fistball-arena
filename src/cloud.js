@@ -1132,6 +1132,24 @@ export async function saveFinalReportFields(fields) {
   await updateDoc(doc(db, "events", reqEid()), { finalReport: fields });
 }
 
+// MDP scouting of a game (how each point was decided). Public read so the
+// Fistball Live statistics page can show it; written by admins, officials and scouts.
+export function subscribeMdp(gameId, cb) {
+  const eid = reqEid();
+  return onSnapshot(edoc("mdp", gameId),
+    (d) => { if (eid === _eid) cb(d.exists() ? d.data() : { log: [], serve: {} }); },
+    (err) => console.warn("MDP unavailable:", err?.code || err));
+}
+export async function saveMdp(gameId, data, by) {
+  await setDoc(edoc("mdp", gameId), { log: data.log || [], serve: data.serve || {}, updatedAt: serverTimestamp(), updatedBy: by || null });
+}
+export function subscribeAllMdp(cb) {
+  const eid = reqEid();
+  return onSnapshot(ecol("mdp"),
+    (snap) => { if (eid === _eid) cb(Object.fromEntries(snap.docs.map((d) => [d.id, d.data()]))); },
+    (err) => console.warn("MDP unavailable:", err?.code || err));
+}
+
 export function subscribeReport(gameId, cb) {
   const eid = reqEid();
   return onSnapshot(edoc("reports", gameId),

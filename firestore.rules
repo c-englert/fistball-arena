@@ -33,6 +33,7 @@ service cloud.firestore {
     }
     function isEventAdmin(eventId) { return memberRole(eventId) == 'admin'; }
     function canWriteReports(eventId) { return memberRole(eventId) in ['admin', 'official']; }
+    function canScout(eventId) { return memberRole(eventId) in ['admin', 'official', 'scout']; }
 
     function eventPath(eventId) { return /databases/$(database)/documents/events/$(eventId); }
     function isActive(eventId) {
@@ -138,6 +139,11 @@ service cloud.firestore {
       }
 
       // Results: PUBLIC read (spectator app, no login); official/admin write.
+      // MDP scouting (how each point was decided): public for the Live statistics page.
+      match /mdp/{gameId} {
+        allow read: if true;
+        allow write: if isOrgAdmin() || (canScout(eventId) && isActive(eventId));
+      }
       match /results/{gameId} {
         allow read: if true;
         allow write: if isOrgAdmin() || (canWriteReports(eventId) && isActive(eventId));

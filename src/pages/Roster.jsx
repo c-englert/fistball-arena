@@ -416,7 +416,7 @@ function PersonModal({ person, results = [], onClose, me, isAdmin }) {
             <div className="add-row" style={{ flexWrap: "wrap" }}>
               <input style={{ flex: "2 1 160px" }} value={grant.email} onChange={(e) => setGrant({ ...grant, email: e.target.value })} placeholder="email@example.com" />
               <select value={grant.role} onChange={(e) => setGrant({ ...grant, role: e.target.value })}>
-                <option value="admin">{tr("admin")}</option><option value="official">{tr("official")}</option><option value="viewer">{tr("viewer")}</option>
+                <option value="admin">{tr("admin")}</option><option value="official">{tr("official")}</option><option value="scout">{tr("scout")}</option><option value="viewer">{tr("viewer")}</option>
               </select>
               <button className="btn primary" disabled={granting || !grant.email.trim()} onClick={authorize}>{tr("Authorize")}</button>
             </div>

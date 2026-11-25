@@ -5,6 +5,7 @@ import { isPlaceholder } from "../schedule/advance.js";
 import { flagFor, countryName } from "../flags.js";
 import { tRound, tCategory, localeOf } from "../i18n.js";
 import { dayKey } from "./weather.js";
+import { stratify } from "../mdp/mdp.js";
 import { finalRanking, genderOf, gameMinutes, durationByBestOf, cardsByCategory, realTeams, formatOf, playingDays, medalGames, mediaImpact, streamImpact } from "./finalReport.js";
 
 export const GENDERS = ["Women", "Men", "Other"];
@@ -72,7 +73,7 @@ export function reportData({ games, results, rosterOf, reports, defaultMinutes }
 }
 
 // tr: translator for lang. fields: { host, technical, notes }. mapPages: images of a PDF venue map.
-export function reportModel({ data, lang, tr, event, branding, fields, refsCount, reports, teamLogos, venueMap, mapPages, weather }) {
+export function reportModel({ data, lang, tr, event, branding, fields, refsCount, reports, teamLogos, venueMap, mapPages, weather, mdpGames }) {
     const loc = localeOf(lang);
     const R = (s) => tRound(lang, s);
     const hm = (d) => d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
@@ -216,6 +217,10 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
       add(tr("Medal matches"), blocks);
     }
 
+    // MDP: how the points were decided (only games that were scouted).
+    const mdp = mdpBlocks(mdpGames || [], { tr, C, T, loc });
+    if (mdp) add(tr("Map Definition Point (MDP)"), mdp);
+
     // Media impact: social media insights + livestream views per day, then the total.
     const media = mediaImpact(fields.media);
     const stream = streamImpact(fields.stream, data.days.map((d) => dayKey(d.day)));
@@ -271,4 +276,29 @@ export function reportModel({ data, lang, tr, event, branding, fields, refsCount
       lines: [dates, venue], eventLogo: branding?.eventLogo?.dataUrl || null,
       promoters: (branding?.promoters || []).map((p) => p.dataUrl).filter(Boolean), sections,
     };
+}
+
+// MDP blocks shared by the final report and the Reports → MDP view:
+// share of every action, then per category how each team won its points and its errors.
+export function mdpBlocks(mdpGames, { tr, C = (c) => c, T = (t) => t, loc = "en-GB" }) {
+  const st = stratify(mdpGames);
+  if (!st.points) return null;
+  const pc = (x) => (x == null ? "—" : `${x.toLocaleString(loc, { maximumFractionDigits: 1 })}%`);
+  const blocks = [
+    { type: "p", text: tr("{games} games scouted · {points} points.", { games: st.games, points: st.points }) },
+    { type: "table", num: [1, 2], head: [tr("How the point was decided"), tr("Points"), "%"],
+      rows: [...st.actions].sort((a, b) => b.count - a.count).map((a) => [tr(a.label), a.count, pc(a.pct)]), total: [tr("Total"), st.points, "100%"] },
+  ];
+  const cats = [...new Set(st.teams.map((t) => t.category))];
+  for (const cat of cats) {
+    const list = st.teams.filter((t) => t.category === cat);
+    if (cat || cats.length > 1) blocks.push({ type: "h3", text: C(cat) || "—" });
+    blocks.push({ type: "table", num: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+      head: [tr("Team"), tr("Games"), tr("Points won"), tr("Service winners"), tr("Attack winners"), tr("Opponent errors"), tr("Service errors"), tr("Attack errors"), tr("Defense errors"), tr("Setter errors")],
+      rows: list.map((t) => [T(t.team, t.category), t.games, t.won, t.wonBy.ace, t.wonBy.attack,
+        t.wonBy.serviceError + t.wonBy.attackError + t.wonBy.defenseError + t.wonBy.setterError,
+        t.errors.serviceError, t.errors.attackError, t.errors.defenseError, t.errors.setterError]) });
+  }
+  blocks.push({ type: "p", small: true, text: tr("Points won = own service and attack winners + opponent errors. The error columns are the errors the team made (points given to the opponent).") });
+  return blocks;
 }

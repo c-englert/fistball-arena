@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { pdf } from "@react-pdf/renderer";
-import { subscribeGames, subscribeResults, subscribeRosters, subscribeReferees, fetchReports, saveFinalReportFields, rosterKey, subscribeVenueMap, subscribeTeamLogos } from "../cloud.js";
+import { subscribeGames, subscribeResults, subscribeRosters, subscribeReferees, fetchReports, saveFinalReportFields, rosterKey, subscribeVenueMap, subscribeTeamLogos, subscribeAllMdp } from "../cloud.js";
 import { useEvent } from "../eventContext.js";
 import { flagFor } from "../flags.js";
 import { isPlaceholder } from "../schedule/advance.js";
-import { reportData, reportModel } from "../report/reportModel.js";
+import { reportData, reportModel, mdpBlocks } from "../report/reportModel.js";
 import { SumulasPDF } from "../pdf/SumulaPDF.jsx";
 import { useT, useLang, LANGS, langName, localeOf, tCategory } from "../i18n.js";
 import { overlayUrl } from "../broadcast.js";
@@ -27,6 +27,14 @@ export default function Reports() {
   const [rosters, setRosters] = useState({});
   const [refs, setRefs] = useState([]);
   const [reports, setReports] = useState(null);
+  const [mdpDocs, setMdpDocs] = useState({});
+  useEffect(() => subscribeAllMdp(setMdpDocs), []);
+  // Scouted games (MDP) with their teams and category.
+  const mdpGames = useMemo(() => Object.entries(mdpDocs).map(([id, mdp]) => {
+    const g = games.find((x) => x.id === id) || results.find((x) => x.id === id);
+    const nm = (t) => (t && typeof t === "object" ? t.name : t) || "";
+    return g ? { id, teamA: nm(g.teamA), teamB: nm(g.teamB), category: g.category || "", mdp } : null;
+  }).filter(Boolean), [mdpDocs, games, results]);
 
   useEffect(() => subscribeGames(setGames), []);
   useEffect(() => subscribeResults(setResults), []);
@@ -43,10 +51,12 @@ export default function Reports() {
           <button className={`filter-pill ${view === "final" ? "active" : ""}`} onClick={() => setView("final")}>{tr("Event final report")}</button>
           <button className={`filter-pill ${view === "team" ? "active" : ""}`} onClick={() => setView("team")}>{tr("Game reports by team")}</button>
           <button className={`filter-pill ${view === "links" ? "active" : ""}`} onClick={() => setView("links")}>{tr("Broadcast links")}</button>
+          <button className={`filter-pill ${view === "mdp" ? "active" : ""}`} onClick={() => setView("mdp")}>{tr("MDP")}</button>
         </span>
       </div>
       {view === "final"
-        ? <FinalReport event={event} branding={branding} games={games} results={results} rosters={rosters} refs={refs} reports={reports} />
+        ? <FinalReport event={event} branding={branding} games={games} results={results} rosters={rosters} refs={refs} reports={reports} mdpGames={mdpGames} />
+        : view === "mdp" ? <MdpSummary event={event} mdpGames={mdpGames} />
         : view === "links" ? <BroadcastList eventId={eventId} event={event} games={games} />
           : <TeamReports event={event} branding={branding} games={games} reports={reports} reload={loadReports} />}
     </>
@@ -55,7 +65,7 @@ export default function Reports() {
 
 /* ---------------- event final report ---------------- */
 // One block model feeds the screen / print view and the Word document.
-function FinalReport({ event, branding, games, results, rosters, refs, reports }) {
+function FinalReport({ event, branding, games, results, rosters, refs, reports, mdpGames }) {
   const tr = useT();
   const [lang] = useLang();
   const saved = event?.finalReport || {};
@@ -123,8 +133,8 @@ function FinalReport({ event, branding, games, results, rosters, refs, reports }
     return () => { live = false; };
   }, [dayList, event?.place]);
 
-  const model = useMemo(() => reportModel({ data, lang, tr, event, branding, fields, refsCount: refs.length, reports, teamLogos, venueMap, mapPages, weather }),
-    [data, lang, tr, event, branding, fields, refs.length, reports, teamLogos, venueMap, mapPages, weather]);
+  const model = useMemo(() => reportModel({ data, lang, tr, event, branding, fields, refsCount: refs.length, reports, teamLogos, venueMap, mapPages, weather, mdpGames }),
+    [data, lang, tr, event, branding, fields, refs.length, reports, teamLogos, venueMap, mapPages, weather, mdpGames]);
 
   const downloadWord = async () => {
     setBusy(true);
@@ -404,6 +414,26 @@ function BroadcastList({ eventId, event, games }) {
             </tbody>
           </table>
         )}
+      </section>
+    </>
+  );
+}
+
+/* ---------------- MDP of the event ---------------- */
+// How the points of the event were decided (scouted games only), per category and team.
+function MdpSummary({ event, mdpGames }) {
+  const tr = useT();
+  const [lang] = useLang();
+  const blocks = mdpBlocks(mdpGames, { tr, C: (c) => tCategory(lang, c), T: (t) => short(t), loc: localeOf(lang) });
+  return (
+    <>
+      <section className="card no-print">
+        <div className="fr-actions"><span className="muted-sm">{tr("Scouted in each game via “📊 MDP”. The same tables are in the event final report.")}</span><span className="spacer" />
+          <button className="btn sm" onClick={() => window.print()} disabled={!blocks}>{tr("Print / PDF")}</button></div>
+      </section>
+      <section className="card fr-doc">
+        <h2>{tr("Map Definition Point (MDP)")} — {event?.name || ""}</h2>
+        {blocks ? blocks.map((b, i) => <Block key={i} b={b} />) : <p className="muted-sm">{tr("No points scouted yet.")}</p>}
       </section>
     </>
   );

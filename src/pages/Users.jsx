@@ -16,7 +16,7 @@ function canonEmail(e) {
   return s;
 }
 
-const ROLES = ["", "viewer", "official", "admin"];
+const ROLES = ["", "viewer", "scout", "official", "admin"];
 const ROLE_LABEL = { "": "—", viewer: "Viewer", official: "Official", admin: "Admin" };
 
 // Translated rich text: **bold** and [[tag]] markers become <b> / <span class="tag">.

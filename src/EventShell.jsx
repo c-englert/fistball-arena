@@ -16,6 +16,7 @@ import Standings from "./pages/Standings.jsx";
 import Plans from "./pages/Plans.jsx";
 import Venue from "./pages/Venue.jsx";
 import Reports from "./pages/Reports.jsx";
+import Mdp from "./pages/Mdp.jsx";
 
 export default function EventShell({ me, onSignOut }) {
   const t = useT();
@@ -42,7 +43,8 @@ export default function EventShell({ me, onSignOut }) {
   const archived = event.status === "archived";
   const isAdmin = myRole === "admin" || me.admin;
   const canScore = !archived && (isAdmin || myRole === "official");
-  const ctx = { eventId, event, myRole, archived, isAdmin, canScore, branding };
+  const canScout = !archived && (canScore || myRole === "scout");
+  const ctx = { eventId, event, myRole, archived, isAdmin, canScore, canScout, branding };
 
   return (
     <EventContext.Provider value={ctx}>
@@ -51,6 +53,7 @@ export default function EventShell({ me, onSignOut }) {
           <Route element={<AppShell me={me} onSignOut={onSignOut} />}>
             <Route index element={<MatchList me={me} onSignOut={onSignOut} />} />
             <Route path="game/:id" element={<Sumula me={me} />} />
+            <Route path="game/:id/mdp" element={<Mdp me={me} />} />
             <Route path="standings" element={<Standings />} />
             <Route path="plans" element={<Plans />} />
             <Route path="schedule" element={isAdmin ? <Schedule me={me} /> : <Navigate to=".." replace />} />

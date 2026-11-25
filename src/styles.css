@@ -1181,3 +1181,41 @@ tr.fr-skip td { opacity: .45; }
 .bl-table td.bl-url { word-break: break-all; font-size: 12px; }
 @media print { .bl-table { font-size: 10px; } .bl-table td.bl-url { font-size: 9px; } }
 .fr-doc .fr-kv thead th.fr-kv-title { background: #1f3a5f; color: #fff; width: auto; text-align: left; }
+
+/* ---------- MDP (Map Definition Point) ---------- */
+.mdp-score { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 18px; }
+.mdp-score b { font-size: 28px; }
+.mdp-set { font-weight: 700; color: var(--muted); }
+.mdp-team.a, .mdp-a { color: #1f5fd1; font-weight: 700; }
+.mdp-team.b, .mdp-b { color: #c2410c; font-weight: 700; }
+.mdp-serve { margin: 6px 0 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mdp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mdp-col { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 10px; }
+.mdp-col.a { background: #eaf1fd; }
+.mdp-col.b { background: #fdf0e8; }
+.mdp-col-h { font-weight: 800; font-size: 16px; }
+.mdp-col.a .mdp-col-h { color: #1f5fd1; }
+.mdp-col.b .mdp-col-h { color: #c2410c; }
+.mdp-col-sub { font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 6px; text-transform: uppercase; }
+.mdp-btn { min-height: 52px; font-size: 16px; font-weight: 700; border-radius: 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; touch-action: manipulation; }
+.mdp-col.a .mdp-btn { border-color: #9dbcf3; }
+.mdp-col.b .mdp-btn { border-color: #f2b896; }
+.mdp-btn:active { transform: scale(.98); background: #f3f4f6; }
+.mdp-btn.err { font-weight: 600; }
+.mdp-btn.dim { opacity: .45; }
+.mdp-actions { display: flex; gap: 8px; margin: 12px 0 6px; }
+.mdp-last { margin: 6px 0 0; padding-left: 22px; font-size: 14px; }
+.mdp-h2h { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.mdp-h2h th { font-size: 16px; padding: 6px; }
+.mdp-h2h th.a { color: #1f5fd1; text-align: right; }
+.mdp-h2h th.b { color: #c2410c; text-align: left; }
+.mdp-h2h td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
+.mdp-h2h .mdp-group td { font-weight: 800; text-transform: uppercase; font-size: 12px; color: var(--muted); padding-top: 14px; }
+.mdp-label { text-align: center; font-size: 13px; width: 38%; }
+.mdp-val { position: relative; }
+.mdp-val b { position: relative; }
+.mdp-val.a { text-align: right; }
+.mdp-bar { position: absolute; top: 4px; bottom: 4px; opacity: .22; border-radius: 4px; }
+.mdp-bar.a { right: 0; background: #1f5fd1; }
+.mdp-bar.b { left: 0; background: #c2410c; }
+@media (max-width: 560px) { .mdp-btn { min-height: 46px; font-size: 14px; } .mdp-cols { gap: 8px; } }

@@ -298,6 +298,7 @@ export default function Sumula({ me }) {
             {t(full ? "✕ Exit full screen" : "⛶ Full screen")}
           </button>
           <button className="btn sm" onClick={copyOverlay} title={t("Copy the live scoreboard link for this game (OBS/vMix browser source)")}>{t("📺 Broadcast link")}</button>
+          <button className="btn sm" onClick={() => nav(`/e/${eventId}/game/${id}/mdp`)} title={t("Map Definition Point — how each point was decided")}>{t("📊 MDP")}</button>
           {isAdmin && !archived && (
             <button className="btn danger sm" onClick={resetThis} title={t("Clear only this game report")}>{t("Reset this report")}</button>
           )}

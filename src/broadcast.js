@@ -27,3 +27,10 @@ export function gamePageUrl(eventId, gameId, hash = "") {
   const q = new URLSearchParams({ event: eventId, game: gameId });
   return `${LIVE_URL}game.html?${q}${hash}`;
 }
+
+// Public MDP statistics of one game on Fistball Live (how the points were
+// decided, head to head) — for TV and commentators.
+export function mdpPageUrl(eventId, gameId) {
+  const q = new URLSearchParams({ event: eventId, game: gameId });
+  return `${LIVE_URL}mdp.html?${q}`;
+}
