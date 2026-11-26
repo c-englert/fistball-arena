@@ -34,3 +34,10 @@ export function mdpPageUrl(eventId, gameId) {
   const q = new URLSearchParams({ event: eventId, game: gameId });
   return `${LIVE_URL}mdp.html?${q}`;
 }
+// MDP graphic for the live stream (OBS/vMix browser source, transparent):
+// shows the statistics of the last finished set, switching by itself when a set ends.
+export function mdpOverlayUrl(eventId, gameId, lang) {
+  const q = new URLSearchParams({ event: eventId, game: gameId, tv: "1", set: "last" });
+  if (lang) q.set("lang", lang);
+  return `${LIVE_URL}mdp.html?${q}`;
+}

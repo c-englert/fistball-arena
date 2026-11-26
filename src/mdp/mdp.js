@@ -11,6 +11,7 @@ export const ACTIONS = [
   { key: "ace", label: "Service winner", by: "winner" },
   { key: "attack", label: "Attack winner", by: "winner" },
   { key: "serviceError", label: "Service error", by: "loser" },
+  { key: "footFault", label: "Foot fault", by: "loser" }, // service line fault
   // A risky all-or-nothing attack (trying to kill the point) that failed — the "winner" lost.
   { key: "attackMiss", label: "Attack winner lost", by: "loser" },
   { key: "attackError", label: "Unforced attack error", by: "loser" },
@@ -68,6 +69,7 @@ export function teamStats(points) {
       servicesLostPct: pct(served.length - servedWon, served.length),
       aces: by("ace", T),
       serviceErrors: by("serviceError", T),
+      footFaults: by("footFault", T),
       attackWon: by("attack", T),
       attackLost: by("attackMiss", T),
       attackErrors: by("attackError", T),
@@ -81,10 +83,23 @@ export function teamStats(points) {
 // The rows shown head to head, in the order of the MDP sheet.
 export const STAT_ROWS = [
   { group: "General play", rows: [["played", "Points played"], ["won", "Points won"], ["lost", "Points lost"]] },
-  { group: "Service play", rows: [["services", "Number of services"], ["servicesWonPct", "% of services won", "%"], ["servicesLostPct", "% of services lost", "%"], ["aces", "Service winners won"], ["serviceErrors", "Service errors"]] },
+  { group: "Service play", rows: [["services", "Number of services"], ["servicesWonPct", "% of services won", "%"], ["servicesLostPct", "% of services lost", "%"], ["aces", "Service winners won"], ["serviceErrors", "Service errors"], ["footFaults", "Foot faults"]] },
   { group: "Strikes play", rows: [["attackWon", "Attack winners won"], ["attackLost", "Attack winners lost"], ["attackErrors", "Unforced attack errors"]] },
   { group: "Defense and setter play", rows: [["defenseErrors", "Defense unforced errors"], ["setterErrors", "Setter unforced errors"]] },
 ];
+
+// Disciplinary cards of the game (from the published result; not per set — they
+// don't decide points, shown for the team's behaviour/balance).
+export const CARD_ROWS = { group: "Cards", rows: [["yellow", "Yellow cards"], ["yellowRed", "Yellow-red cards"], ["red", "Red cards"]] };
+export function cardStats(cards, teamA, teamB) {
+  const norm = (n) => String(n || "").split(" - ")[0].trim().toLowerCase();
+  const side = (name) => {
+    const list = (cards || []).filter((c) => c.team === name || norm(c.team) === norm(name));
+    const sum = (k) => list.reduce((s, c) => s + (c[k] ? 1 : 0), 0);
+    return { yellow: sum("y"), yellowRed: sum("yr"), red: sum("r") };
+  };
+  return { A: side(teamA), B: side(teamB) };
+}
 
 // How the points were decided over many games (event / category / team):
 // share of every action, and per team how it won its points and which errors it made.

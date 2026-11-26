@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { replay, teamStats, stratify, responsible } from "./mdp.js";
+import { replay, teamStats, stratify, responsible, cardStats } from "./mdp.js";
 
 const P = (w, a) => ({ w, a });
 
@@ -60,4 +60,12 @@ test("stratify: share of every action and per-team breakdown", () => {
   assert.equal(y.errors.setterError, 3);
   assert.equal(y.wonBy.ace, 1);
   assert.equal(y.games, 1);
+});
+
+test("foot fault counts against the serving team; cards per team", () => {
+  const pts = replay({ log: [P("B", "footFault")] }).sets[0].points;
+  assert.equal(teamStats(pts).A.footFaults, 1);
+  const c = cardStats([{ team: "Brazil - BRA", y: 1 }, { team: "Chile", y: 1, yr: 1 }, { team: "Chile", r: 1 }], "Brazil", "Chile");
+  assert.deepEqual(c.A, { yellow: 1, yellowRed: 0, red: 0 });
+  assert.deepEqual(c.B, { yellow: 1, yellowRed: 1, red: 1 });
 });

@@ -3,9 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { subscribeGames, subscribeResults, subscribeMdp, saveMdp } from "../cloud.js";
 import { useEvent } from "../eventContext.js";
 import { flagFor } from "../flags.js";
-import { useT } from "../i18n.js";
-import { mdpPageUrl } from "../broadcast.js";
-import { ACTIONS, replay, teamStats, STAT_ROWS, other } from "../mdp/mdp.js";
+import { useT, useLang } from "../i18n.js";
+import { mdpPageUrl, mdpOverlayUrl } from "../broadcast.js";
+import { ACTIONS, replay, teamStats, STAT_ROWS, CARD_ROWS, cardStats, other } from "../mdp/mdp.js";
 
 // MDP — Map Definition Point. The scout records, for every point, which team
 // won it and the action that defined it (one tap); the statistics compare both
@@ -18,6 +18,7 @@ export default function Mdp({ me }) {
   const { id } = useParams();
   const nav = useNavigate();
   const tr = useT();
+  const [lang] = useLang();
   const { eventId, canScout } = useEvent();
   const [games, setGames] = useState([]);
   const [results, setResults] = useState([]);
@@ -65,6 +66,8 @@ export default function Mdp({ me }) {
         </div>
         <div className="gh-actions">
           <a className="btn sm" href={mdpPageUrl(eventId, id)} target="_blank" rel="noreferrer" title={tr("Public statistics page for TV and commentators")}>{tr("📺 TV page")}</a>
+          <button className="btn sm" title={tr("Graphic for the live stream (OBS/vMix browser source, transparent background): statistics of the last finished set, updated by itself when a set ends.")}
+            onClick={async () => { const u = mdpOverlayUrl(eventId, id, lang); try { await navigator.clipboard.writeText(u); alert(tr("Overlay link copied — add it as a Browser source in OBS/vMix (1920×1080).")); } catch (_) { window.prompt(tr("Copy the link:"), u); } }}>{tr("🎬 Stream overlay")}</button>
         </div>
       </div>
       <div className="plan-bar">
@@ -98,7 +101,7 @@ export default function Mdp({ me }) {
                   ))}
                   <div className="mdp-col-sub">{tr("Error by {team}", { team: name[O] })}</div>
                   {ACTIONS.filter((x) => x.by === "loser").map((x) => (
-                    <button key={x.key} className={`mdp-btn err ${x.key === "serviceError" && rp.nextServer !== O ? "dim" : ""}`} onClick={() => add(T, x.key)}>{tr(x.label)}</button>
+                    <button key={x.key} className={`mdp-btn err ${(x.key === "serviceError" || x.key === "footFault") && rp.nextServer !== O ? "dim" : ""}`} onClick={() => add(T, x.key)}>{tr(x.label)}</button>
                   ))}
                 </div>
               );
@@ -119,14 +122,14 @@ export default function Mdp({ me }) {
           </ol>
         </section>
       ) : (
-        <MdpStats rp={rp} name={name} />
+        <MdpStats rp={rp} name={name} cards={cardStats(result?.cards, result?.teamA, result?.teamB)} />
       )}
     </>
   );
 }
 
 // Head-to-head table: whole game or one set.
-export function MdpStats({ rp, name }) {
+export function MdpStats({ rp, name, cards }) {
   const tr = useT();
   const [scope, setScope] = useState("game");
   const points = scope === "game" ? rp.sets.flatMap((s) => s.points) : rp.sets[scope]?.points || [];
@@ -142,10 +145,11 @@ export function MdpStats({ rp, name }) {
       <table className="mdp-h2h">
         <thead><tr><th className="a">{name.A}</th><th /><th className="b">{name.B}</th></tr></thead>
         <tbody>
-          {STAT_ROWS.map((g) => [
+          {[...STAT_ROWS, ...(cards && scope === "game" ? [{ ...CARD_ROWS, cards: true }] : [])].map((g) => [
             <tr key={g.group} className="mdp-group"><td colSpan={3}>{tr(g.group)}</td></tr>,
             ...g.rows.map(([k, label, unit]) => {
-              const a = st.A[k], b = st.B[k];
+              const src = g.cards ? cards : st;
+              const a = src.A[k], b = src.B[k];
               const sum = unit === "%" ? 100 : (a || 0) + (b || 0);
               const w = (v) => `${sum ? Math.round(((v || 0) / (unit === "%" ? 100 : sum)) * 100) : 0}%`;
               return (

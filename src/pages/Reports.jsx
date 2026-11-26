@@ -7,7 +7,7 @@ import { isPlaceholder } from "../schedule/advance.js";
 import { reportData, reportModel, mdpBlocks } from "../report/reportModel.js";
 import { SumulasPDF } from "../pdf/SumulaPDF.jsx";
 import { useT, useLang, LANGS, langName, localeOf, tCategory } from "../i18n.js";
-import { overlayUrl } from "../broadcast.js";
+import { overlayUrl, mdpOverlayUrl } from "../broadcast.js";
 import { scheduledStart } from "../report/finalReport.js";
 import { dayKey } from "../report/weather.js";
 
@@ -355,6 +355,7 @@ function BroadcastList({ eventId, event, games }) {
       category: tCategory(lang, g.category || ""), round: g.round || "",
       match: `${short(g.teamA?.name ?? g.teamA)} ${tr("vs")} ${short(g.teamB?.name ?? g.teamB)}`,
       url: overlayUrl(eventId, { game: g.id }),
+      mdp: mdpOverlayUrl(eventId, g.id, lang),
     })), [games, eventId, lang, tr]);
   const days = [...new Set(rows.map((r) => r.day))];
   const [day, setDay] = useState("");
@@ -364,8 +365,8 @@ function BroadcastList({ eventId, event, games }) {
     const r = rows.find((x) => x.day === key);
     return r?.start ? r.start.toLocaleDateString(loc, { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }) : key || "—";
   };
-  const head = [tr("Day"), tr("Time"), tr("Court"), tr("Game"), tr("Category"), tr("Match"), tr("Broadcast link")];
-  const cells = (r) => [dayName(r.day), r.time, r.court, r.nr, r.category, r.match, r.url];
+  const head = [tr("Day"), tr("Time"), tr("Court"), tr("Game"), tr("Category"), tr("Match"), tr("Broadcast link"), tr("MDP overlay")];
+  const cells = (r) => [dayName(r.day), r.time, r.court, r.nr, r.category, r.match, r.url, r.mdp];
   const copyAll = async () => {
     const tsv = [head, ...list.map(cells)].map((l) => l.map((c) => String(c ?? "").replace(/\s+/g, " ")).join("\t")).join("\n");
     try { await navigator.clipboard.writeText(tsv); alert(tr("{n} links copied — paste them into Excel or Google Sheets.", { n: list.length })); }
@@ -395,7 +396,7 @@ function BroadcastList({ eventId, event, games }) {
           <button className="btn sm" onClick={copyAll} disabled={!list.length}>{tr("Copy for Excel")}</button>
           <button className="btn sm" onClick={csv} disabled={!list.length}>{tr("Download CSV")}</button>
         </div>
-        <p className="muted-sm">{tr("Each link shows the live scoreboard of that game (OBS/vMix browser source) — the same link as “📺 Broadcast link” in the game report.")}</p>
+        <p className="muted-sm">{tr("Each link shows the live scoreboard of that game (OBS/vMix browser source) — the same link as “📺 Broadcast link” in the game report.")} {tr("The MDP overlay shows the statistics of the last finished set (transparent background) — show it between sets.")}</p>
       </section>
       <section className="card fr-doc">
         <h2>{tr("Broadcast links")} — {event?.name || ""}</h2>
@@ -409,6 +410,7 @@ function BroadcastList({ eventId, event, games }) {
                   {pick === "all" && <td>{dayName(r.day)}</td>}
                   <td>{r.time}</td><td>{r.court}</td><td>{r.nr}</td><td>{r.category}</td><td>{r.match}</td>
                   <td className="bl-url"><a href={r.url} target="_blank" rel="noreferrer">{r.url}</a></td>
+                  <td className="bl-url"><a href={r.mdp} target="_blank" rel="noreferrer">{r.mdp}</a></td>
                 </tr>
               ))}
             </tbody>
