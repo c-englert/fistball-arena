@@ -82,10 +82,10 @@ export function teamStats(points) {
 
 // The rows shown head to head, in the order of the MDP sheet.
 export const STAT_ROWS = [
-  { group: "General play", rows: [["played", "Points played"], ["won", "Points won"], ["lost", "Points lost"]] },
-  { group: "Service play", rows: [["services", "Number of services"], ["servicesWonPct", "% of services won", "%"], ["servicesLostPct", "% of services lost", "%"], ["aces", "Service winners won"], ["serviceErrors", "Service errors"], ["footFaults", "Foot faults"]] },
-  { group: "Strikes play", rows: [["attackWon", "Attack winners won"], ["attackLost", "Attack winners lost"], ["attackErrors", "Unforced attack errors"]] },
-  { group: "Defense and setter play", rows: [["defenseErrors", "Defense unforced errors"], ["setterErrors", "Setter unforced errors"]] },
+  { group: "General Match", rows: [["played", "Points played"], ["won", "Points won"], ["lost", "Points lost"]] },
+  { group: "Service", rows: [["services", "Number of services"], ["servicesWonPct", "% of services won", "%"], ["servicesLostPct", "% of services lost", "%"], ["aces", "Service winners won"], ["serviceErrors", "Service errors"], ["footFaults", "Foot faults"]] },
+  { group: "Strike", rows: [["attackWon", "Attack winners won"], ["attackLost", "Attack winners lost"], ["attackErrors", "Unforced attack errors"]] },
+  { group: "Defense and Setter", rows: [["defenseErrors", "Defense unforced errors"], ["setterErrors", "Setter unforced errors"]] },
 ];
 
 // Disciplinary cards of the game (from the published result; not per set — they
