@@ -11,6 +11,8 @@ export const ACTIONS = [
   { key: "ace", label: "Service winner", by: "winner" },
   { key: "attack", label: "Attack winner", by: "winner" },
   { key: "serviceError", label: "Service error", by: "loser" },
+  // A risky all-or-nothing attack (trying to kill the point) that failed — the "winner" lost.
+  { key: "attackMiss", label: "Attack winner lost", by: "loser" },
   { key: "attackError", label: "Unforced attack error", by: "loser" },
   { key: "defenseError", label: "Defense unforced error", by: "loser" },
   { key: "setterError", label: "Setter unforced error", by: "loser" },
@@ -67,7 +69,7 @@ export function teamStats(points) {
       aces: by("ace", T),
       serviceErrors: by("serviceError", T),
       attackWon: by("attack", T),
-      attackLost: by("attack", O),
+      attackLost: by("attackMiss", T),
       attackErrors: by("attackError", T),
       defenseErrors: by("defenseError", T),
       setterErrors: by("setterError", T),

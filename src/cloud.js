@@ -1134,11 +1134,11 @@ export async function saveFinalReportFields(fields) {
 
 // MDP scouting of a game (how each point was decided). Public read so the
 // Fistball Live statistics page can show it; written by admins, officials and scouts.
-export function subscribeMdp(gameId, cb) {
+export function subscribeMdp(gameId, cb, onError) {
   const eid = reqEid();
   return onSnapshot(edoc("mdp", gameId),
     (d) => { if (eid === _eid) cb(d.exists() ? d.data() : { log: [], serve: {} }); },
-    (err) => console.warn("MDP unavailable:", err?.code || err));
+    (err) => { console.warn("MDP unavailable:", err?.code || err); onError?.(err); });
 }
 export async function saveMdp(gameId, data, by) {
   await setDoc(edoc("mdp", gameId), { log: data.log || [], serve: data.serve || {}, updatedAt: serverTimestamp(), updatedBy: by || null });

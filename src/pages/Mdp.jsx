@@ -22,10 +22,11 @@ export default function Mdp({ me }) {
   const [games, setGames] = useState([]);
   const [results, setResults] = useState([]);
   const [mdp, setMdp] = useState(null);
+  const [loadErr, setLoadErr] = useState(null);
   const [tab, setTab] = useState(canScout ? "scout" : "stats");
   useEffect(() => subscribeGames(setGames), []);
   useEffect(() => subscribeResults(setResults), []);
-  useEffect(() => subscribeMdp(id, setMdp), [id]);
+  useEffect(() => subscribeMdp(id, (d) => { setLoadErr(null); setMdp(d); }, setLoadErr), [id]);
 
   const game = games.find((g) => g.id === id);
   const result = results.find((r) => r.id === id);
@@ -43,6 +44,13 @@ export default function Mdp({ me }) {
   const endSet = () => { if (window.confirm(tr("End set {n} now?", { n: rp.current + 1 }))) save({ ...mdp, log: [...(mdp?.log || []), { next: true }] }); };
   const setServe = (t) => save({ ...mdp, serve: { ...(mdp?.serve || {}), [rp.current]: t } });
 
+  if (!mdp && loadErr) return (
+    <div className="empty">
+      {loadErr.code === "permission-denied"
+        ? tr("MDP is not enabled on the server yet (database rules not published). Ask the system administrator.")
+        : tr("Could not load MDP: {e}", { e: String(loadErr.code || loadErr.message || loadErr) })}
+    </div>
+  );
   if (!mdp) return <div className="empty">{tr("Loading…")}</div>;
   const curSet = rp.sets[rp.current] || { points: [], a: 0, b: 0 };
   const opening = !curSet.points.length; // no point yet in the set being scouted

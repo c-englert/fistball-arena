@@ -31,18 +31,19 @@ test("replay: manual set end and chosen first serve", () => {
 
 test("teamStats: the rows of the MDP sheet", () => {
   // A serves: A ace (A serves again? no — B lost, B serves), B service error (B served, A wins)...
-  const pts = replay({ log: [P("A", "ace"), P("A", "serviceError"), P("B", "attack"), P("B", "attackError"), P("A", "defenseError")] }).sets[0].points;
+  const pts = replay({ log: [P("A", "ace"), P("A", "serviceError"), P("B", "attack"), P("B", "attackError"), P("A", "defenseError"), P("B", "attackMiss")] }).sets[0].points;
   // servers: A, B (lost p1), B (lost p2), A (lost p3), A (lost p4)
-  assert.deepEqual(pts.map((p) => p.server), ["A", "B", "B", "A", "A"]);
+  assert.deepEqual(pts.map((p) => p.server), ["A", "B", "B", "A", "A", "B"]);
   const s = teamStats(pts);
-  assert.equal(s.A.played, 5);
-  assert.deepEqual([s.A.won, s.A.lost], [3, 2]);
+  assert.equal(s.A.played, 6);
+  assert.deepEqual([s.A.won, s.A.lost], [3, 3]);
   assert.equal(s.A.services, 3);
   assert.equal(Math.round(s.A.servicesWonPct), 67); // won p1, p5; lost p4
   assert.equal(s.A.aces, 1);
   assert.equal(s.B.serviceErrors, 1);
   assert.equal(s.B.attackWon, 1);
-  assert.equal(s.A.attackLost, 1);
+  assert.equal(s.A.attackLost, 1); // A's risky attack failed (B won the point)
+  assert.equal(s.B.attackLost, 0);
   assert.equal(s.A.attackErrors, 1);
   assert.equal(s.B.defenseErrors, 1);
 });

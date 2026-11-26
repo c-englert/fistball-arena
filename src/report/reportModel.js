@@ -293,11 +293,11 @@ export function mdpBlocks(mdpGames, { tr, C = (c) => c, T = (t) => t, loc = "en-
   for (const cat of cats) {
     const list = st.teams.filter((t) => t.category === cat);
     if (cat || cats.length > 1) blocks.push({ type: "h3", text: C(cat) || "—" });
-    blocks.push({ type: "table", num: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-      head: [tr("Team"), tr("Games"), tr("Points won"), tr("Service winners"), tr("Attack winners"), tr("Opponent errors"), tr("Service errors"), tr("Attack errors"), tr("Defense errors"), tr("Setter errors")],
+    blocks.push({ type: "table", num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      head: [tr("Team"), tr("Games"), tr("Points won"), tr("Service winners"), tr("Attack winners"), tr("Opponent errors"), tr("Service errors"), tr("Attack winners lost"), tr("Attack errors"), tr("Defense errors"), tr("Setter errors")],
       rows: list.map((t) => [T(t.team, t.category), t.games, t.won, t.wonBy.ace, t.wonBy.attack,
-        t.wonBy.serviceError + t.wonBy.attackError + t.wonBy.defenseError + t.wonBy.setterError,
-        t.errors.serviceError, t.errors.attackError, t.errors.defenseError, t.errors.setterError]) });
+        Object.keys(t.errors).reduce((s, k) => s + t.wonBy[k], 0),
+        t.errors.serviceError, t.errors.attackMiss, t.errors.attackError, t.errors.defenseError, t.errors.setterError]) });
   }
   blocks.push({ type: "p", small: true, text: tr("Points won = own service and attack winners + opponent errors. The error columns are the errors the team made (points given to the opponent).") });
   return blocks;
